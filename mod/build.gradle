@@ -10,6 +10,7 @@ base {
 }
 
 repositories {
+    mavenCentral()
     exclusiveContent {
         forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
         filter { includeGroup 'maven.modrinth' }
@@ -25,6 +26,8 @@ dependencies {
 
     // Браузер: компилируемся против API, в игре он необязателен (лаунчер ставит его сам)
     modCompileOnly "maven.modrinth:mcef-modern:${project.mcef_version}"
+    // Классы Chromium (CefBrowser) лежат внутри MCEF вложенным jar — для компиляции берём их отдельно
+    compileOnly "me.friwi:jcef-api:${project.jcef_api_version}"
     if (project.findProperty('dev_mcef') == 'true') {
         modLocalRuntime "maven.modrinth:mcef-modern:${project.mcef_version}"
     }
