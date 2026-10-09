@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Umbra</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- живой фон -->
+  <div id="scene">
+    <img class="layer" id="sky" src="img/sky.png" alt="">
+    <div id="stars"></div>
+    <img class="layer corona" id="coronaA" src="img/corona_a.png" alt="">
+    <img class="layer corona" id="coronaB" src="img/corona_b.png" alt="">
+    <img class="layer" id="sun" src="img/sun.png" alt="">
+    <div id="water">
+      <img src="img/water.png" alt="" class="w1">
+      <img src="img/water.png" alt="" class="w2">
+    </div>
+  </div>
+  <div id="disc"><div id="percent"></div></div>
+
+  <!-- верхняя панель -->
+  <header data-tauri-drag-region>
+    <div class="brand" data-tauri-drag-region>UMBRA <span>бета</span></div>
+    <div class="right">
+      <span id="account"></span>
+      <button class="win" id="min" title="Свернуть">—</button>
+      <button class="win" id="close" title="Закрыть">✕</button>
+    </div>
+  </header>
+
+  <!-- главная -->
+  <main id="home" class="view active">
+    <button id="play" class="play">ИГРАТЬ</button>
+    <div class="meta" id="build">…</div>
+    <button class="nav" id="toSettings">НАСТРОЙКИ</button>
+    <button class="nav nav2" id="toMarket">МАРКЕТ</button>
+    <section class="news">
+      <div class="news-title">ЧТО НОВОГО <span id="newsVer"></span></div>
+      <ul id="changelog"></ul>
+    </section>
+    <nav class="links" id="links"></nav>
+  </main>
+
+  <!-- настройки -->
+  <main id="settings" class="view">
+    <h1>НАСТРОЙКИ</h1>
+    <div class="row">
+      <div><div class="label">Память для игры</div><div class="sub" id="ramHint"></div></div>
+      <input type="range" id="ram" min="1024" max="16384" step="512">
+      <div class="value" id="ramValue"></div>
+    </div>
+    <div class="row">
+      <div><div class="label">Папка клиента</div><div class="sub" id="folder"></div></div>
+      <span></span>
+      <button class="link" id="openFolder">Открыть</button>
+    </div>
+    <div class="row">
+      <div><div class="label">Закрывать лаунчер</div><div class="sub">после выхода из игры</div></div>
+      <span></span>
+      <div class="seg" id="closeSeg"><button data-v="0">Нет</button><button data-v="1">Да</button></div>
+    </div>
+    <button class="nav back" id="back">НАЗАД</button>
+  </main>
+
+  <!-- маркет -->
+  <section id="market">
+    <div class="m-head">
+      <div class="m-title">МАРКЕТ</div>
+      <div class="m-tabs" id="mKinds">
+        <button data-k="mod" class="on">Моды</button>
+        <button data-k="resourcepack">Ресурспаки</button>
+        <button data-k="shader">Шейдеры</button>
+      </div>
+      <div class="m-src" id="mSrc"><button data-s="modrinth" class="on">Modrinth</button><button data-s="local">Мои</button></div>
+      <button class="win" id="mClose" title="Закрыть">✕</button>
+    </div>
+    <div class="m-bar">
+      <input id="mQuery" placeholder="Поиск на Modrinth" spellcheck="false">
+      <div class="m-sort" id="mSort">
+        <button data-s="downloads" class="on">Популярные</button>
+        <button data-s="updated">Обновлённые</button>
+        <button data-s="newest">Новые</button>
+      </div>
+    </div>
+    <div class="m-body" id="mBody"></div>
+  </section>
+
+  <div id="status"><div id="statusMain"></div><div id="statusSub"></div></div>
+
+  <!-- заставка -->
+  <div id="splash">
+    <svg id="emblem" viewBox="0 0 200 200" aria-hidden="true">
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="55%" stop-color="#dcdcff" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#dcdcff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="halo" cx="100" cy="100" r="78" fill="url(#glow)"/>
+      <circle class="ring" cx="100" cy="100" r="58"/>
+      <circle class="core" cx="100" cy="100" r="56"/>
+    </svg>
+    <div id="logo" data-text="UMBRA">UMBRA</div>
+    <div id="presents">ПРЕДСТАВЛЯЕТ</div>
+  </div>
+</div>
+<script src="main.js"></script>
+</body>
+</html>

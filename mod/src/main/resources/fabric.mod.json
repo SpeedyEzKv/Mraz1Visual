@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "umbra",
+  "version": "${version}",
+  "name": "Umbra",
+  "description": "Личный визуальный клиент. Только то, что игрок и так видит.",
+  "authors": ["SpeedyEzKv"],
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.umbra.Umbra"]
+  },
+  "suggests": {
+    "sodium": "*",
+    "iris": "*",
+    "mcef-modern": "*"
+  },
+  "mixins": ["umbra.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

@@ -1,3 +1,11 @@
-node_modules/
-src-tauri/target/
-src-tauri/gen/
+# Gradle / мод
+mod/.gradle/
+mod/build/
+mod/run/
+mod/out/
+.idea/
+*.iml
+# Лаунчер
+launcher/node_modules/
+launcher/src-tauri/target/
+launcher/src-tauri/gen/

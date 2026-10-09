@@ -1,0 +1,102 @@
+# Полный выпуск Umbra на серверах GitHub.
+# Каждый push в main (или кнопка Run workflow во вкладке Actions):
+#   1) собирает мод umbra.jar (Linux, Java 21);
+#   2) собирает лаунчер Umbra-setup.exe (Windows);
+#   3) публикует релиз v0.1.<номер> с umbra.jar, manifest.json и Umbra-setup.exe.
+# Лаунчер сам скачивает umbra.jar и manifest.json из последнего релиза,
+# а при новой версии лаунчера показывает кнопку «Обновить лаунчер».
+name: Release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+env:
+  VERSION: 0.1.${{ github.run_number }}
+
+jobs:
+  mod:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build umbra.jar
+        run: bash ./gradlew build --no-daemon --stacktrace -Pmod_version=$VERSION -Pdev_sodium=false -Pdev_mcef=false
+      - name: Pick jar
+        run: |
+          JAR=$(ls build/libs/*.jar | grep -v -e sources -e dev | head -n1)
+          cp "$JAR" ../umbra.jar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mod
+          path: umbra.jar
+
+  launcher:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: launcher
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: launcher/src-tauri
+      - name: Set version
+        run: |
+          sed -i "0,/^version = \".*\"/s//version = \"$VERSION\"/" src-tauri/Cargo.toml
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+      - run: npm install
+      - run: npx tauri build
+      - name: Pick installer
+        run: cp src-tauri/target/release/bundle/nsis/*-setup.exe ../Umbra-setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher
+          path: Umbra-setup.exe
+
+  release:
+    needs: [mod, launcher]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+      - name: manifest.json
+        run: |
+          jq --arg v "$VERSION" --argjson b ${{ github.run_number }} \
+             --arg url "https://github.com/${{ github.repository }}/releases/latest/download/Umbra-setup.exe" \
+             '.client_version=$v | .build=$b | .launcher_version=$v | .launcher_url=$url' \
+             release/manifest.json > dist/manifest.json
+          jq -r '.changelog | map("- " + .) | join("\n")' dist/manifest.json > notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Umbra ${{ env.VERSION }}
+          body_path: notes.md
+          make_latest: true
+          files: |
+            dist/umbra.jar
+            dist/manifest.json
+            dist/Umbra-setup.exe

@@ -1,0 +1,50 @@
+{
+  "client_version": "0.1.0",
+  "build": 4,
+  "minecraft": "1.21.11",
+  "fabric_loader": "",
+  "mods": [
+    {
+      "modrinth": [
+        "fabric-api",
+        "0.141.3+1.21.11"
+      ]
+    },
+    {
+      "modrinth": [
+        "sodium",
+        "mc1.21.11-0.8.7-fabric"
+      ]
+    },
+    {
+      "modrinth": [
+        "iris",
+        "1.10.7+1.21.11-fabric"
+      ]
+    },
+    {
+      "modrinth": [
+        "mcef-modern",
+        "0.3.3+mc1.21.11.jcef146.0.10"
+      ]
+    },
+    {
+      "url": "https://github.com/SpeedyEzKv/Umbra/releases/latest/download/umbra.jar",
+      "file": "umbra.jar"
+    }
+  ],
+  "changelog": [
+    "Исправлено",
+    "No Delay: быстрая установка блоков (Player).",
+    "Cosmetics: свой плащ (виден только тебе).",
+    "Лаунчер сам предлагает обновиться.",
+    "Музыка: виджет «Сейчас играет» в меню и HUD (Spotify, Яндекс Музыка, браузер).",
+    "Аккаунты Microsoft в главном меню.",
+    "Вкладки в настройках графики.",
+    "Оверлей Shift+Tab: время в игре и скриншоты.",
+    "No Render: убрать огонь, анимацию тотема, оверлеи.",
+    "Waypoints: точки-маяки и место смерти.",
+    "Встроенный браузер в оверлее Shift+Tab."
+  ],
+  "links": []
+}
