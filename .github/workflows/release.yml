@@ -36,7 +36,18 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Build umbra.jar
-        run: bash ./gradlew build --no-daemon --stacktrace -Pmod_version=$VERSION -Pdev_sodium=false -Pdev_mcef=false
+        run: |
+          set -o pipefail
+          bash ./gradlew build --no-daemon --console=plain -Pmod_version=$VERSION -Pdev_sodium=false -Pdev_mcef=false 2>&1 | tee ../build.log
+      - name: Errors summary
+        if: failure()
+        run: |
+          {
+            echo "## Ошибки сборки мода"
+            echo '```'
+            grep -E -A3 "error:|What went wrong|Caused by|> " ../build.log | grep -v "^\s*at " | head -n 150
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Pick jar
         run: |
           JAR=$(ls build/libs/*.jar | grep -v -e sources -e dev | head -n1)
