@@ -35,7 +35,7 @@ public final class Cape extends Module {
     private ClientAsset.Texture asset;
 
     public Cape() {
-        super("cape", "Cape", "Свой плащ. Виден только тебе.", Category.COSMETICS);
+        super("cape", "Cape", "Свой плащ. Виден только тебе.", Category.VISUALS);
         instance = this;
     }
 

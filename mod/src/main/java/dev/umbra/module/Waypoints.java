@@ -36,10 +36,7 @@ public final class Waypoints extends Module implements WorldLayer {
 
     final KeySetting addKey = add(new KeySetting("add_key", "Поставить точку", org.lwjgl.glfw.GLFW.GLFW_KEY_B));
     final KeySetting removeKey = add(new KeySetting("remove_key", "Убрать ближайшую", KeySetting.NONE));
-    final BoolSetting deathPoint = add(new BoolSetting("death", "Точка при смерти", true).group("Смерть"));
-    final BoolSetting deathChat = add(new BoolSetting("death_chat", "Координаты смерти в чат (только тебе)", true).group("Смерть"));
     final ColorSetting color = add(new ColorSetting("color", "Цвет точек", 0xB0B8B4F2).group("Вид"));
-    final ColorSetting deathColor = add(new ColorSetting("death_color", "Цвет точки смерти", 0xC0E05A5A).group("Вид"));
 
     public static final class Point {
         public String name;
@@ -50,11 +47,11 @@ public final class Waypoints extends Module implements WorldLayer {
 
     /** server → точки */
     private Map<String, List<Point>> data = new HashMap<>();
-    private boolean addWas, removeWas, wasDead;
+    private boolean addWas, removeWas;
     private int counter = 1;
 
     public Waypoints() {
-        super("waypoints", "Waypoints", "Свои точки-маяки и место смерти.", Category.WORLD);
+        super("waypoints", "Waypoints", "Свои точки-маяки по клавише.", Category.MISC);
         load();
     }
 
@@ -103,26 +100,6 @@ public final class Waypoints extends Module implements WorldLayer {
         }
         removeWas = rem;
 
-        boolean dead = p.isDeadOrDying();
-        if (dead && !wasDead) {
-            int x = p.getBlockX(), y = p.getBlockY(), z = p.getBlockZ();
-            if (deathChat.get()) {
-                p.displayClientMessage(Component.literal("§7Umbra: ты умер на §f" + x + " " + y + " " + z), false);
-            }
-            if (deathPoint.get()) {
-                points(mc).removeIf(pt -> pt.death);
-                Point pt = new Point();
-                pt.name = "Смерть";
-                pt.dim = dim;
-                pt.x = x + 0.5;
-                pt.y = y;
-                pt.z = z + 0.5;
-                pt.death = true;
-                points(mc).add(pt);
-                save();
-            }
-        }
-        wasDead = dead;
     }
 
     @Override
@@ -133,10 +110,10 @@ public final class Waypoints extends Module implements WorldLayer {
         List<Point> list = data.get(serverKey(mc));
         if (list == null) return;
         for (Point p : list) {
-            if (!p.dim.equals(dim)) continue;
+            if (p.death || !p.dim.equals(dim)) continue;
             double dist = Math.sqrt(mc.player.distanceToSqr(p.x, p.y, p.z));
             float fade = (float) Math.min(1, Math.max(0.25, dist / 24)); // вблизи луч не мешает обзору
-            int c = Colors.mulAlpha(p.death ? deathColor.get() : color.get(), fade);
+            int c = Colors.mulAlpha(color.get(), fade);
             d.beam(p.x, p.y, p.z, 96, 0.22, c);
             d.ring(p.x, p.y + 0.02, p.z, 0.35, 0.5, 32, Colors.mulAlpha(c, 0.3f), c);
         }

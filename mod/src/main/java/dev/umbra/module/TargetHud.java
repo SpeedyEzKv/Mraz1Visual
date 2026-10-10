@@ -27,7 +27,7 @@ public final class TargetHud extends Module implements HudLayer, AttackListener 
     private float lastHp = -1;
 
     public TargetHud() {
-        super("target_hud", "Target HUD", "Здоровье цели после твоего удара.", Category.HUD);
+        super("target_hud", "Target HUD", "Здоровье цели после твоего удара.", Category.VISUALS);
     }
 
     @Override

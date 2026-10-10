@@ -101,7 +101,7 @@ public final class UmbraScreen extends Screen implements Host {
     /** Анимация открытия (0..1) и смены содержимого (0..1). */
     private float openT, contentT = 1f;
     private long startNanos;
-    private float gearHover;
+    private float gearHover, friendsHover;
 
     private boolean configsMode() {
         return category == Category.CONFIGS && search.isEmpty();
@@ -184,18 +184,17 @@ public final class UmbraScreen extends Screen implements Host {
         layoutH = height;
         layoutSize = cs.size.get();
 
+        // Размер как у референса: окно ~54% ширины экрана при 1080p, без привязки к GUI scale.
         Window win = minecraft.getWindow();
         double gui = win.getGuiScale();
         int pw = win.getWidth(), ph = win.getHeight();
-        int fit = 1;
-        while (pw / (fit + 1) >= Theme.WINDOW_W * 1.15 && ph / (fit + 1) >= Theme.WINDOW_H * 1.15) fit++;
-        int tight = fit;
-        while (pw / (tight + 1) >= Theme.WINDOW_MIN_W + 16 && ph / (tight + 1) >= Theme.WINDOW_MIN_H + 16) tight++;
-        int unit = switch (cs.size.getId()) {
-            case "small" -> Math.max(1, fit - 1);
-            case "large" -> Math.max(fit, Math.min(tight, fit + 1));
-            default -> fit;
+        double base = Math.max(0.75, ph / 1080.0) * switch (cs.size.getId()) {
+            case "small" -> 1.2;
+            case "large" -> 1.65;
+            default -> 1.4;
         };
+        double fit = Math.min(pw / (double) (Theme.WINDOW_W + 24), ph / (double) (Theme.WINDOW_H + 24));
+        double unit = Math.max(0.6, Math.min(base, fit));
         k = (float) (unit / gui);
         d.scale = k;
         vw = (int) (width / k);
@@ -218,7 +217,8 @@ public final class UmbraScreen extends Screen implements Host {
     }
 
     private static final int ICON = 9;
-    private static final int TILE = 18;
+    private static final int TILE = 19;
+    private static final int HEADER = Theme.HEADER_H;
 
     private int listX() { return wx + 6; }
     private int listY() { return wy + Theme.TOPBAR_H + 6; }
@@ -228,19 +228,18 @@ public final class UmbraScreen extends Screen implements Host {
     private int cY() { return wy + Theme.TOPBAR_H; }
     private int cW() { return ww - Theme.SIDEBAR_W; }
     private int cH() { return wh - Theme.TOPBAR_H; }
-    private int bannerX() { return cX() + Theme.PAD; }
-    private int bannerY() { return cY() + Theme.PAD; }
-    private int bannerW() { return cW() - 2 * Theme.PAD; }
-    private int bannerH() { return Math.min(Theme.BANNER_H, Math.round(cH() * 0.45f)); }
-    private int cardsY() { return bannerY() + bannerH() + Theme.GAP; }
+    private int headerX() { return cX() + Theme.PAD + 4; }
+    private int headerY() { return cY() + 10; }
+    private int cardsY() { return headerY() + HEADER + Theme.GAP + 2; }
     private int cardsH() { return wy + wh - cardsY() - 4; }
     private int avatarX() { return wx + ww - Theme.PAD - TILE; }
     private int gearX() { return avatarX() - 6 - TILE; }
     private int tileY() { return wy + (Theme.TOPBAR_H - TILE) / 2; }
-    private int searchX() { return gearX() - 8 - Theme.SEARCH_W; }
+    private int friendsX() { return gearX() - 5 - TILE; }
+    private int searchX() { return friendsX() - 8 - Theme.SEARCH_W; }
     private int searchY() { return wy + (Theme.TOPBAR_H - TILE) / 2; }
-    private int headerToggleX() { return bannerX() + bannerW() - 12 - Theme.SWITCH_W; }
-    private int headerMidY() { return bannerY() + bannerH() - 18; }
+    private int headerToggleX() { return cX() + cW() - Theme.PAD - 6 - Theme.SWITCH_W; }
+    private int headerMidY() { return headerY() + HEADER / 2 - 3; }
 
     private void rebuildList() {
         list.clear();
@@ -276,6 +275,11 @@ public final class UmbraScreen extends Screen implements Host {
         selected = m;
         if (m != null) {
             lastInCategory.put(m.category, m);
+            if (category != m.category && search.isEmpty()) {
+                category = m.category;
+                listScroll = listTarget = 0;
+                rebuildList();
+            }
             category = m.category;
         }
         contentScroll = contentTarget = 0;
@@ -294,10 +298,10 @@ public final class UmbraScreen extends Screen implements Host {
         if (selected == null) return;
 
         headerToggle = selected.isEnabled() ? 1 : 0;
-        headerDesc = Draw.ellipsize(selected.description, bannerW() - 40 - (selected.alwaysOn() ? 0 : 130));
+        headerDesc = Draw.ellipsize(selected.description, cW() - 2 * Theme.PAD - 30 - (selected.alwaysOn() ? 0 : 130));
         if (!selected.alwaysOn()) {
             headerBind = new BindWidget(selected.bind, this, false);
-            headerBind.setBounds(headerToggleX() - 10 - 60, headerMidY() - 10, 60, 20);
+            headerBind.setBounds(headerToggleX() - 10 - 60, headerMidY() - 8, 60, 16);
         }
 
         Map<String, List<Setting<?>>> groups = new LinkedHashMap<>();
@@ -489,6 +493,12 @@ public final class UmbraScreen extends Screen implements Host {
         d.card(gx, gy, TILE, TILE, Theme.RADIUS_SM + 1, Colors.lerp(Theme.FIELD, Theme.FIELD_HOVER, gearHover),
                 category == Category.CLIENT && !searching ? Theme.accentSoft() : Theme.CARD_EDGE);
         d.icon(Icons.GEAR, gx + 4, gy + 4, TILE - 8, Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, gearHover));
+        // друзья — открывает Misc → Friends
+        int fx = friendsX();
+        boolean fh = Widget.hit(mx, my, fx, gy, TILE, TILE);
+        friendsHover = Anim.to(friendsHover, fh ? 1 : 0, dt);
+        d.card(fx, gy, TILE, TILE, Theme.RADIUS_SM + 1, Colors.lerp(Theme.FIELD, Theme.FIELD_HOVER, friendsHover), Theme.CARD_EDGE);
+        d.icon(Icons.FRIENDS, fx + 4, gy + 4, TILE - 8, Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, friendsHover));
         drawAvatar(avatarX(), tileY());
 
         d.hLine(wx + 1, wy + Theme.TOPBAR_H, ww - 2, Theme.DIVIDER);
@@ -552,28 +562,20 @@ public final class UmbraScreen extends Screen implements Host {
             return;
         }
 
-        // шапка-превью модуля
-        int bx = bannerX(), by = bannerY(), bw = bannerW(), bh = bannerH();
-        d.round(bx - 1, by - 1, bw + 2, bh + 2, Theme.RADIUS + 1, Theme.CARD_EDGE);
-        PreviewRenderer.render(d, selected.id, bx, by, bw, bh, time, Theme.accent());
-        // скругляем углы картинки цветом окна
-        corners(bx, by, bw, bh, Theme.RADIUS, 0xFF0A0A0E);
-        int dotA = 120 + Math.round(100 * (0.5f + 0.5f * (float) Math.sin(time * 3)));
-        int pw0 = Fonts.width("ПРЕДПРОСМОТР", Fonts.Kind.HEAD);
-        d.disc(bx + bw - 12 - pw0 - 6, by + 11.5f, 1.8f, Colors.withAlpha(Theme.accent(), dotA));
-        d.text("ПРЕДПРОСМОТР", Fonts.Kind.HEAD, bx + bw - 12 - pw0, by + 8, 0xB0E9E9F1);
-
+        // шапка модуля: иконка, название, описание; справа клавиша и тумблер
+        int hx = headerX(), hy = headerY();
         int iconIdx = Icons.forModule(selected.id, Icons.forCategory(selected.category));
-        d.icon(iconIdx, bx + 12, by + bh - 31, 14, Theme.TEXT);
-        d.textScaled(selected.name, Fonts.Kind.HEAD, bx + 32, by + bh - 36, 1.75f, Theme.TEXT);
-        d.text(headerDesc, bx + 32, by + bh - 16, Theme.TEXT_DIM);
+        d.icon(iconIdx, hx, hy + 9, 14, Theme.TEXT);
+        d.textScaled(selected.name, Fonts.Kind.HEAD, hx + 22, hy + 4, 1.45f, Theme.TEXT);
+        d.text(headerDesc, hx + 22, hy + 24, Theme.TEXT_DIM);
         if (!selected.alwaysOn()) {
             headerToggle = Anim.to(headerToggle, selected.isEnabled() ? 1 : 0, dt);
             d.toggle(headerToggleX(), headerMidY() - Theme.SWITCH_H / 2, headerToggle);
             headerBind.render(d, mx, my, dt);
             int labelRight = headerBind.x + headerBind.w - headerBind.buttonWidth(d) - 6;
-            d.textRight("КЛАВИША", labelRight, Draw.textY(headerBind.y, headerBind.h), 0xB0E9E9F1);
+            d.textScaled("КЛАВИША", Fonts.Kind.HEAD, Math.round(labelRight - Fonts.width("КЛАВИША", Fonts.Kind.HEAD) * 0.8f), Draw.textY(headerBind.y, headerBind.h) + 1, 0.8f, Theme.TEXT_MUTED);
         }
+        d.hLine(cx + 1, hy + HEADER, cw - 2, Theme.DIVIDER);
 
         // карточки настроек
         int ay = cardsY(), ah = cardsH();
@@ -676,6 +678,11 @@ public final class UmbraScreen extends Screen implements Host {
             return true;
         }
         searchFocused = false;
+        if (Widget.hit(mx, my, friendsX(), tileY(), TILE, TILE)) {
+            Module f = mm.find("friends");
+            if (f != null) select(f);
+            return true;
+        }
         if (Widget.hit(mx, my, gearX(), tileY(), TILE, TILE)) {
             selectCategory(Category.CLIENT);
             return true;

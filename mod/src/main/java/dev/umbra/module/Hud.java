@@ -31,7 +31,7 @@ public final class Hud extends Module implements HudLayer {
     private String fpsStr = "", pingStr = "", coordStr = "";
 
     public Hud() {
-        super("hud", "HUD", "Кадры, пинг, координаты и броня на экране.", Category.HUD);
+        super("hud", "Interface", "Кадры, пинг, координаты и броня на экране.", Category.VISUALS);
     }
 
     @Override
@@ -59,7 +59,7 @@ public final class Hud extends Module implements HudLayer {
             pair(g, "кадров/с", fpsStr, x, y);
         }
 
-        if (coords.get()) {
+        if (coords.get() && !StreamerMode.hidesCoords()) {
             int bx = p.getBlockX(), by = p.getBlockY(), bz = p.getBlockZ();
             if (bx != lastX || by != lastY || bz != lastZ) {
                 lastX = bx; lastY = by; lastZ = bz;

@@ -9,4 +9,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface ContainerScreenAccessor {
     @Accessor("hoveredSlot")
     Slot umbra$hoveredSlot();
+
+    @Accessor("leftPos")
+    int umbra$leftPos();
+
+    @Accessor("topPos")
+    int umbra$topPos();
 }

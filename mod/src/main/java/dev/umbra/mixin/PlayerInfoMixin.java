@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 abstract class PlayerInfoMixin {
     @ModifyReturnValue(method = "getSkin", at = @At("RETURN"), require = 0)
     private PlayerSkin umbra$cape(PlayerSkin skin) {
-        return Cape.apply((PlayerInfo) (Object) this, skin);
+        PlayerInfo self = (PlayerInfo) (Object) this;
+        return Cape.apply(self, dev.umbra.module.LocalSkin.apply(self, skin));
     }
 }

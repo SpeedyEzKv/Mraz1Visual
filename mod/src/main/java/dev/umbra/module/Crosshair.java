@@ -24,7 +24,7 @@ public final class Crosshair extends Module {
     final BoolSetting cooldown = add(new BoolSetting("cooldown", "Полоса заряда удара", true));
 
     public Crosshair() {
-        super("crosshair", "Crosshair", "Свой прицел: крест, точка или уголки.", Category.HUD);
+        super("crosshair", "Crosshair", "Свой прицел: крест, точка или уголки.", Category.VISUALS);
         instance = this;
     }
 

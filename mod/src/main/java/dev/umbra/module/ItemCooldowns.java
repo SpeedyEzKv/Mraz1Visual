@@ -17,7 +17,7 @@ public final class ItemCooldowns extends Module implements HudLayer {
     private final Item[] seen = new Item[10];
 
     public ItemCooldowns() {
-        super("item_cooldowns", "Item Cooldowns", "Перезарядка жемчуга и др. под прицелом.", Category.HUD);
+        super("item_cooldowns", "Item Cooldowns", "Перезарядка жемчуга и др. под прицелом.", Category.VISUALS);
     }
 
     @Override

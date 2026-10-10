@@ -4,10 +4,7 @@ package dev.umbra.core;
 public enum Category {
     PLAYER("Player", "Здесь появятся визуалы игрока."),
     VISUALS("Visuals", "Здесь появятся визуалы."),
-    WORLD("World", "Здесь появятся визуалы мира."),
-    HUD("HUD", "Здесь появятся элементы HUD."),
     MISC("Misc", "Здесь появятся мелочи."),
-    COSMETICS("Cosmetics", "Здесь появятся косметики."),
     MUSIC("Music", "Музыка с компьютера."),
     CONFIGS("Configs", "Профили настроек."),
     CLIENT("Настройки", "");

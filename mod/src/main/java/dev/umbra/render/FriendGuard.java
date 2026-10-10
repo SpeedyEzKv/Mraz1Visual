@@ -1,13 +1,12 @@
 package dev.umbra.render;
 
 import dev.umbra.core.Friends;
-import dev.umbra.module.ChatHelpers;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 
-/** No Friend Damage: удар по другу из friends.txt не отправляется. */
+/** No Friend Damage: удар по другу не отправляется. */
 public final class FriendGuard {
     public static volatile boolean enabled;
 

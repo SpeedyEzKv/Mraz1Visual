@@ -30,6 +30,8 @@ public final class WorldDraw {
     private VertexConsumer vc;
     private Matrix4f pose;
     private double cx, cy, cz;
+    private MultiBufferSource src;
+    private org.joml.Quaternionf rot = new org.joml.Quaternionf();
 
     private WorldDraw() {}
 
@@ -51,6 +53,9 @@ public final class WorldDraw {
         d.cy = cam.y;
         d.cz = cam.z;
         d.pose = ps.last().pose();
+        d.src = src;
+        org.joml.Quaternionf o = ctx.worldState().cameraRenderState.orientation;
+        if (o != null) d.rot = o;
         d.vc = src.getBuffer(RenderTypes.debugQuads());
         float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         for (WorldLayer l : layers) {
@@ -61,6 +66,7 @@ public final class WorldDraw {
             }
         }
         d.vc = null;
+        d.src = null;
     }
 
     // ── примитивы ────────────────────────────────────────────
@@ -139,6 +145,42 @@ public final class WorldDraw {
         quad(x + h, y, z - h, x + h, y, z + h, x + h, y2, z + h, x + h, y2, z - h, color, color, top, top);
         quad(x + h, y, z + h, x - h, y, z + h, x - h, y2, z + h, x + h, y2, z + h, color, color, top, top);
         quad(x - h, y, z + h, x - h, y, z - h, x - h, y2, z - h, x - h, y2, z + h, color, color, top, top);
+    }
+
+    public double camX() { return cx; }
+    public double camY() { return cy; }
+    public double camZ() { return cz; }
+
+    /** Отрезок толщиной w, развёрнутый к камере. */
+    public void line(double x1, double y1, double z1, double x2, double y2, double z2, double w, int c) {
+        double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+        double vx = (x1 + x2) / 2 - cx, vy = (y1 + y2) / 2 - cy, vz = (z1 + z2) / 2 - cz;
+        double px = dy * vz - dz * vy, py = dz * vx - dx * vz, pz = dx * vy - dy * vx;
+        double len = Math.sqrt(px * px + py * py + pz * pz);
+        if (len < 1e-6) return;
+        double k = w / 2 / len;
+        px *= k; py *= k; pz *= k;
+        quad(x1 - px, y1 - py, z1 - pz, x1 + px, y1 + py, z1 + pz, x2 + px, y2 + py, z2 + pz, x2 - px, y2 - py, z2 - pz, c, c, c, c);
+    }
+
+    /**
+     * Табличка с текстом над точкой (как ник), с проверкой глубины — сквозь стены не видна.
+     * После текста буфер квадов берётся заново: смена типа рендера закрывает прошлый.
+     */
+    public void label(net.minecraft.network.chat.Component text, double x, double y, double z, float scale, int color, int background) {
+        if (src == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        PoseStack ps = new PoseStack();
+        ps.last().pose().set(pose);
+        ps.translate((float) (x - cx), (float) (y - cy), (float) (z - cz));
+        ps.mulPose(rot);
+        float s = 0.025f * scale;
+        ps.scale(s, -s, s);
+        var font = mc.font;
+        float w = font.width(text);
+        font.drawInBatch(text, -w / 2f, 0, color, false, ps.last().pose(), src,
+                net.minecraft.client.gui.Font.DisplayMode.NORMAL, background, 0xF000F0);
+        vc = src.getBuffer(RenderTypes.debugQuads());
     }
 
     private static float cos(int i, int n) {

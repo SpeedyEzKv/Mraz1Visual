@@ -17,6 +17,12 @@ public abstract class MinecraftMixin {
         return MenuRouter.route((Minecraft) (Object) this, screen);
     }
 
+    /** World Music: своя музыка вместо ситуационной. */
+    @com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "getSituationalMusic", at = @At("RETURN"), require = 0)
+    private net.minecraft.sounds.Music umbra$music(net.minecraft.sounds.Music original) {
+        return dev.umbra.module.WorldMusic.apply(original);
+    }
+
     /** Заголовок окна: «Umbra 0.1.x» вместо «Minecraft* 1.21.11 — Одиночная игра». */
     @Inject(method = "createTitle", at = @At("HEAD"), cancellable = true, require = 0)
     private void umbra$title(CallbackInfoReturnable<String> cir) {

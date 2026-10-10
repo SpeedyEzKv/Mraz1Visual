@@ -28,7 +28,7 @@ public final class Keystrokes extends Module implements HudLayer {
     private long last;
 
     public Keystrokes() {
-        super("keystrokes", "Keystrokes", "WASD, пробел и клики с CPS на экране.", Category.HUD);
+        super("keystrokes", "Keystrokes", "WASD, пробел и клики с CPS на экране.", Category.VISUALS);
     }
 
     @Override
