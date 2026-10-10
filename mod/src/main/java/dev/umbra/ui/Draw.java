@@ -68,6 +68,76 @@ public final class Draw {
         round(x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), fill);
     }
 
+    // ── дробные примитивы (для превью и анимаций) ─────────────
+
+    /** Прямоугольник с точностью 1/4 единицы. */
+    public void rectF(float x, float y, float w, float h, int color) {
+        if (w <= 0 || h <= 0 || (color >>> 24) == 0) return;
+        g.pose().pushMatrix();
+        g.pose().scale(0.25f, 0.25f);
+        int x0 = Math.round(x * 4), y0 = Math.round(y * 4);
+        int x1 = Math.max(x0 + 1, Math.round((x + w) * 4)), y1 = Math.max(y0 + 1, Math.round((y + h) * 4));
+        g.fill(x0, y0, x1, y1, color);
+        g.pose().popMatrix();
+    }
+
+    /** Отрезок заданной толщины. */
+    public void line(float x0, float y0, float x1, float y1, float t, int color) {
+        if ((color >>> 24) == 0) return;
+        float dx = x1 - x0, dy = y1 - y0;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.01f) return;
+        g.pose().pushMatrix();
+        g.pose().translate(x0, y0);
+        g.pose().rotate((float) Math.atan2(dy, dx));
+        g.pose().scale(0.25f, 0.25f);
+        int ht = Math.max(1, Math.round(t * 2));
+        g.fill(0, -ht, Math.round(len * 4), ht, color);
+        g.pose().popMatrix();
+    }
+
+    /** Окружность-кольцо. */
+    public void ring(float cx, float cy, float r, float t, int color) {
+        int seg = Math.max(12, Math.min(64, Math.round(r * 2.2f)));
+        float px = cx + r, py = cy;
+        for (int i = 1; i <= seg; i++) {
+            double a = Math.PI * 2 * i / seg;
+            float nx = cx + (float) Math.cos(a) * r, ny = cy + (float) Math.sin(a) * r;
+            line(px, py, nx, ny, t, color);
+            px = nx;
+            py = ny;
+        }
+    }
+
+    /** Эллипс-кольцо (для «кругов на земле»). */
+    public void ellipseRing(float cx, float cy, float rx, float ry, float t, int color) {
+        int seg = Math.max(16, Math.min(72, Math.round(rx * 2)));
+        float px = cx + rx, py = cy;
+        for (int i = 1; i <= seg; i++) {
+            double a = Math.PI * 2 * i / seg;
+            float nx = cx + (float) Math.cos(a) * rx, ny = cy + (float) Math.sin(a) * ry;
+            line(px, py, nx, ny, t, color);
+            px = nx;
+            py = ny;
+        }
+    }
+
+    /** Закрашенный круг с точностью 1/4 единицы. */
+    public void disc(float cx, float cy, float r, int color) {
+        if (r <= 0) return;
+        float step = 0.25f;
+        for (float y = -r; y < r; y += step) {
+            float yy = y + step / 2;
+            float hw = (float) Math.sqrt(Math.max(0, r * r - yy * yy));
+            rectF(cx - hw, cy + y, hw * 2, step, color);
+        }
+    }
+
+    /** Иконка из атласа {@link Icons}. */
+    public void icon(int index, int x, int y, int size, int color) {
+        Icons.draw(g, index, x, y, size, color);
+    }
+
     public void circle(int cx, int cy, int d, int color) {
         round(cx - d / 2, cy - d / 2, d, d, d / 2, color);
     }

@@ -44,7 +44,7 @@ public final class UmbraServersScreen extends MenuBase {
     private final TextInput addrIn = new TextInput("mc.example.net", 128);
     private final TextInput directIn = new TextInput("mc.example.net", 128);
     private String formError = "";
-    private final float[] actHover = new float[3];
+    private final float[] actHover = new float[4];
 
     /** Кэш отрисовки строки: пересчитывается только при изменении данных сервера. */
     private static final class Row {
@@ -70,7 +70,7 @@ public final class UmbraServersScreen extends MenuBase {
         super("Серверы");
         this.parent = parent;
         itList = item("СЕРВЕРЫ", () -> setMode(Mode.LIST));
-        itAdd = item("ДОБАВИТЬ", () -> setMode(Mode.ADD));
+        itAdd = item("ДОБАВИТЬ", () -> minecraft.setScreen(new UmbraAddServerScreen(this, null, this::addServer)));
         itDirect = item("ПО АДРЕСУ", () -> setMode(Mode.DIRECT));
         itemAfterGap("НАЗАД", this::onClose);
         itList.selected = true;
@@ -155,6 +155,24 @@ public final class UmbraServersScreen extends MenuBase {
         setMode(Mode.LIST);
     }
 
+    private void addServer(ServerData data) {
+        servers.add(data, false);
+        servers.save();
+        reloadRows(false);
+        ping.ping(data, servers::save);
+        selected = rows.size() - 1;
+    }
+
+    private void editSelected() {
+        if (selected < 0 || selected >= rows.size()) return;
+        ServerData data = rows.get(selected).data;
+        minecraft.setScreen(new UmbraAddServerScreen(this, data, d -> {
+            servers.save();
+            reloadRows(false);
+            ping.ping(d, servers::save);
+        }));
+    }
+
     private void submitDirect() {
         String addr = directIn.value().trim();
         if (!ServerAddress.isValidAddress(addr)) {
@@ -228,10 +246,11 @@ public final class UmbraServersScreen extends MenuBase {
         boolean armed = System.currentTimeMillis() < deleteArmedUntil;
         right = action(2, "ОБНОВИТЬ", right, ay, mx, my, dt, true);
         right = action(1, armed ? "ТОЧНО?" : "УДАЛИТЬ", right - 22, ay, mx, my, dt, has);
+        right = action(3, "ИЗМЕНИТЬ", right - 22, ay, mx, my, dt, has);
         action(0, "ИГРАТЬ", right - 22, ay, mx, my, dt, has);
     }
 
-    private final int[] actX = new int[3], actW = new int[3];
+    private final int[] actX = new int[4], actW = new int[4];
     private int actY;
 
     /** Текстовая кнопка, выровненная по правому краю. Возвращает её левый край. */
@@ -353,9 +372,10 @@ public final class UmbraServersScreen extends MenuBase {
 
         switch (mode) {
             case LIST -> {
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < 4; i++) {
                     if (e.button() == 0 && Widget.hit(mx, my, actX[i] - 4, actY - 4, actW[i] + 8, 16)) {
-                        if (i == 2) refresh();
+                        if (i == 3) editSelected();
+                        else if (i == 2) refresh();
                         else if (i == 1) deleteSelected();
                         else if (selected >= 0 && selected < rows.size()) join(rows.get(selected).data);
                         return true;

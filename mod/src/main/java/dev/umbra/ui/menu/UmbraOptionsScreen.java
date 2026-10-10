@@ -25,7 +25,6 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
-import net.minecraft.client.gui.screens.options.SkinCustomizationScreen;
 import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.CharacterEvent;
@@ -44,7 +43,7 @@ import java.util.List;
  * подсказка к наведённому параметру внизу. Редкие настройки — «Все настройки» (ванильный экран).
  */
 public final class UmbraOptionsScreen extends MenuBase implements Host {
-    private enum Section { GRAPHICS, SOUND, CONTROLS, CHAT }
+    private enum Section { GRAPHICS, SOUND, CONTROLS, CHAT, SKIN, PACKS }
 
     /** Ванильный экран, открытый через «Все настройки», не перехватываем. */
     static boolean bypass;
@@ -81,12 +80,8 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
         sectionItems[1] = item("ЗВУК", () -> setSection(Section.SOUND));
         sectionItems[2] = item("УПРАВЛЕНИЕ", () -> setSection(Section.CONTROLS));
         sectionItems[3] = item("ЧАТ", () -> setSection(Section.CHAT));
-        item("СКИН", () -> minecraft.setScreen(new SkinCustomizationScreen(this, minecraft.options)));
-        item("ВСЕ НАСТРОЙКИ", () -> {
-            bypass = true;
-            minecraft.setScreen(new OptionsScreen(this, minecraft.options));
-            bypass = false;
-        });
+        sectionItems[4] = item("СКИН", () -> setSection(Section.SKIN));
+        sectionItems[5] = item("РЕСУРСПАКИ", () -> setSection(Section.PACKS));
         itemAfterGap("НАЗАД", this::onClose);
         sectionItems[0].selected = true;
     }
@@ -130,7 +125,11 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
         build();
     }
 
+    private final PacksPanel packs = new PacksPanel();
+
     private void setSection(Section s) {
+        if (section == Section.PACKS && s != Section.PACKS) packs.apply();
+        if (s == Section.PACKS && section != Section.PACKS) packs.open();
         section = s;
         for (int i = 0; i < sectionItems.length; i++) sectionItems[i].selected = i == s.ordinal();
         scroll = scrollTarget = 0;
@@ -153,6 +152,8 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
             case SOUND -> sound(list);
             case CONTROLS -> controls(list);
             case CHAT -> chat(list);
+            case SKIN -> skin(list);
+            case PACKS -> { }
         }
         int rows = (list.size() + 1) / 2;
         for (int i = 0; i < list.size(); i++) {
@@ -317,6 +318,25 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
         l.add(OptionBinds.doubles("Межстрочный интервал", o.chatLineSpacing(), 0, 1, 0.01, OptionBinds::pct, "Расстояние между строками.", syncs));
     }
 
+    private void skin(List<Setting<?>> l) {
+        net.minecraft.world.entity.player.PlayerModelPart[] parts = {
+                net.minecraft.world.entity.player.PlayerModelPart.CAPE, net.minecraft.world.entity.player.PlayerModelPart.JACKET,
+                net.minecraft.world.entity.player.PlayerModelPart.LEFT_SLEEVE, net.minecraft.world.entity.player.PlayerModelPart.RIGHT_SLEEVE,
+                net.minecraft.world.entity.player.PlayerModelPart.LEFT_PANTS_LEG, net.minecraft.world.entity.player.PlayerModelPart.RIGHT_PANTS_LEG,
+                net.minecraft.world.entity.player.PlayerModelPart.HAT};
+        String[] names = {"Плащ", "Куртка", "Левый рукав", "Правый рукав", "Левая штанина", "Правая штанина", "Головной убор"};
+        for (int i = 0; i < parts.length; i++) {
+            var part = parts[i];
+            BoolSetting b = new BoolSetting(names[i], names[i], o.isModelPartEnabled(part));
+            b.onChange(() -> o.toggleModelPart(part, b.get()));
+            b.hint("Слой скина: " + names[i].toLowerCase() + ".");
+            syncs.add(() -> b.setSilently(o.isModelPartEnabled(part)));
+            l.add(b);
+        }
+        l.add(OptionBinds.choice("Ведущая рука", o.mainHand(), net.minecraft.world.entity.HumanoidArm.values(), new String[]{"Левая", "Правая"},
+                "В какой руке персонаж держит предмет.", syncs));
+    }
+
     private SettingWidget widgetFor(Setting<?> s) {
         if (s instanceof BoolSetting b) return new ToggleWidget(b, this);
         if (s instanceof SliderSetting sl) return new SliderWidget(sl, this);
@@ -345,6 +365,10 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
         int sc = Math.round(scroll);
         double cmy = inArea ? my + sc : -1e6;
 
+        if (section == Section.PACKS) {
+            packs.render(d, mx, my, dt, px, py, pw, ph, fade);
+            return;
+        }
         if (section == Section.GRAPHICS) renderGraphicsTabs(mx, my, dt);
         else d.text(sectionTitle(), Fonts.Kind.HEAD, px, py - 22, Theme.TEXT_MUTED);
         d.rect(px, py - 8, pw, 1, Theme.DIVIDER);
@@ -430,6 +454,8 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
             case SOUND -> "ЗВУК";
             case CONTROLS -> "УПРАВЛЕНИЕ";
             case CHAT -> "ЧАТ";
+            case SKIN -> "НАСТРОЙКИ СКИНА";
+            case PACKS -> "РЕСУРСПАКИ";
         };
     }
 
@@ -449,6 +475,10 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
             listening = null;
         }
         if (b == 0 && clickItems(mx, my)) return true;
+        if (section == Section.PACKS) {
+            if (b == 0) packs.click(mx, my, px, py, pw, ph);
+            return true;
+        }
         if (b == 0 && clickGraphicsTabs(mx, my)) return true;
         if (extraAction != null) {
             int ey = py + Math.min(contentH, ph) + 12;
@@ -490,6 +520,10 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double sx, double sy) {
+        if (section == Section.PACKS) {
+            packs.scroll(sy, ph);
+            return true;
+        }
         int max = Math.max(0, contentH - ph);
         scrollTarget = (float) Math.max(0, Math.min(max, scrollTarget - sy * ROW_H));
         return true;
@@ -518,6 +552,7 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
 
     @Override
     public void onClose() {
+        if (section == Section.PACKS) packs.apply();
         minecraft.options.save();
         if (o != null && o.guiScale().get() != initialGuiScale) minecraft.resizeDisplay();
         minecraft.setScreen(parent);

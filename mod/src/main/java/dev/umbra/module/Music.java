@@ -30,7 +30,7 @@ public final class Music extends Module implements HudLayer {
     private boolean tWas, nWas, pWas;
 
     public Music() {
-        super("music", "Music", "Что играет на компьютере: обложка, трек, управление.", Category.HUD);
+        super("music", "Music", "Что играет на компьютере: обложка, трек, управление.", Category.MUSIC);
     }
 
     @Override

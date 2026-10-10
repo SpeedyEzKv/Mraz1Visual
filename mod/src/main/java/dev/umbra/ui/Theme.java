@@ -41,20 +41,21 @@ public final class Theme {
     }
 
     // ── размеры (в единицах окна; 1 единица = 1–3 физических пикселя) ──
-    public static final int WINDOW_W   = 620;
-    public static final int WINDOW_H   = 360;
+    public static final int WINDOW_W   = 720;
+    public static final int WINDOW_H   = 380;
     public static final int WINDOW_MIN_W = 480;
     public static final int WINDOW_MIN_H = 280;
     public static final int RADIUS     = 8;
     public static final int RADIUS_SM  = 4;
 
-    public static final int TOPBAR_H   = 30;
-    public static final int SIDEBAR_W  = 158;
+    public static final int TOPBAR_H   = 34;
+    public static final int SIDEBAR_W  = 168;
     public static final int HEADER_H   = 48;
+    public static final int BANNER_H   = 150;
     public static final int ROW_H      = 20;
     public static final int PAD        = 12;
     public static final int GAP        = 8;
-    public static final int TAB_GAP    = 16;
+    public static final int TAB_GAP    = 12;
 
     public static final int CARD_PAD     = 8;
     public static final int CARD_TITLE_H = 18;
@@ -64,7 +65,7 @@ public final class Theme {
     public static final int SWITCH_H   = 10;
     public static final int SLIDER_W   = 84;
     public static final int FIELD_H    = 14;
-    public static final int SEARCH_W   = 110;
+    public static final int SEARCH_W   = 96;
 
     // ── шрифт ────────────────────────────────────────────────
     public static final int FONT_H     = 8; // высота строчных глифов ванильного шрифта

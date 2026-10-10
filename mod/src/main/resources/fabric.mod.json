@@ -6,6 +6,7 @@
   "description": "Личный визуальный клиент. Только то, что игрок и так видит.",
   "authors": ["SpeedyEzKv"],
   "license": "All-Rights-Reserved",
+  "icon": "assets/umbra/icon/icon_128.png",
   "environment": "client",
   "entrypoints": {
     "client": ["dev.umbra.Umbra"]

@@ -8,6 +8,7 @@ public enum Category {
     HUD("HUD", "Здесь появятся элементы HUD."),
     MISC("Misc", "Здесь появятся мелочи."),
     COSMETICS("Cosmetics", "Здесь появятся косметики."),
+    MUSIC("Music", "Музыка с компьютера."),
     CONFIGS("Configs", "Профили настроек."),
     CLIENT("Настройки", "");
 

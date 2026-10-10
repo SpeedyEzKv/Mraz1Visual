@@ -14,6 +14,8 @@ public final class TextInput extends Widget {
     private final int maxLen;
     private String view = "";
     public boolean focused;
+    /** Стиль меню: только линия снизу, без рамки. */
+    public boolean underline;
     private float hover;
 
     public TextInput(String placeholder, int maxLen) {
@@ -32,8 +34,12 @@ public final class TextInput extends Widget {
     @Override
     public void render(Draw d, double mx, double my, float dt) {
         hover = Anim.to(hover, hit(mx, my) || focused ? 1 : 0, dt);
-        d.card(x, y, w, h, Theme.RADIUS_SM, Colors.lerp(Theme.FIELD, Theme.FIELD_HOVER, hover),
-                focused ? Theme.accentSoft() : Theme.CARD_EDGE);
+        if (underline) {
+            d.rect(x, y + h - 1, w, 1, focused ? Theme.accentSoft() : Colors.lerp(0x26FFFFFF, 0x40FFFFFF, hover));
+        } else {
+            d.card(x, y, w, h, Theme.RADIUS_SM, Colors.lerp(Theme.FIELD, Theme.FIELD_HOVER, hover),
+                    focused ? Theme.accentSoft() : Theme.CARD_EDGE);
+        }
         int ty = Draw.textY(y, h);
         String shown = view.isEmpty() ? placeholder : view;
         // длинный текст показываем с конца
@@ -43,9 +49,10 @@ public final class TextInput extends Widget {
             while (start < shown.length() && d.width(shown.substring(start)) > maxW) start++;
             shown = shown.substring(start);
         }
-        d.text(shown, x + 7, ty, view.isEmpty() ? Theme.TEXT_MUTED : Theme.TEXT);
+        int pad = underline ? 0 : 7;
+        d.text(shown, x + pad, ty, view.isEmpty() ? Theme.TEXT_MUTED : Theme.TEXT);
         if (focused && (System.currentTimeMillis() / 500 & 1) == 0) {
-            int cx = x + 7 + (view.isEmpty() ? 0 : Fonts.width(shown)) + 1;
+            int cx = x + pad + (view.isEmpty() ? 0 : Fonts.width(shown)) + 1;
             d.rect(cx, y + (h - 9) / 2, 1, 9, Theme.TEXT);
         }
     }

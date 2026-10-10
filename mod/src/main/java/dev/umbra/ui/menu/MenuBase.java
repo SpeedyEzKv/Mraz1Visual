@@ -161,13 +161,38 @@ public abstract class MenuBase extends Screen {
         lastNanos = 0;
     }
 
+    /** Ник, подпись и лицо скина сверху справа. */
+    protected void renderAccount(String subtitle) {
+        String name = minecraft.getUser().getName();
+        int tile = 24, tx = vw - 36 - tile, ty = 24;
+        net.minecraft.resources.Identifier skin = null;
+        try {
+            if (minecraft.player != null) skin = minecraft.player.getSkin().body().texturePath();
+        } catch (Throwable ignored) {
+        }
+        if (skin != null) {
+            int c = Colors.withAlpha(0xFFFFFF, Math.round(255 * fade));
+            d.g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skin, tx, ty, 8f, 8f, tile, tile, 8, 8, 64, 64, c);
+            d.g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skin, tx, ty, 40f, 8f, tile, tile, 8, 8, 64, 64, c);
+        } else {
+            d.round(tx, ty, tile, tile, 3, Colors.mulAlpha(0xFF2A2A3C, fade));
+            d.textCenter(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(), tx + tile / 2, ty + 8, Colors.mulAlpha(ITEM_HOVER, fade));
+        }
+        int right = tx - 9;
+        d.text(name, Fonts.Kind.BOLD, right - Fonts.width(name, Fonts.Kind.BOLD), ty + 2, Colors.mulAlpha(0xFFE6E6F4, fade));
+        d.textRight(subtitle, right, ty + 14, Colors.mulAlpha(0xFF8686A2, fade));
+    }
+
+    private static final String VERSION = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("umbra")
+            .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("0.1.0");
+
     /** Подпись внизу слева: широкий логотип, версия, автор. */
     protected void renderBrand(int x) {
         int y = vh - 88;
         float sc = 1.4f;
         d.textScaled("UMBRA", Fonts.Kind.BRAND, x, y, sc, Colors.mulAlpha(ITEM_HOVER, fade));
         int bw = Math.round(Fonts.width("UMBRA", Fonts.Kind.BRAND) * sc);
-        d.text("0.1.0", x + bw + 2, y + 12, Colors.mulAlpha(0xFF8A8AA6, fade));
+        d.text(VERSION, x + bw + 2, y + 12, Colors.mulAlpha(0xFF8A8AA6, fade));
         d.text("by SpeedyEzKv", x, y + 30, Colors.mulAlpha(0xFF6E6E88, fade));
     }
 }

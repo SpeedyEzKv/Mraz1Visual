@@ -48,7 +48,11 @@ public final class Umbra implements ClientModInitializer {
         dev.umbra.render.FriendGuard.register();
         PlayStats.load();
         AccountStore.load();
-        ClientLifecycleEvents.CLIENT_STARTED.register(mc -> AccountStore.autoLogin());
+        ClientLifecycleEvents.CLIENT_STARTED.register(mc -> {
+            AccountStore.autoLogin();
+            WindowBranding.applyIcon();
+            mc.updateTitle();
+        });
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {
             CONFIG.saveIfDirty();
             PlayStats.save();

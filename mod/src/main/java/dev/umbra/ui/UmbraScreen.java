@@ -23,6 +23,8 @@ import dev.umbra.ui.widget.SliderWidget;
 import dev.umbra.ui.widget.ToggleWidget;
 import dev.umbra.ui.widget.Widget;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -46,7 +48,8 @@ import java.util.Map;
  * Всё, что можно посчитать заранее, считается в relayout()/rebuild*(), а не в кадре.
  */
 public final class UmbraScreen extends Screen implements Host {
-    private static final Category[] TABS = Category.values();
+    /** Вкладки сверху. «Настройки клиента» — шестерёнка справа. */
+    private static final Category[] TABS = java.util.Arrays.stream(Category.values()).filter(c -> c != Category.CLIENT).toArray(Category[]::new);
     private static final String BRAND = "UMBRA";
     private static final int SEARCH_MAX = 32;
 
@@ -95,6 +98,11 @@ public final class UmbraScreen extends Screen implements Host {
     private long lastNanos;
     private final ProfilesPanel profiles = new ProfilesPanel();
 
+    /** Анимация открытия (0..1) и смены содержимого (0..1). */
+    private float openT, contentT = 1f;
+    private long startNanos;
+    private float gearHover;
+
     private boolean configsMode() {
         return category == Category.CONFIGS && search.isEmpty();
     }
@@ -119,6 +127,8 @@ public final class UmbraScreen extends Screen implements Host {
             restored = true;
             restoreState();
         }
+        openT = cs.animations.get() ? 0f : 1f;
+        startNanos = System.nanoTime();
         profiles.refresh();
         relayout();
     }
@@ -196,16 +206,19 @@ public final class UmbraScreen extends Screen implements Host {
         wx = (vw - ww) / 2;
         wy = (vh - wh) / 2;
 
-        int x = wx + Theme.PAD + Fonts.width(BRAND, Fonts.Kind.HEAD) + 22;
+        int x = wx + Theme.PAD + Fonts.width(BRAND, Fonts.Kind.HEAD) + 20;
         for (int i = 0; i < TABS.length; i++) {
             tabX[i] = x;
-            tabW[i] = Fonts.width(TABS[i].title);
+            tabW[i] = ICON + 5 + Fonts.width(TABS[i].title);
             x += tabW[i] + Theme.TAB_GAP;
         }
         ulInit = false;
         rebuildList();
         rebuildContent();
     }
+
+    private static final int ICON = 9;
+    private static final int TILE = 18;
 
     private int listX() { return wx + 6; }
     private int listY() { return wy + Theme.TOPBAR_H + 6; }
@@ -215,12 +228,19 @@ public final class UmbraScreen extends Screen implements Host {
     private int cY() { return wy + Theme.TOPBAR_H; }
     private int cW() { return ww - Theme.SIDEBAR_W; }
     private int cH() { return wh - Theme.TOPBAR_H; }
-    private int cardsY() { return cY() + Theme.HEADER_H; }
-    private int cardsH() { return cH() - Theme.HEADER_H; }
-    private int searchX() { return wx + ww - Theme.PAD - Theme.SEARCH_W; }
-    private int searchY() { return wy + (Theme.TOPBAR_H - 16) / 2; }
-    private int headerToggleX() { return cX() + cW() - Theme.PAD - Theme.SWITCH_W; }
-    private int headerMidY() { return cY() + 18; }
+    private int bannerX() { return cX() + Theme.PAD; }
+    private int bannerY() { return cY() + Theme.PAD; }
+    private int bannerW() { return cW() - 2 * Theme.PAD; }
+    private int bannerH() { return Math.min(Theme.BANNER_H, Math.round(cH() * 0.45f)); }
+    private int cardsY() { return bannerY() + bannerH() + Theme.GAP; }
+    private int cardsH() { return wy + wh - cardsY() - 4; }
+    private int avatarX() { return wx + ww - Theme.PAD - TILE; }
+    private int gearX() { return avatarX() - 6 - TILE; }
+    private int tileY() { return wy + (Theme.TOPBAR_H - TILE) / 2; }
+    private int searchX() { return gearX() - 8 - Theme.SEARCH_W; }
+    private int searchY() { return wy + (Theme.TOPBAR_H - TILE) / 2; }
+    private int headerToggleX() { return bannerX() + bannerW() - 12 - Theme.SWITCH_W; }
+    private int headerMidY() { return bannerY() + bannerH() - 18; }
 
     private void rebuildList() {
         list.clear();
@@ -259,6 +279,7 @@ public final class UmbraScreen extends Screen implements Host {
             category = m.category;
         }
         contentScroll = contentTarget = 0;
+        contentT = cs.animations.get() ? 0f : 1f;
         rebuildContent();
     }
 
@@ -273,10 +294,10 @@ public final class UmbraScreen extends Screen implements Host {
         if (selected == null) return;
 
         headerToggle = selected.isEnabled() ? 1 : 0;
-        headerDesc = Draw.ellipsize(selected.description, cW() - 2 * Theme.PAD - (selected.alwaysOn() ? 0 : 120));
+        headerDesc = Draw.ellipsize(selected.description, bannerW() - 40 - (selected.alwaysOn() ? 0 : 130));
         if (!selected.alwaysOn()) {
             headerBind = new BindWidget(selected.bind, this, false);
-            headerBind.setBounds(headerToggleX() - 12 - 60, headerMidY() - 10, 60, 20);
+            headerBind.setBounds(headerToggleX() - 10 - 60, headerMidY() - 10, 60, 20);
         }
 
         Map<String, List<Setting<?>>> groups = new LinkedHashMap<>();
@@ -286,7 +307,7 @@ public final class UmbraScreen extends Screen implements Host {
         int cols = inner >= 2 * Theme.CARD_MIN_W + Theme.GAP ? 2 : 1;
         int colW = (inner - (cols - 1) * Theme.GAP) / cols;
         int[] colY = new int[cols];
-        for (int i = 0; i < cols; i++) colY[i] = cardsY() + 6;
+        for (int i = 0; i < cols; i++) colY[i] = cardsY() + 2;
 
         for (Map.Entry<String, List<Setting<?>>> e : groups.entrySet()) {
             int col = 0;
@@ -352,6 +373,7 @@ public final class UmbraScreen extends Screen implements Host {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         long now = System.nanoTime();
         float dt = lastNanos == 0 ? 1f : Math.min(0.1f, (now - lastNanos) / 1e9f);
+        float animDt = lastNanos == 0 ? 0f : dt;
         lastNanos = now;
         Anim.enabled = cs.animations.get();
         if (width != layoutW || height != layoutH || cs.size.get() != layoutSize) relayout();
@@ -362,12 +384,27 @@ public final class UmbraScreen extends Screen implements Host {
 
         listScroll = Anim.to(listScroll, listTarget, dt);
         contentScroll = Anim.to(contentScroll, contentTarget, dt);
+        if (openT < 1f) openT = Math.min(1f, openT + animDt / 0.75f);
+        if (contentT < 1f) contentT = Math.min(1f, contentT + animDt / 0.22f);
+        float time = (now - startNanos) / 1e9f;
 
         d.begin(g, font, k);
-        drawWindow();
+        if (openT < 1f) drawOpening(openT);
+        float grow = ease(clamp((openT - 0.22f) / 0.4f, 0, 1));
+        if (grow <= 0f) {
+            d.end();
+            return;
+        }
+        int gh = Math.max(2, Math.round(wh * grow));
+        int gy = wy + (wh - gh) / 2;
+        drawWindow(gy, gh);
+        d.clip(wx, gy, ww, gh);
         drawTopBar(mx, my, dt, now);
         drawSidebar(mx, my, dt);
-        drawContent(mx, my, dt);
+        drawContent(mx, my, dt, time);
+        float reveal = clamp((openT - 0.5f) / 0.35f, 0, 1);
+        if (reveal < 1f) d.rect(wx + 1, gy + 1, ww - 2, gh - 2, Colors.withAlpha(0x0A0A0E, Math.round(255 * (1 - ease(reveal)))));
+        d.unclip();
         if (popup != null) {
             if (popup.isClosed()) popup = null;
             else {
@@ -378,10 +415,31 @@ public final class UmbraScreen extends Screen implements Host {
         d.end();
     }
 
-    private void drawWindow() {
-        d.round(wx - 8, wy - 5, ww + 16, wh + 18, Theme.RADIUS + 8, 0x18000000);
-        d.round(wx - 3, wy - 1, ww + 6, wh + 7, Theme.RADIUS + 3, Theme.SHADOW);
-        d.card(wx, wy, ww, wh, Theme.RADIUS, Theme.WINDOW, Theme.WINDOW_EDGE);
+    private static float ease(float t) {
+        return 1f - (float) Math.pow(1f - t, 3);
+    }
+
+    /** Открытие: затмение и полоса света, из которой раскрывается окно. */
+    private void drawOpening(float t) {
+        float a = t < 0.15f ? t / 0.15f : t < 0.45f ? 1f : Math.max(0f, 1f - (t - 0.45f) / 0.25f);
+        if (a <= 0f) return;
+        float cx = wx + ww * 0.78f, cy = wy - wh * 0.02f, r = wh * 0.22f;
+        int acc = Theme.accent();
+        for (int i = 8; i > 0; i--) d.disc(cx, cy, r + i * 3f, Colors.withAlpha(acc, Math.round(a * (8 + (8 - i) * 5))));
+        d.disc(cx, cy, r + 1.5f, Colors.withAlpha(0xE8E4FF, Math.round(a * 230)));
+        d.disc(cx, cy, r, Colors.withAlpha(0x050508, Math.round(a * 255)));
+        // горизонт: линия света раскрывается из центра
+        float line = ease(clamp(t / 0.3f, 0, 1));
+        int lw = Math.round(ww * 1.1f * line);
+        int ly = wy + wh / 2;
+        d.rect(wx + (ww - lw) / 2, ly, lw, 1, Colors.withAlpha(0xE8E4FF, Math.round(a * 160)));
+        d.rect(wx + (ww - lw) / 2, ly - 2, lw, 5, Colors.withAlpha(acc, Math.round(a * 30)));
+    }
+
+    private void drawWindow(int y, int h) {
+        d.round(wx - 8, y - 5, ww + 16, h + 18, Theme.RADIUS + 8, 0x18000000);
+        d.round(wx - 3, y - 1, ww + 6, h + 7, Theme.RADIUS + 3, Theme.SHADOW);
+        d.card(wx, y, ww, h, Theme.RADIUS, Theme.WINDOW, Theme.WINDOW_EDGE);
     }
 
     private void drawTopBar(double mx, double my, float dt, long now) {
@@ -394,7 +452,8 @@ public final class UmbraScreen extends Screen implements Host {
             tabHover[i] = Anim.to(tabHover[i], hov ? 1 : 0, dt);
             boolean on = TABS[i] == category && !searching;
             int c = on ? Theme.TEXT : Colors.lerp(Theme.TEXT_MUTED, Theme.TEXT_DIM, tabHover[i]);
-            d.text(TABS[i].title, tabX[i], ty, c);
+            d.icon(Icons.forCategory(TABS[i]), tabX[i], wy + (Theme.TOPBAR_H - ICON) / 2, ICON, c);
+            d.text(TABS[i].title, tabX[i] + ICON + 5, ty, c);
             if (TABS[i] == category) {
                 if (!ulInit) {
                     ulX = tabX[i];
@@ -405,22 +464,32 @@ public final class UmbraScreen extends Screen implements Host {
                 ulW = Anim.to(ulW, tabW[i], dt);
             }
         }
-        if (!searching && ulInit) {
+        if (!searching && ulInit && category != Category.CLIENT) {
             int ux = Math.round(ulX), uw = Math.round(ulW);
             d.round(ux - 4, wy + Theme.TOPBAR_H - 4, uw + 8, 4, 2, Colors.withAlpha(Theme.accent(), 0x26));
             d.round(ux, wy + Theme.TOPBAR_H - 2, uw, 2, 1, Theme.accent());
         }
 
         int sx = searchX(), sy = searchY();
-        boolean sh = Widget.hit(mx, my, sx, sy, Theme.SEARCH_W, 16);
-        d.card(sx, sy, Theme.SEARCH_W, 16, Theme.RADIUS_SM, sh || searchFocused ? Theme.FIELD_HOVER : Theme.FIELD,
+        boolean sh = Widget.hit(mx, my, sx, sy, Theme.SEARCH_W, TILE);
+        d.card(sx, sy, Theme.SEARCH_W, TILE, Theme.RADIUS_SM + 1, sh || searchFocused ? Theme.FIELD_HOVER : Theme.FIELD,
                 searchFocused ? Theme.accentSoft() : Theme.CARD_EDGE);
-        int textY = Draw.textY(sy, 16);
-        if (searching) d.text(searchView, sx + 7, textY, Theme.TEXT);
-        else d.text("Поиск", sx + 7, textY, Theme.TEXT_MUTED);
+        int textY = Draw.textY(sy, TILE);
+        d.icon(Icons.SEARCH, sx + 6, sy + (TILE - 8) / 2, 8, Theme.TEXT_MUTED);
+        if (searching) d.text(searchView, sx + 19, textY, Theme.TEXT);
+        else d.text("Поиск", sx + 19, textY, Theme.TEXT_MUTED);
         if (searchFocused && (now / 500_000_000L & 1) == 0) {
-            d.rect(sx + 7 + (searching ? d.width(searchView) : 0) + 1, sy + 4, 1, 8, Theme.TEXT);
+            d.rect(sx + 19 + (searching ? d.width(searchView) : 0) + 1, sy + 5, 1, 8, Theme.TEXT);
         }
+
+        // шестерёнка — настройки клиента
+        int gx = gearX(), gy = tileY();
+        boolean gh = Widget.hit(mx, my, gx, gy, TILE, TILE);
+        gearHover = Anim.to(gearHover, gh || category == Category.CLIENT ? 1 : 0, dt);
+        d.card(gx, gy, TILE, TILE, Theme.RADIUS_SM + 1, Colors.lerp(Theme.FIELD, Theme.FIELD_HOVER, gearHover),
+                category == Category.CLIENT && !searching ? Theme.accentSoft() : Theme.CARD_EDGE);
+        d.icon(Icons.GEAR, gx + 4, gy + 4, TILE - 8, Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, gearHover));
+        drawAvatar(avatarX(), tileY());
 
         d.hLine(wx + 1, wy + Theme.TOPBAR_H, ww - 2, Theme.DIVIDER);
     }
@@ -453,18 +522,25 @@ public final class UmbraScreen extends Screen implements Host {
 
             int nameColor = m == selected || (m.isEnabled() && !m.alwaysOn()) ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, a[0]);
             int textY = Draw.textY(ry, Theme.ROW_H);
-            d.text(m.name, lx + 9, textY, nameColor);
+            d.icon(Icons.forModule(m.id, Icons.forCategory(m.category)), lx + 8, ry + (Theme.ROW_H - 8) / 2, 8,
+                    Colors.lerp(Theme.TEXT_MUTED, nameColor, 0.6f));
+            d.text(m.name, lx + 22, textY, nameColor);
             if (!m.alwaysOn()) {
                 int tx = lx + lw - 6 - Theme.SWITCH_W;
                 d.toggle(tx, ry + (Theme.ROW_H - Theme.SWITCH_H) / 2, a[1]);
-                if (m.bind.isBound()) d.textRight(m.bind.display(), tx - 6, textY, Theme.TEXT_MUTED);
+                if (m.bind.isBound()) {
+                    String b = m.bind.display();
+                    int bw = d.width(b) + 8;
+                    d.round(tx - 6 - bw, ry + 5, bw, Theme.ROW_H - 10, 3, Theme.FIELD);
+                    d.textCenter(b, tx - 6 - bw / 2, textY, Theme.TEXT_MUTED);
+                }
             }
         }
         if (list.isEmpty() && !search.isEmpty()) d.text("Ничего не найдено", lx + 9, Draw.textY(ly, Theme.ROW_H), Theme.TEXT_MUTED);
         d.unclip();
     }
 
-    private void drawContent(double mx, double my, float dt) {
+    private void drawContent(double mx, double my, float dt, float time) {
         int cx = cX(), cy = cY(), cw = cW(), ch = cH();
         if (configsMode()) {
             profiles.renderContent(d, mx, my, dt, cx, cy, cw, ch);
@@ -476,21 +552,34 @@ public final class UmbraScreen extends Screen implements Host {
             return;
         }
 
-        // шапка модуля
-        d.textScaled(selected.name, Fonts.Kind.HEAD, cx + Theme.PAD, cy + 10, 1.75f, Theme.TEXT);
-        d.text(headerDesc, cx + Theme.PAD, cy + 30, Theme.TEXT_DIM);
+        // шапка-превью модуля
+        int bx = bannerX(), by = bannerY(), bw = bannerW(), bh = bannerH();
+        d.round(bx - 1, by - 1, bw + 2, bh + 2, Theme.RADIUS + 1, Theme.CARD_EDGE);
+        PreviewRenderer.render(d, selected.id, bx, by, bw, bh, time, Theme.accent());
+        // скругляем углы картинки цветом окна
+        corners(bx, by, bw, bh, Theme.RADIUS, 0xFF0A0A0E);
+        int dotA = 120 + Math.round(100 * (0.5f + 0.5f * (float) Math.sin(time * 3)));
+        int pw0 = Fonts.width("ПРЕДПРОСМОТР", Fonts.Kind.HEAD);
+        d.disc(bx + bw - 12 - pw0 - 6, by + 11.5f, 1.8f, Colors.withAlpha(Theme.accent(), dotA));
+        d.text("ПРЕДПРОСМОТР", Fonts.Kind.HEAD, bx + bw - 12 - pw0, by + 8, 0xB0E9E9F1);
+
+        int iconIdx = Icons.forModule(selected.id, Icons.forCategory(selected.category));
+        d.icon(iconIdx, bx + 12, by + bh - 31, 14, Theme.TEXT);
+        d.textScaled(selected.name, Fonts.Kind.HEAD, bx + 32, by + bh - 36, 1.75f, Theme.TEXT);
+        d.text(headerDesc, bx + 32, by + bh - 16, Theme.TEXT_DIM);
         if (!selected.alwaysOn()) {
             headerToggle = Anim.to(headerToggle, selected.isEnabled() ? 1 : 0, dt);
             d.toggle(headerToggleX(), headerMidY() - Theme.SWITCH_H / 2, headerToggle);
             headerBind.render(d, mx, my, dt);
             int labelRight = headerBind.x + headerBind.w - headerBind.buttonWidth(d) - 6;
-            d.textRight("Клавиша", labelRight, Draw.textY(headerBind.y, headerBind.h), Theme.TEXT_MUTED);
+            d.textRight("КЛАВИША", labelRight, Draw.textY(headerBind.y, headerBind.h), 0xB0E9E9F1);
         }
 
         // карточки настроек
         int ay = cardsY(), ah = cardsH();
         if (widgets.isEmpty()) {
             d.text("Настроек нет — только вкл/выкл.", cx + Theme.PAD, ay + 10, Theme.TEXT_MUTED);
+            fadeContent(cx, cy, cw, ch);
             return;
         }
         boolean inArea = Widget.hit(mx, my, cx, ay, cw, ah);
@@ -521,6 +610,44 @@ public final class UmbraScreen extends Screen implements Host {
             int thumbY = ay + 4 + Math.round((trackH - thumbH) * (contentScroll / contentMax));
             d.round(cx + cw - 5, thumbY, 2, thumbH, 1, Theme.SELECTED);
         }
+        fadeContent(cx, cy, cw, ch);
+    }
+
+    /** Плавное появление содержимого при смене модуля/вкладки. */
+    private void fadeContent(int cx, int cy, int cw, int ch) {
+        if (contentT >= 1f) return;
+        d.rect(cx + 1, cy + 1, cw - 2, ch - 2, Colors.withAlpha(0x0A0A0E, Math.round(255 * (1 - ease(contentT)))));
+    }
+
+    /** Закрашивает углы прямоугольника, чтобы он выглядел скруглённым. */
+    private void corners(int x, int y, int w, int h, int r, int color) {
+        for (int i = 0; i < r; i++) {
+            double dy = r - i - 0.5;
+            int in = (int) Math.round(r - Math.sqrt(Math.max(0, r * r - dy * dy)));
+            if (in <= 0) continue;
+            d.rect(x, y + i, in, 1, color);
+            d.rect(x + w - in, y + i, in, 1, color);
+            d.rect(x, y + h - 1 - i, in, 1, color);
+            d.rect(x + w - in, y + h - 1 - i, in, 1, color);
+        }
+    }
+
+    /** Аватар игрока: лицо со скина, в меню — буква ника. */
+    private void drawAvatar(int x, int y) {
+        Identifier skin = null;
+        try {
+            if (minecraft.player != null) skin = minecraft.player.getSkin().body().texturePath();
+        } catch (Throwable ignored) {
+        }
+        if (skin != null) {
+            d.round(x - 1, y - 1, TILE + 2, TILE + 2, 4, Theme.CARD_EDGE);
+            d.g.blit(RenderPipelines.GUI_TEXTURED, skin, x, y, 8f, 8f, TILE, TILE, 8, 8, 64, 64, 0xFFFFFFFF);
+            d.g.blit(RenderPipelines.GUI_TEXTURED, skin, x, y, 40f, 8f, TILE, TILE, 8, 8, 64, 64, 0xFFFFFFFF);
+        } else {
+            String name = minecraft.getUser().getName();
+            d.round(x, y, TILE, TILE, 4, 0xFF2A2A3C);
+            d.textCenter(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT), x + TILE / 2, Draw.textY(y, TILE), Theme.TEXT);
+        }
     }
 
     // ── ввод ─────────────────────────────────────────────────
@@ -544,11 +671,15 @@ public final class UmbraScreen extends Screen implements Host {
             return true;
         }
 
-        if (Widget.hit(mx, my, searchX(), searchY(), Theme.SEARCH_W, 16)) {
+        if (Widget.hit(mx, my, searchX(), searchY(), Theme.SEARCH_W, TILE)) {
             searchFocused = true;
             return true;
         }
         searchFocused = false;
+        if (Widget.hit(mx, my, gearX(), tileY(), TILE, TILE)) {
+            selectCategory(Category.CLIENT);
+            return true;
+        }
 
         if (my < wy + Theme.TOPBAR_H) {
             for (int i = 0; i < TABS.length; i++) {

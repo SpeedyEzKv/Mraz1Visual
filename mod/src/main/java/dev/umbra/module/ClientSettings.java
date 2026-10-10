@@ -45,6 +45,12 @@ public final class ClientSettings extends Module {
     public final BoolSetting customOptions = add(new BoolSetting("custom_options", "Свои настройки игры", true)
             .group("Меню игры"));
 
+    public final BoolSetting customWorlds = add(new BoolSetting("custom_worlds", "Свой выбор миров", true)
+            .group("Меню игры"));
+
+    public final BoolSetting customPause = add(new BoolSetting("custom_pause", "Своё меню паузы и статистика", true)
+            .group("Меню игры"));
+
     public ClientSettings() {
         super("client", "Клиент", "Окно, клавиши и цвет интерфейса.", Category.CLIENT);
     }
