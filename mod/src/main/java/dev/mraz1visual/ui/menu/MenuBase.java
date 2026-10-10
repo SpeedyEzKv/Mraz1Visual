@@ -20,7 +20,6 @@ import java.util.List;
  * Меню рисуется в «виртуальных» единицах: экран всегда ~540 единиц в высоту.
  */
 public abstract class MenuBase extends Screen {
-    private final EclipseBackground background = new EclipseBackground();
 
     protected static final int ITEM_IDLE = 0xFF9494AE;
     protected static final int ITEM_HOVER = 0xFFDCDCF5;
@@ -139,8 +138,7 @@ public abstract class MenuBase extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        background.render(g, width, height, sunScreenX(), sunScreenY(), zoom(), mouseX, mouseY,
-                Modules.client.animations.get());
+        VideoBackground.renderMenu(g, width, height);
     }
 
     @Override

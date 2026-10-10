@@ -27,7 +27,8 @@
     "LocalPlayerMixin",
     "CameraZoomMixin",
     "ChatComponentMixin",
-    "SoundInstanceMixin"
+    "SoundInstanceMixin",
+    "LoadingOverlayMixin"
   ],
   "injectors": {
     "defaultRequire": 1

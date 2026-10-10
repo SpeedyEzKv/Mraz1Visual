@@ -49,6 +49,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         AutoCommand.register();
         dev.mraz1visual.module.AuctionHelper.register();
         dev.mraz1visual.module.ItemHighlighter.register();
+        dev.mraz1visual.ui.menu.LoadingScreens.register();
         dev.mraz1visual.module.Hotbar.register();
         dev.mraz1visual.music.MediaClient.start();
         dev.mraz1visual.render.FriendGuard.register();

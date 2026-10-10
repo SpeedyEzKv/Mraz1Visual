@@ -37,6 +37,10 @@ public final class MenuRouter {
                 if (screen == Mraz1VisualOptionsScreen.vanillaInstance.get() || !Modules.client.customOptions.get()) return screen;
                 return new Mraz1VisualOptionsScreen(mc.screen);
             }
+            if (screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen cws
+                    && Modules.client.customWorlds.get() && !Mraz1VisualCreateWorldScreen.bypass) {
+                return new Mraz1VisualCreateWorldScreen(cws);
+            }
             if (screen instanceof SelectWorldScreen && Modules.client.customWorlds.get() && !bypassWorlds) {
                 Screen parent = mc.screen instanceof Mraz1VisualTitleScreen ? mc.screen : new Mraz1VisualTitleScreen();
                 return new Mraz1VisualWorldsScreen(parent);
