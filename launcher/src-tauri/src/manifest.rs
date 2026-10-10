@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Репозиторий с релизами Umbra: "владелец/репозиторий". Поменяй на свой.
-pub const GITHUB_REPO: &str = "SpeedyEzKv/Umbra";
+/// Репозиторий с релизами Mraz1Visual: "владелец/репозиторий". Поменяй на свой.
+pub const GITHUB_REPO: &str = "SpeedyEzKv/Mraz1Visual";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Manifest {
@@ -42,7 +42,7 @@ pub struct ModEntry {
     /// Для Modrinth: slug проекта и номер версии.
     #[serde(default)]
     pub modrinth: Option<(String, String)>,
-    /// Прямая ссылка (например, umbra.jar из релиза).
+    /// Прямая ссылка (например, mraz1visual.jar из релиза).
     #[serde(default)]
     pub url: Option<String>,
     #[serde(default)]
@@ -71,8 +71,8 @@ impl Manifest {
                 ModEntry { modrinth: Some(("mcef-modern".into(), "0.3.3+mc1.21.11.jcef146.0.10".into())), url: None, file: None, sha1: None },
                 ModEntry {
                     modrinth: None,
-                    url: Some(format!("https://github.com/{GITHUB_REPO}/releases/latest/download/umbra.jar")),
-                    file: Some("umbra.jar".into()),
+                    url: Some(format!("https://github.com/{GITHUB_REPO}/releases/latest/download/mraz1visual.jar")),
+                    file: Some("mraz1visual.jar".into()),
                     sha1: None,
                 },
             ],

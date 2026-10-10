@@ -8,7 +8,7 @@ use tokio::io::AsyncWriteExt;
 
 pub fn client() -> reqwest::Client {
     reqwest::Client::builder()
-        .user_agent(concat!("UmbraLauncher/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Mraz1VisualLauncher/", env!("CARGO_PKG_VERSION")))
         .connect_timeout(std::time::Duration::from_secs(15))
         .timeout(std::time::Duration::from_secs(600))
         .build()

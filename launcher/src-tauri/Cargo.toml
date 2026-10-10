@@ -1,11 +1,11 @@
 [package]
-name = "umbra-launcher"
+name = "mraz1visual-launcher"
 version = "0.1.0"
 edition = "2021"
-description = "Umbra launcher"
+description = "Mraz1Visual launcher"
 
 [lib]
-name = "umbra_launcher_lib"
+name = "mraz1visual_launcher_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

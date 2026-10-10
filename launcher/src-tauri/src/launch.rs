@@ -62,7 +62,7 @@ pub fn build_command(paths: &Paths, inst: &Installed, ram_mb: u64, account: &Acc
 
     let mut vars: HashMap<&str, String> = HashMap::new();
     vars.insert("natives_directory", natives.to_string_lossy().to_string());
-    vars.insert("launcher_name", "umbra".into());
+    vars.insert("launcher_name", "mraz1visual".into());
     vars.insert("launcher_version", env!("CARGO_PKG_VERSION").into());
     vars.insert("classpath", classpath);
     vars.insert("classpath_separator", sep.into());

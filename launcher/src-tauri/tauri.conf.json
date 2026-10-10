@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Umbra",
+  "productName": "Mraz1Visual",
   "version": "0.1.0",
-  "identifier": "dev.umbra.launcher",
+  "identifier": "dev.mraz1visual.launcher",
   "build": {
     "frontendDist": "../src"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Umbra",
+        "title": "Mraz1Visual",
         "width": 1050,
         "height": 640,
         "resizable": false,

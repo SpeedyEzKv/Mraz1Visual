@@ -22,23 +22,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
 
 /* ── фон ─────────────────────────────── */
-#scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
-.layer { position: absolute; pointer-events: none; }
-#sky { left: 0; top: 0; width: 1920px; height: 1080px; }
-.corona { border-radius: 50%; }
-#coronaA { animation: spin 160s linear infinite, pulse 9s ease-in-out infinite; }
-#coronaB { animation: spinR 220s linear infinite, pulse 13s ease-in-out infinite reverse; opacity: .85; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes spinR { to { transform: rotate(-360deg); } }
-@keyframes pulse { 50% { opacity: .78; } }
-#water { position: absolute; left: 0; top: 847px; width: 1920px; height: 233px; overflow: hidden; }
-#water img { position: absolute; left: 0; top: 0; width: 1920px; height: 233px; }
-#water .w1 { animation: wave 6s ease-in-out infinite; }
-#water .w2 { animation: wave 4.3s ease-in-out infinite reverse; opacity: .55; filter: blur(.6px); }
-@keyframes wave { 0%,100% { transform: translateX(-6px) scaleY(1); opacity: .9; } 50% { transform: translateX(7px) scaleY(1.04); opacity: .6; } }
-.star { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #e4e4ff;
-  animation: twinkle var(--d) ease-in-out infinite; animation-delay: var(--o); }
-@keyframes twinkle { 0%,100% { opacity: 0; } 50% { opacity: .9; } }
+#scene { position: absolute; inset: 0; overflow: hidden; background: #000; }
+#bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; }
+#bg.ready { opacity: 1; }
+/* затемнение слева, чтобы меню читалось, и лёгкая виньетка */
+#shade { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(3,3,8,.86) 0%, rgba(3,3,8,.55) 32%, rgba(3,3,8,.08) 62%, rgba(3,3,8,.25) 100%),
+              radial-gradient(ellipse at 60% 40%, rgba(0,0,0,0) 45%, rgba(0,0,0,.45) 100%); }
 
 #disc { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 #percent { font-family: Head; font-size: 54px; color: rgba(233,233,241,.9); letter-spacing: .02em; opacity: 0; transition: opacity .3s; }
@@ -166,3 +156,39 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px;
 .local span { font-size: 13px; color: var(--text); } .local small { color: var(--muted); margin-left: 8px; }
 
 .links button.update { color: var(--accent, #b9a6ff); border-color: currentColor; }
+
+/* текст поверх видео — с мягкой тенью, чтобы читался на светлой траве */
+#status, #percent { text-shadow: 0 2px 14px rgba(0,0,0,.85), 0 0 2px rgba(0,0,0,.6); }
+
+
+/* ── вход: видео + «нажмите», затем стекло ─────────── */
+#glass { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  -webkit-backdrop-filter: blur(0px) saturate(100%); backdrop-filter: blur(0px) saturate(100%);
+  background: linear-gradient(180deg, rgba(24,20,48,0) 0%, rgba(6,6,14,0) 100%);
+  clip-path: inset(100% 0 0 0 round 0);
+  transition: clip-path 1.1s cubic-bezier(.22,.9,.24,1), backdrop-filter 1.1s ease, -webkit-backdrop-filter 1.1s ease, background 1.1s ease; }
+#glass .sheen { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); opacity: 0; transition: opacity .8s .4s; }
+#app:not(.intro) #glass { clip-path: inset(0 0 0 0 round 0);
+  -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%);
+  background: linear-gradient(180deg, rgba(24,20,48,.30) 0%, rgba(6,6,14,.55) 100%); }
+#app:not(.intro) #glass .sheen { opacity: 1; }
+
+#tap { position: absolute; left: 0; right: 0; bottom: 9%; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 14px;
+  font-family: Head; font-size: 13px; letter-spacing: .32em; color: rgba(233,233,241,.92); text-shadow: 0 2px 16px rgba(0,0,0,.9);
+  cursor: pointer; transition: opacity .5s, transform .6s; }
+#tap span { animation: tapPulse 2.4s ease-in-out infinite; padding: 10px 22px 10px 26px; border-radius: 999px;
+  background: rgba(6,6,14,.38); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.08); }
+#tap i { width: 1px; height: 34px; background: linear-gradient(180deg, rgba(233,233,241,.8), transparent); animation: tapLine 2.4s ease-in-out infinite; }
+@keyframes tapPulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes tapLine { 0% { transform: scaleY(0); transform-origin: top; } 50% { transform: scaleY(1); transform-origin: top; } 51% { transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+#app:not(.intro) #tap { opacity: 0; transform: translateY(14px); pointer-events: none; }
+#app.intro #tap { opacity: 1; }
+
+/* в режиме заставки меню спрятано, видео чистое */
+#app.intro .view, #app.intro #status, #app.intro #disc, #app.intro #market, #app.intro .right #account { opacity: 0 !important; pointer-events: none !important; }
+#app.intro #shade { opacity: .35; }
+#shade { transition: opacity 1s; }
+#app.intro { cursor: pointer; }
+header, .view, #status, #disc { z-index: 4; }
+#app.entering .view.active { transition-delay: .55s; }
+#app.entering #status { transition: opacity .6s .75s; }

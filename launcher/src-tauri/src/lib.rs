@@ -1,4 +1,4 @@
-//! Лаунчер Umbra: ставит Java, Minecraft 1.21.11, Fabric, моды и запускает игру.
+//! Лаунчер Mraz1Visual: ставит Java, Minecraft 1.21.11, Fabric, моды и запускает игру.
 
 mod install;
 mod launch;
@@ -46,7 +46,7 @@ struct LauncherInfo {
     close_on_launch: bool,
     game_dir: String,
     account: String,
-    has_umbra: bool,
+    has_mraz1visual: bool,
     /// Ссылка на новый установщик лаунчера, если он вышел.
     launcher_update: Option<String>,
 }
@@ -91,7 +91,7 @@ async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
         close_on_launch: s.close_on_launch,
         game_dir: state.paths.root.to_string_lossy().to_string(),
         account: launch::current_account(&state.paths).name,
-        has_umbra: install::has_umbra(&state.paths),
+        has_mraz1visual: install::has_mraz1visual(&state.paths),
         launcher_update: (!m.launcher_url.is_empty() && manifest::newer(&m.launcher_version, env!("CARGO_PKG_VERSION")))
             .then(|| m.launcher_url.clone()),
     })
@@ -144,8 +144,8 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     };
     let progress = EmitProgress(app.clone());
     let installed = install::install(&state.paths, &manifest, &progress).await?;
-    if !install::has_umbra(&state.paths) {
-        anyhow::bail!("В папке mods нет umbra.jar. Собери мод (gradlew build) и положи jar в папку игры → game/mods, либо укажи GitHub-репозиторий в лаунчере.");
+    if !install::has_mraz1visual(&state.paths) {
+        anyhow::bail!("В папке mods нет mraz1visual.jar. Собери мод (gradlew build) и положи jar в папку игры → game/mods, либо укажи GitHub-репозиторий в лаунчере.");
     }
 
     let (ram, close) = {
@@ -156,8 +156,8 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     // мост «Сейчас играет»: порт и токен уходят в игру системными свойствами
     let mut extra = Vec::new();
     if let Some(m) = state.media.get_or_init(media::start).await {
-        extra.push(format!("-Dumbra.media.port={}", m.port));
-        extra.push(format!("-Dumbra.media.token={}", m.token));
+        extra.push(format!("-Dmraz1visual.media.port={}", m.port));
+        extra.push(format!("-Dmraz1visual.media.token={}", m.token));
     }
     let mut cmd = launch::build_command(&state.paths, &installed, ram, &account, &extra)?;
     launch::ensure_logs(&state.paths)?;
@@ -269,5 +269,5 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![info, set_settings, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
         .run(tauri::generate_context!())
-        .expect("error while running Umbra launcher");
+        .expect("error while running Mraz1Visual launcher");
 }

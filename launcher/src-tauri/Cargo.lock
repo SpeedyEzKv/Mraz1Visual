@@ -1934,6 +1934,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "mraz1visual-launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs 6.0.0",
+ "futures",
+ "hex",
+ "md5",
+ "open",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tokio",
+ "windows 0.58.0",
+ "zip",
+]
+
+[[package]]
 name = "muda"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3979,28 +4001,6 @@ name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
-
-[[package]]
-name = "umbra-launcher"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dirs 6.0.0",
- "futures",
- "hex",
- "md5",
- "open",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha1",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tokio",
- "windows 0.58.0",
- "zip",
-]
 
 [[package]]
 name = "unicode-ident"

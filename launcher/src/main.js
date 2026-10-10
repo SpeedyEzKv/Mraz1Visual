@@ -1,50 +1,28 @@
-// Лаунчер Umbra: интерфейс. Вся работа — в Rust (invoke), сюда приходят события.
+// Лаунчер Mraz1Visual: интерфейс. Вся работа — в Rust (invoke), сюда приходят события.
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 const win = window.__TAURI__.window.getCurrentWindow();
 
 const $ = (id) => document.getElementById(id);
-const W = 1920, H = 1080, CX = W * 0.66, CY = H * 0.364, R = H * 0.22;
-const SUN_X = 0.70, SUN_Y = 0.47, ZOOM = 1.14;
 
 let info = null;
 let busy = false;
 
-// ── фон: раскладка слоёв в координатах картинки 1920×1080 ──────
-function place(el, d) {
-  el.style.width = el.style.height = d + "px";
-  el.style.left = (CX - d / 2) + "px";
-  el.style.top = (CY - d / 2) + "px";
-}
+// ── фон: видео на весь экран, диск с процентами — над деревом ──────
 function layout() {
   const w = innerWidth, h = innerHeight;
-  const s = Math.max(w / W, h / H) * ZOOM;
-  let ox = SUN_X * w - CX * s, oy = SUN_Y * h - CY * s;
-  ox = Math.min(0, Math.max(w - W * s, ox));
-  oy = Math.min(0, Math.max(h - H * s, oy));
-  $("scene").style.transform = `translate(${ox}px, ${oy}px) scale(${s})`;
-  place($("coronaA"), R * 3.4 * 2);
-  place($("coronaB"), R * 3.0 * 2);
-  place($("sun"), R * 1.62 * 2);
-  // диск с процентами — в экранных координатах
-  const dx = ox + CX * s, dy = oy + CY * s, dr = R * s;
+  const dx = w * 0.6, dy = h * 0.36, dr = Math.min(w, h) * 0.17;
   const disc = $("disc");
   Object.assign(disc.style, { left: dx - dr + "px", top: dy - dr + "px", width: dr * 2 + "px", height: dr * 2 + "px" });
   const st = $("status");
   st.style.left = dx - 210 + "px";
   st.style.top = Math.min(h - 70, dy + dr + 42) + "px";
 }
-function stars() {
-  const box = $("stars");
-  for (let i = 0; i < 60; i++) {
-    const s = document.createElement("div");
-    s.className = "star";
-    s.style.left = Math.random() * W + "px";
-    s.style.top = Math.random() * 820 + "px";
-    s.style.setProperty("--d", (2 + Math.random() * 4).toFixed(2) + "s");
-    s.style.setProperty("--o", (-Math.random() * 6).toFixed(2) + "s");
-    box.appendChild(s);
-  }
+function startVideo() {
+  const v = $("bg");
+  const show = () => v.classList.add("ready");
+  if (v.readyState >= 3) show(); else v.addEventListener("canplay", show, { once: true });
+  v.play().catch(() => {});
 }
 
 // ── заставка ─────────────────────────────────────────────────
@@ -78,7 +56,7 @@ async function splash(show) {
   }
   sp.classList.add("on");
   await new Promise((r) => setTimeout(r, 500));
-  await scramble($("logo"), "UMBRA", 900);
+  await scramble($("logo"), "MRAZ1VISUAL", 900);
   $("presents").classList.add("on");
 }
 
@@ -96,7 +74,7 @@ function percent(p) {
 }
 function idleStatus() {
   if (!info) return;
-  if (!info.has_umbra && !info.online) status("Umbra ещё не установлен", "Положи umbra.jar в папку игры → game/mods");
+  if (!info.has_mraz1visual && !info.online) status("Mraz1Visual ещё не установлен", "Положи mraz1visual.jar в папку игры → game/mods");
   else status(`Версия ${info.version} · Minecraft ${info.minecraft}`, "Нажми «Играть» — потом игра запустится сама");
 }
 
@@ -293,7 +271,7 @@ listen("game-exited", (e) => {
   else idleStatus();
 });
 
-stars();
+startVideo();
 layout();
 (async () => {
   splash(true);
@@ -305,3 +283,17 @@ layout();
   }
   setTimeout(() => splash(false), 2200);
 })();
+
+// ── заставка «нажмите, чтобы продолжить» → стекло с меню ─────
+function enter() {
+  const app = $("app");
+  if (!app.classList.contains("intro")) return;
+  app.classList.add("entering");
+  app.classList.remove("intro");
+  setTimeout(() => app.classList.remove("entering"), 1800);
+}
+$("app").addEventListener("click", (e) => {
+  if (e.target.closest(".win")) return;
+  enter();
+});
+addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " " || e.key === "Escape") enter(); });

@@ -1,6 +1,0 @@
-{
-  "providers": [
-    { "type": "ttf", "file": "umbra:head.ttf", "size": 8.0, "oversample": 6.0, "shift": [0, 0.5] },
-    { "type": "reference", "id": "minecraft:default" }
-  ]
-}

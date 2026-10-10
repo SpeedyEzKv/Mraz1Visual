@@ -1,9 +1,9 @@
-# Полный выпуск Umbra на серверах GitHub.
+# Полный выпуск Mraz1Visual на серверах GitHub.
 # Каждый push в main (или кнопка Run workflow во вкладке Actions):
-#   1) собирает мод umbra.jar (Linux, Java 21);
-#   2) собирает лаунчер Umbra-setup.exe (Windows);
-#   3) публикует релиз v0.1.<номер> с umbra.jar, manifest.json и Umbra-setup.exe.
-# Лаунчер сам скачивает umbra.jar и manifest.json из последнего релиза,
+#   1) собирает мод mraz1visual.jar (Linux, Java 21);
+#   2) собирает лаунчер Mraz1Visual-setup.exe (Windows);
+#   3) публикует релиз v0.1.<номер> с mraz1visual.jar, manifest.json и Mraz1Visual-setup.exe.
+# Лаунчер сам скачивает mraz1visual.jar и manifest.json из последнего релиза,
 # а при новой версии лаунчера показывает кнопку «Обновить лаунчер».
 name: Release
 on:
@@ -35,7 +35,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build umbra.jar
+      - name: Build mraz1visual.jar
         run: |
           set -o pipefail
           bash ./gradlew build --no-daemon --console=plain -Pmod_version=$VERSION -Pdev_sodium=false -Pdev_mcef=false 2>&1 | tee ../build.log
@@ -51,11 +51,11 @@ jobs:
       - name: Pick jar
         run: |
           JAR=$(ls build/libs/*.jar | grep -v -e sources -e dev | head -n1)
-          cp "$JAR" ../umbra.jar
+          cp "$JAR" ../mraz1visual.jar
       - uses: actions/upload-artifact@v4
         with:
           name: mod
-          path: umbra.jar
+          path: mraz1visual.jar
 
   launcher:
     runs-on: windows-latest
@@ -79,11 +79,11 @@ jobs:
       - run: npm install
       - run: npx tauri build
       - name: Pick installer
-        run: cp src-tauri/target/release/bundle/nsis/*-setup.exe ../Umbra-setup.exe
+        run: cp src-tauri/target/release/bundle/nsis/*-setup.exe ../Mraz1Visual-setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: launcher
-          path: Umbra-setup.exe
+          path: Mraz1Visual-setup.exe
 
   release:
     needs: [mod, launcher]
@@ -97,17 +97,17 @@ jobs:
       - name: manifest.json
         run: |
           jq --arg v "$VERSION" --argjson b ${{ github.run_number }} \
-             --arg url "https://github.com/${{ github.repository }}/releases/latest/download/Umbra-setup.exe" \
+             --arg url "https://github.com/${{ github.repository }}/releases/latest/download/Mraz1Visual-setup.exe" \
              '.client_version=$v | .build=$b | .launcher_version=$v | .launcher_url=$url' \
              release/manifest.json > dist/manifest.json
           jq -r '.changelog | map("- " + .) | join("\n")' dist/manifest.json > notes.md
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}
-          name: Umbra ${{ env.VERSION }}
+          name: Mraz1Visual ${{ env.VERSION }}
           body_path: notes.md
           make_latest: true
           files: |
-            dist/umbra.jar
+            dist/mraz1visual.jar
             dist/manifest.json
-            dist/Umbra-setup.exe
+            dist/Mraz1Visual-setup.exe

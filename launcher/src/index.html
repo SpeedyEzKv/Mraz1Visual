@@ -2,28 +2,25 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Umbra</title>
+<title>Mraz1Visual</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
+<div id="app" class="intro">
   <!-- живой фон -->
   <div id="scene">
-    <img class="layer" id="sky" src="img/sky.png" alt="">
-    <div id="stars"></div>
-    <img class="layer corona" id="coronaA" src="img/corona_a.png" alt="">
-    <img class="layer corona" id="coronaB" src="img/corona_b.png" alt="">
-    <img class="layer" id="sun" src="img/sun.png" alt="">
-    <div id="water">
-      <img src="img/water.png" alt="" class="w1">
-      <img src="img/water.png" alt="" class="w2">
-    </div>
+    <video id="bg" src="img/bg.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <div id="shade"></div>
   </div>
+  <!-- стекло: накрывает видео после нажатия -->
+  <div id="glass"><div class="sheen"></div></div>
+  <!-- подсказка на заставке -->
+  <div id="tap"><span>НАЖМИТЕ, ЧТОБЫ ПРОДОЛЖИТЬ</span><i></i></div>
   <div id="disc"><div id="percent"></div></div>
 
   <!-- верхняя панель -->
   <header data-tauri-drag-region>
-    <div class="brand" data-tauri-drag-region>UMBRA <span>бета</span></div>
+    <div class="brand" data-tauri-drag-region>MRAZ1VISUAL <span>бета</span></div>
     <div class="right">
       <span id="account"></span>
       <button class="win" id="min" title="Свернуть">—</button>
@@ -103,7 +100,7 @@
       <circle class="ring" cx="100" cy="100" r="58"/>
       <circle class="core" cx="100" cy="100" r="56"/>
     </svg>
-    <div id="logo" data-text="UMBRA">UMBRA</div>
+    <div id="logo" data-text="MRAZ1VISUAL">MRAZ1VISUAL</div>
     <div id="presents">ПРЕДСТАВЛЯЕТ</div>
   </div>
 </div>

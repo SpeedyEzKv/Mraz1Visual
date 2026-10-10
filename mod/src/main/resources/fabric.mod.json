@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "id": "umbra",
+  "id": "mraz1visual",
   "version": "${version}",
-  "name": "Umbra",
+  "name": "Mraz1Visual",
   "description": "Личный визуальный клиент. Только то, что игрок и так видит.",
   "authors": ["SpeedyEzKv"],
   "license": "All-Rights-Reserved",
-  "icon": "assets/umbra/icon/icon_128.png",
+  "icon": "assets/mraz1visual/icon/icon_128.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["dev.umbra.Umbra"]
+    "client": ["dev.mraz1visual.Mraz1Visual"]
   },
   "suggests": {
     "sodium": "*",
     "iris": "*",
     "mcef-modern": "*"
   },
-  "mixins": ["umbra.mixins.json"],
+  "mixins": ["mraz1visual.mixins.json"],
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "~1.21.11",

@@ -5,4 +5,4 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = 'umbra'
+rootProject.name = 'mraz1visual'

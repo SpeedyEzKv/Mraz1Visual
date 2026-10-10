@@ -67,7 +67,7 @@ struct Installed {
 }
 
 fn installed_path(paths: &Paths) -> PathBuf {
-    paths.game().join(".umbra-market.json")
+    paths.game().join(".mraz1visual-market.json")
 }
 
 fn load_installed(paths: &Paths) -> Installed {

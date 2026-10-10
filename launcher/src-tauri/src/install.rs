@@ -335,19 +335,19 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
             // свой мод из релиза: если релиза нет, но jar уже лежит — играем с ним
             // скачиваем каждый раз (файл маленький) — так всегда последняя версия из релиза
             if let Err(e) = net::fetch(client, &job).await {
-                if !has_umbra(paths) {
+                if !has_mraz1visual(paths) {
                     return Err(e);
                 }
                 files.push(file);
                 continue;
             }
-            // убрать другие копии umbra*.jar, иначе Fabric увидит два одинаковых мода
-            if file.to_lowercase().starts_with("umbra") {
+            // убрать другие копии mraz1visual*.jar, иначе Fabric увидит два одинаковых мода
+            if is_client_jar(&file.to_lowercase()) {
                 if let Ok(rd) = std::fs::read_dir(paths.mods()) {
                     for e in rd.flatten() {
                         let n = e.file_name().to_string_lossy().to_string();
                         let low = n.to_lowercase();
-                        if low != file.to_lowercase() && low.starts_with("umbra") && low.ends_with(".jar") {
+                        if low != file.to_lowercase() && is_client_jar(&low) {
                             let _ = std::fs::remove_file(e.path());
                         }
                     }
@@ -375,12 +375,17 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     Ok(())
 }
 
-/// Есть ли в mods сам Umbra (на случай, когда репозиторий ещё не настроен).
-pub fn has_umbra(paths: &Paths) -> bool {
+/// Jar нашего клиента: новое имя mraz1visual*.jar или старое umbra*.jar.
+fn is_client_jar(low: &str) -> bool {
+    (low.starts_with("mraz1visual") || low.starts_with(concat!("umb", "ra"))) && low.ends_with(".jar")
+}
+
+/// Есть ли в mods сам Mraz1Visual (на случай, когда репозиторий ещё не настроен).
+pub fn has_mraz1visual(paths: &Paths) -> bool {
     std::fs::read_dir(paths.mods())
         .map(|rd| rd.flatten().any(|e| {
             let n = e.file_name().to_string_lossy().to_lowercase();
-            n.starts_with("umbra") && n.ends_with(".jar")
+            is_client_jar(&n)
         }))
         .unwrap_or(false)
 }

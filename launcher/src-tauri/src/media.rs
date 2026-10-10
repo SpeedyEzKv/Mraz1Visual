@@ -58,7 +58,7 @@ pub async fn start() -> Option<Media> {
                 let req = String::from_utf8_lossy(&buf[..n]).to_string();
                 let line = req.lines().next().unwrap_or("");
                 let path = line.split_whitespace().nth(1).unwrap_or("/");
-                let authorized = req.lines().any(|l| l.eq_ignore_ascii_case(&format!("x-umbra-token: {tok}")));
+                let authorized = req.lines().any(|l| l.eq_ignore_ascii_case(&format!("x-mraz1visual-token: {tok}")));
                 let (status, ctype, body): (&str, &str, Vec<u8>) = if !authorized {
                     ("403 Forbidden", "text/plain", b"no".to_vec())
                 } else if path.starts_with("/now") {
