@@ -8,7 +8,6 @@ import dev.umbra.ui.Draw;
 import dev.umbra.ui.Fonts;
 import dev.umbra.ui.Theme;
 import dev.umbra.ui.widget.Widget;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -187,7 +186,7 @@ final class PacksPanel {
             tx += w + 18;
         }
         if (Widget.hit(mx, my, folderX - 4, btnY - 4, folderW + 8, 16)) {
-            Util.getPlatform().openPath(mc.getResourcePackDirectory());
+            dev.umbra.overlay.Screenshots.openExternal(mc.getResourcePackDirectory().toAbsolutePath().toString());
             return true;
         }
         if (Widget.hit(mx, my, addX - 4, btnY - 4, addW + 8, 16)) {

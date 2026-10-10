@@ -328,7 +328,7 @@ public final class UmbraOptionsScreen extends MenuBase implements Host {
         for (int i = 0; i < parts.length; i++) {
             var part = parts[i];
             BoolSetting b = new BoolSetting(names[i], names[i], o.isModelPartEnabled(part));
-            b.onChange(() -> o.toggleModelPart(part, b.get()));
+            b.onChange(() -> o.setModelPart(part, b.get()));
             b.hint("Слой скина: " + names[i].toLowerCase() + ".");
             syncs.add(() -> b.setSilently(o.isModelPartEnabled(part)));
             l.add(b);
