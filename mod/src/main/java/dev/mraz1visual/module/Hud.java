@@ -85,10 +85,10 @@ public final class Hud extends Module implements HudLayer {
     /** Пара «подпись значение», выровненная по правому краю. Возвращает левый край. */
     private static int pair(GuiGraphics g, String label, String value, int right, int y) {
         Minecraft mc = Minecraft.getInstance();
-        int vw = mc.font.width(Fonts.of(value, Fonts.Kind.BOLD));
-        int lw = mc.font.width(Fonts.of(label, Fonts.Kind.TEXT));
-        g.drawString(mc.font, Fonts.of(value, Fonts.Kind.BOLD), right - vw, y, VALUE, true);
-        g.drawString(mc.font, Fonts.of(label, Fonts.Kind.TEXT), right - vw - 5 - lw, y, LABEL, true);
+        int vw = Fonts.width(value, Fonts.Kind.BOLD);
+        int lw = Fonts.width(label, Fonts.Kind.TEXT);
+        Fonts.drawShadow(g, value, Fonts.Kind.BOLD, right - vw, y, VALUE);
+        Fonts.drawShadow(g, label, Fonts.Kind.TEXT, right - vw - 5 - lw, y, LABEL);
         return right - vw - 5 - lw;
     }
 

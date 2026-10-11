@@ -22,7 +22,7 @@ public final class ClientSettings extends Module {
             "auto", "Авто", "small", "Мелкий", "large", "Крупный")
             .group("Окно"));
 
-    public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 0,
+    public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 1,
             "blur", "Размытие", "dim", "Затемнение", "none", "Нет")
             .group("Окно"));
 

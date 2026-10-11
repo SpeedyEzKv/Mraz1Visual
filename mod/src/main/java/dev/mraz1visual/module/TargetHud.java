@@ -67,14 +67,14 @@ public final class TargetHud extends Module implements HudLayer, AttackListener 
         g.fill(x, y, x + w, y + h, Colors.mulAlpha(0xE00C0C12, alpha));
         g.fill(x, y, x + w, y + 1, Colors.mulAlpha(0x30FFFFFF, alpha));
         g.fill(x + 5, y + 5, x + 29, y + 29, Colors.mulAlpha(0xFF22222E, alpha));
-        int lw = mc.font.width(Fonts.of(letter, Fonts.Kind.BOLD));
-        g.drawString(mc.font, Fonts.of(letter, Fonts.Kind.BOLD), x + 17 - lw / 2, y + 13, Colors.mulAlpha(0xFFE6E6F4, alpha), false);
-        g.drawString(mc.font, Fonts.of(name, Fonts.Kind.BOLD), x + 34, y + 6, Colors.mulAlpha(0xFFE9E9F1, alpha), false);
+        int lw = Fonts.width(letter, Fonts.Kind.BOLD);
+        Fonts.draw(g, letter, Fonts.Kind.BOLD, x + 17 - lw / 2, y + 13, Colors.mulAlpha(0xFFE6E6F4, alpha));
+        Fonts.draw(g, name, Fonts.Kind.BOLD, x + 34, y + 6, Colors.mulAlpha(0xFFE9E9F1, alpha));
         int bw = w - 40;
         g.fill(x + 34, y + 21, x + 34 + bw, y + 25, Colors.mulAlpha(0x40FFFFFF, alpha));
         int hpc = Colors.lerp(0xFFE05A5A, 0xFF7AD67A, shownHp);
         g.fill(x + 34, y + 21, x + 34 + Math.round(bw * shownHp), y + 25, Colors.mulAlpha(hpc, alpha));
-        int tw = mc.font.width(Fonts.of(hpText, Fonts.Kind.TEXT));
-        g.drawString(mc.font, Fonts.of(hpText, Fonts.Kind.TEXT), x + w - 6 - tw, y + 6, Colors.mulAlpha(0xFFB4B4C4, alpha), false);
+        int tw = Fonts.width(hpText, Fonts.Kind.TEXT);
+        Fonts.draw(g, hpText, Fonts.Kind.TEXT, x + w - 6 - tw, y + 6, Colors.mulAlpha(0xFFB4B4C4, alpha));
     }
 }

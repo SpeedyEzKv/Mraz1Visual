@@ -74,7 +74,7 @@ public final class Keystrokes extends Module implements HudLayer {
         anim[i] = Anim.to(anim[i], km.isDown() ? 1 : 0, dt);
         g.fill(x, y, x + w, y + h, Colors.lerp(0xA00C0C12, 0xD0E6E4FF, anim[i]));
         int tc = Colors.lerp(0xFFE9E9F1, 0xFF0C0C12, anim[i]);
-        int tw = mc.font.width(Fonts.of(label, Fonts.Kind.BOLD));
-        g.drawString(mc.font, Fonts.of(label, Fonts.Kind.BOLD), x + (w - tw) / 2, y + (h - 8) / 2, tc, false);
+        int tw = Fonts.width(label, Fonts.Kind.BOLD);
+        Fonts.draw(g, label, Fonts.Kind.BOLD, x + (w - tw) / 2, y + (h - 8) / 2, tc);
     }
 }

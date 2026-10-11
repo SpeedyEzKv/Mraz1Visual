@@ -1,6 +1,28 @@
 {
   "providers": [
-    { "type": "ttf", "file": "mraz1visual:bold.ttf", "size": 8.0, "oversample": 4.0, "shift": [0, 0.5] },
-    { "type": "reference", "id": "minecraft:default" }
+    {
+      "type": "ttf",
+      "file": "mraz1visual:bold.ttf",
+      "size": 24.0,
+      "oversample": 1.0,
+      "shift": [
+        0,
+        1.5
+      ]
+    },
+    {
+      "type": "ttf",
+      "file": "mraz1visual:symbols.ttf",
+      "size": 24.0,
+      "oversample": 1.0,
+      "shift": [
+        0,
+        1.5
+      ]
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:default"
+    }
   ]
 }

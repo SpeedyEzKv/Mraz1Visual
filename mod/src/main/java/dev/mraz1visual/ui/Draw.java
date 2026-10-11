@@ -157,7 +157,7 @@ public final class Draw {
 
     public void text(String s, Fonts.Kind k, int x, int y, int color) {
         if ((color >>> 24) == 0 || s.isEmpty()) return;
-        g.drawString(font, Fonts.of(s, k), x, y, color, false);
+        Fonts.draw(g, s, k, x, y, color);
     }
 
     public void textRight(String s, int right, int y, int color) {
@@ -170,11 +170,7 @@ public final class Draw {
 
     /** Текст в масштабе k (крупные заголовки). */
     public void textScaled(String s, Fonts.Kind kind, int x, int y, float k, int color) {
-        g.pose().pushMatrix();
-        g.pose().translate(x, y);
-        g.pose().scale(k, k);
-        g.drawString(font, Fonts.of(s, kind), 0, 0, color, false);
-        g.pose().popMatrix();
+        Fonts.draw(g, s, kind, x, y, k, color);
     }
 
     public int width(String s) { return Fonts.width(s); }

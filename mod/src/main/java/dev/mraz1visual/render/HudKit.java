@@ -26,15 +26,15 @@ public final class HudKit {
         D.begin(g, mc.font, 1f);
         D.disc(x + 2, y + 3.5f, 1.8f, Colors.mulAlpha(Theme.accent(), alpha));
         D.end();
-        g.drawString(mc.font, Fonts.of(text, Fonts.Kind.HEAD), x + 7, y, Colors.mulAlpha(0xFF8E8EA0, alpha), false);
+        Fonts.draw(g, text, Fonts.Kind.HEAD, x + 7, y, Colors.mulAlpha(0xFF8E8EA0, alpha));
     }
 
     public static void text(GuiGraphics g, String s, int x, int y, int color) {
-        g.drawString(Minecraft.getInstance().font, Fonts.of(s, Fonts.Kind.TEXT), x, y, color, false);
+        Fonts.draw(g, s, Fonts.Kind.TEXT, x, y, color);
     }
 
     public static void bold(GuiGraphics g, String s, int x, int y, int color) {
-        g.drawString(Minecraft.getInstance().font, Fonts.of(s, Fonts.Kind.BOLD), x, y, color, false);
+        Fonts.draw(g, s, Fonts.Kind.BOLD, x, y, color);
     }
 
     public static int width(String s) {

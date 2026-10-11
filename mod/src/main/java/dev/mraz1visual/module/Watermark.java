@@ -44,7 +44,7 @@ public final class Watermark extends Module implements HudLayer {
         int x = 4, y = 4;
         HudKit.card(g, x, y, w, h, 1f);
         g.fill(x + 1, y + 3, x + 3, y + h - 3, Theme.accent());
-        g.drawString(mc.font, Fonts.of("MRAZ1VISUAL", Fonts.Kind.HEAD), x + 7, y + 4, 0xFFE9E9F1, false);
+        Fonts.draw(g, "MRAZ1VISUAL", Fonts.Kind.HEAD, x + 7, y + 4, 0xFFE9E9F1);
         HudKit.text(g, info, x + 7 + bw, y + 4, Colors.withAlpha(0x9B9BAB, 0xFF));
     }
 }
