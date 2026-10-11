@@ -2,8 +2,7 @@
 # Каждый push в main (или кнопка Run workflow во вкладке Actions):
 #   1) собирает мод mraz1visual.jar (Linux, Java 21);
 #   2) собирает лаунчер Mraz1Visual-setup.exe (Windows);
-#   3) готовит видео-фон меню (60 кадров/с) из release/menu-video.mp4 → menu-video.zip;
-#   4) публикует релиз v0.1.<номер> с mraz1visual.jar, manifest.json, menu-video.zip и Mraz1Visual-setup.exe.
+#   3) публикует релиз v0.1.<номер> с mraz1visual.jar, manifest.json и Mraz1Visual-setup.exe.
 # Лаунчер сам скачивает mraz1visual.jar и manifest.json из последнего релиза,
 # а при новой версии лаунчера показывает кнопку «Обновить лаунчер».
 name: Release
@@ -95,18 +94,11 @@ jobs:
         with:
           merge-multiple: true
           path: dist
-      - name: Menu video (60 fps)
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg zip
-          bash release/make-video.sh release/menu-video.mp4 dist/menu-video.zip
-          echo "VIDEO_VER=$(cat release/menu-video.mp4 release/make-video.sh | sha1sum | cut -c1-12)" >> "$GITHUB_ENV"
       - name: manifest.json
         run: |
           jq --arg v "$VERSION" --argjson b ${{ github.run_number }} \
              --arg url "https://github.com/${{ github.repository }}/releases/latest/download/Mraz1Visual-setup.exe" \
-             --arg vurl "https://github.com/${{ github.repository }}/releases/download/v$VERSION/menu-video.zip" \
-             --arg vver "$VIDEO_VER" \
-             '.client_version=$v | .build=$b | .launcher_version=$v | .launcher_url=$url | .video={url:$vurl, version:$vver}' \
+             '.client_version=$v | .build=$b | .launcher_version=$v | .launcher_url=$url' \
              release/manifest.json > dist/manifest.json
           jq -r '.changelog | map("- " + .) | join("\n")' dist/manifest.json > notes.md
       - uses: softprops/action-gh-release@v2
@@ -118,5 +110,4 @@ jobs:
           files: |
             dist/mraz1visual.jar
             dist/manifest.json
-            dist/menu-video.zip
             dist/Mraz1Visual-setup.exe

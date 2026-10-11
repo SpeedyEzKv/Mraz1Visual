@@ -340,6 +340,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         if (s instanceof EnumSetting en) return new EnumWidget(en, this, font);
         if (s instanceof ColorSetting c) return new ColorWidget(c, this);
         if (s instanceof KeySetting key) return new BindWidget(key, this, true);
+        if (s instanceof dev.mraz1visual.setting.ActionSetting a) return new dev.mraz1visual.ui.widget.ActionWidget(a, this);
         throw new IllegalArgumentException("No widget for " + s.getClass().getName());
     }
 
@@ -366,6 +367,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (cs.wallGui.get() && dev.mraz1visual.wallpaper.WallpaperPlayer.render(g, 0, 0, width, height)) return;
         String mode = cs.background.getId();
         if (mode.equals("none")) return;
         if (mode.equals("blur")) super.renderBackground(g, mouseX, mouseY, partialTick);

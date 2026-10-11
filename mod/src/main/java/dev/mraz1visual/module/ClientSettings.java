@@ -2,6 +2,7 @@ package dev.mraz1visual.module;
 
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
+import dev.mraz1visual.setting.ActionSetting;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.ColorSetting;
 import dev.mraz1visual.setting.EnumSetting;
@@ -50,6 +51,30 @@ public final class ClientSettings extends Module {
 
     public final BoolSetting customPause = add(new BoolSetting("custom_pause", "Своё меню паузы и статистика", true)
             .group("Меню игры"));
+
+    public final ActionSetting wallpaper = add(new ActionSetting("wallpaper", "Обои Wallpaper Engine", "Выбрать ›",
+            () -> net.minecraft.client.Minecraft.getInstance().setScreen(
+                    new dev.mraz1visual.ui.menu.WallpaperScreen(net.minecraft.client.Minecraft.getInstance().screen)))
+            .group("Обои"));
+
+    public final BoolSetting wallMenus = add(new BoolSetting("wall_menus", "В меню игры", true)
+            .group("Обои"));
+
+    public final BoolSetting wallGui = add(new BoolSetting("wall_gui", "За окном GUI", true)
+            .group("Обои"));
+
+    public final EnumSetting wallQuality = add(new EnumSetting("wall_quality", "Качество видео", 1,
+            "720", "720p", "1080", "1080p", "1440", "1440p")
+            .group("Обои")
+            .onChange(dev.mraz1visual.wallpaper.WallpaperPlayer::stop));
+
+    public final EnumSetting wallFps = add(new EnumSetting("wall_fps", "Кадров в секунду", 1,
+            "30", "30", "60", "60")
+            .group("Обои")
+            .onChange(dev.mraz1visual.wallpaper.WallpaperPlayer::stop));
+
+    public final SliderSetting wallDim = add(new SliderSetting("wall_dim", "Затемнение обоев", 20, 0, 80, 5, "%")
+            .group("Обои"));
 
     public ClientSettings() {
         super("client", "Клиент", "Окно, клавиши и цвет интерфейса.", Category.CLIENT);

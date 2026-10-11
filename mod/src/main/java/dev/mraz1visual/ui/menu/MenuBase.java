@@ -21,6 +21,8 @@ import java.util.List;
  */
 public abstract class MenuBase extends Screen {
 
+    private final EclipseBackground background = new EclipseBackground();
+
     protected static final int ITEM_IDLE = 0xFF9494AE;
     protected static final int ITEM_HOVER = 0xFFDCDCF5;
     protected static final float ITEM_SCALE = 1.35f;
@@ -138,7 +140,20 @@ public abstract class MenuBase extends Screen {
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        VideoBackground.renderMenu(g, width, height);
+        if (Modules.client.wallMenus.get() && dev.mraz1visual.wallpaper.WallpaperPlayer.render(g, 0, 0, width, height)) {
+            // затемнение слева — там пункты меню, и лёгкая виньетка
+            int steps = 24;
+            for (int i = 0; i < steps; i++) {
+                float t = i / (float) steps;
+                int a = Math.round(170 * (float) Math.pow(1 - t, 1.6));
+                int x0 = Math.round(width * 0.6f * t), x1 = Math.round(width * 0.6f * (t + 1f / steps));
+                g.fill(x0, 0, x1, height, a << 24 | 0x030308);
+            }
+            g.fillGradient(0, height - height / 4, width, height, 0x00000000, 0x80000000);
+            return;
+        }
+        background.render(g, width, height, sunScreenX(), sunScreenY(), zoom(), mouseX, mouseY,
+                Modules.client.animations.get());
     }
 
     @Override

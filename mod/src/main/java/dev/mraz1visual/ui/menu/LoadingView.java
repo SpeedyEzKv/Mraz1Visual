@@ -44,6 +44,10 @@ public final class LoadingView {
         return logoReady;
     }
 
+    private static final EclipseBackground LOADING_BG = new EclipseBackground();
+    /** Во время перезагрузки ресурсов текстуры фона ещё не готовы — рисуем только логотип. */
+    private static boolean inReload;
+
     /**
      * Нарисовать экран загрузки на весь экран.
      * @param progress 0..1 или &lt; 0 — бегущая полоса без процентов
@@ -54,7 +58,7 @@ public final class LoadingView {
         int w = g.guiWidth(), h = g.guiHeight();
         int a = Math.round(255 * Math.min(1f, alpha));
         g.fill(0, 0, w, h, a << 24 | 0x030308);
-        if (alpha > 0.5f) VideoBackground.render(g, 0, 0, w, h);
+        if (alpha > 0.5f && !inReload) LOADING_BG.render(g, w, h, 0.5f, 0.38f, 1f, w / 2, h / 2, true);
         // затемнение, чтобы логотип читался
         g.fill(0, 0, w, h, Math.round(a * 0.55f) << 24 | 0x030308);
         g.fillGradient(0, h / 2, w, h, 0, Math.round(a * 0.6f) << 24);
@@ -140,7 +144,12 @@ public final class LoadingView {
             else if (fadeIn) alpha = Math.max(0f, Math.min(1f, fi));
             else alpha = 1f;
             g.nextStratum();
-            render(g, progress, alpha);
+            inReload = true;
+            try {
+                render(g, progress, alpha);
+            } finally {
+                inReload = false;
+            }
         } catch (Throwable t) {
             // не сломать загрузку игры из-за картинки
         }
