@@ -24,6 +24,15 @@ pub struct Manifest {
     pub launcher_version: String,
     #[serde(default)]
     pub launcher_url: String,
+    /// Видео-фон меню мода (кадры 60 fps), качается один раз, пока не сменится version.
+    #[serde(default)]
+    pub video: Option<VideoAsset>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct VideoAsset {
+    pub url: String,
+    pub version: String,
 }
 
 /// true, если `remote` новее `local` (сравнение по числам через точку).
@@ -80,6 +89,7 @@ impl Manifest {
             links: vec![],
             launcher_version: String::new(),
             launcher_url: String::new(),
+            video: None,
         }
     }
 

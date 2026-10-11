@@ -128,6 +128,11 @@ pub async fn install(paths: &Paths, manifest: &Manifest, progress: &dyn Progress
     // моды
     ensure_mods(&client, paths, manifest, progress).await.context("моды")?;
 
+    // видео-фон меню: не критично — при ошибке игра запускается с заставкой
+    if let Err(e) = ensure_video(&client, paths, manifest, progress).await {
+        eprintln!("menu video: {e:#}");
+    }
+
     let main_class = str_of(&fabric, "mainClass")?;
     let version_name = str_of(&fabric, "id").unwrap_or_else(|_| format!("fabric-{}", manifest.minecraft));
     Ok(Installed {
@@ -198,6 +203,33 @@ fn unzip(archive: &Path, dest: &Path) -> Result<()> {
             std::io::copy(&mut entry, &mut f)?;
         }
     }
+    Ok(())
+}
+
+/// Кадры видео-фона в game/mraz1visual/video (мод читает их оттуда).
+async fn ensure_video(client: &reqwest::Client, paths: &Paths, m: &Manifest, progress: &dyn Progress) -> Result<()> {
+    let Some(v) = &m.video else { return Ok(()) };
+    if v.url.is_empty() {
+        return Ok(());
+    }
+    let dir = paths.game().join("mraz1visual").join("video");
+    let stamp = dir.join(".version");
+    if std::fs::read_to_string(&stamp).map(|t| t.trim() == v.version).unwrap_or(false) && dir.join("video.json").exists() {
+        return Ok(());
+    }
+    progress.report(99.0, "Видео-фон меню");
+    let archive = paths.game().join("mraz1visual").join("menu-video.zip");
+    std::fs::create_dir_all(archive.parent().unwrap())?;
+    let _ = std::fs::remove_file(&archive);
+    net::fetch(client, &Job { url: v.url.clone(), path: archive.clone(), sha1: None, size: None }).await?;
+    let (dir2, archive2) = (dir.clone(), archive.clone());
+    tokio::task::spawn_blocking(move || -> Result<()> {
+        let _ = std::fs::remove_dir_all(&dir2);
+        unzip(&archive2, &dir2)
+    })
+    .await??;
+    let _ = std::fs::remove_file(&archive);
+    std::fs::write(&stamp, &v.version)?;
     Ok(())
 }
 
@@ -332,8 +364,14 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
         };
         let job = Job { url, path: paths.mods().join(&file), sha1, size: None };
         if entry.url.is_some() {
-            // свой мод из релиза: если релиза нет, но jar уже лежит — играем с ним
-            // скачиваем каждый раз (файл маленький) — так всегда последняя версия из релиза
+            // свой мод из релиза: качаем только когда вышла новая сборка (номер build в manifest)
+            let stamp = paths.mods().join(format!(".{file}.build"));
+            let have = std::fs::read_to_string(&stamp).ok().and_then(|t| t.trim().parse::<u32>().ok());
+            if have == Some(m.build) && paths.mods().join(&file).exists() {
+                files.push(file);
+                continue;
+            }
+            // если релиза нет, но jar уже лежит — играем с ним
             if let Err(e) = net::fetch(client, &job).await {
                 if !has_mraz1visual(paths) {
                     return Err(e);
@@ -353,6 +391,7 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
                     }
                 }
             }
+            let _ = std::fs::write(&stamp, m.build.to_string());
             files.push(file);
             continue;
         }
