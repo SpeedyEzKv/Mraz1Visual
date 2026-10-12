@@ -5,31 +5,26 @@ import java.nio.file.Path;
 /**
  * Одни обои из Wallpaper Engine (или свой файл).
  *
- * @param media   что проигрывать: видео, gif или картинка
- * @param preview картинка для плитки в списке (может совпадать с media)
- * @param kind    VIDEO — настоящее видео обоев; PREVIEW — сцена/веб, играем их анимированное превью; IMAGE — картинка
+ * @param media   VIDEO — видеофайл; WEB — index.html; SCENE/PREVIEW — превью (gif/картинка); IMAGE — сам файл
+ * @param preview картинка для плитки в списке (может быть null)
+ * @param folder  папка обоев (для сцен — откуда брать scene.pkg), у своих файлов — null
  */
-public record Wallpaper(String key, String title, Kind kind, String source, Path media, Path preview, String weType) {
-    public enum Kind { VIDEO, PREVIEW, IMAGE }
+public record Wallpaper(String key, String title, Kind kind, String source, Path media, Path preview, Path folder) {
+    public enum Kind { VIDEO, SCENE, WEB, PREVIEW, IMAGE }
 
     public String label() {
         return switch (kind) {
             case VIDEO -> "Видео";
-            case PREVIEW -> typeName() + (isAnimated(media) ? " · анимированное превью" : " · превью-картинка");
+            case SCENE -> "Сцена";
+            case WEB -> "Веб";
+            case PREVIEW -> "Программа · превью";
             case IMAGE -> isAnimated(media) ? "Анимация" : "Картинка";
         };
     }
 
-    private String typeName() {
-        return switch (weType == null ? "" : weType) {
-            case "web" -> "Веб";
-            case "application" -> "Программа";
-            default -> "Сцена";
-        };
-    }
-
     public static boolean isAnimated(Path p) {
+        if (p == null) return false;
         String n = p.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
-        return !(n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") || n.endsWith(".bmp"));
+        return n.endsWith(".gif") || n.endsWith(".webp") || n.endsWith(".mp4") || n.endsWith(".webm");
     }
 }

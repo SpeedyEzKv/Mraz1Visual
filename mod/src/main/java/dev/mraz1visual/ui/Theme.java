@@ -8,32 +8,87 @@ public final class Theme {
     private Theme() {}
 
     // ── цвета (ARGB) ─────────────────────────────────────────
-    public static final int DEFAULT_ACCENT = 0xFFB8B4F2; // лавандовый
+    // Нейтральная палитра (как Tailwind neutral): чёрный/белый, без цветного оттенка.
+    // Два режима — тёмный и светлый; GUI включает светлый только на время своей отрисовки.
+    public static final int DEFAULT_ACCENT = 0xFFFAFAFA;
 
-    public static final int WINDOW      = 0xF00A0A0E;
-    public static final int WINDOW_EDGE = 0x1AFFFFFF;
-    public static final int SHADOW      = 0x40000000;
-    public static final int DIVIDER     = 0x12FFFFFF;
-    public static final int HOVER       = 0x0AFFFFFF;
-    public static final int SELECTED    = 0x16FFFFFF;
-    public static final int CARD        = 0xFF0F0F15;
-    public static final int CARD_EDGE   = 0x10FFFFFF;
-    public static final int FIELD       = 0xFF17171F;
-    public static final int FIELD_HOVER = 0xFF1D1D27;
-    public static final int POPUP       = 0xFA121219;
-    public static final int TRACK       = 0xFF25252F;
-    public static final int KNOB_OFF    = 0xFF676775;
-    public static final int KNOB_ON     = 0xFFF2F2F8;
+    public static int WINDOW, WINDOW_EDGE, SHADOW, DIVIDER, HOVER, SELECTED, CARD, CARD_EDGE, FIELD, FIELD_HOVER,
+            POPUP, TRACK, KNOB_OFF, KNOB_ON, TEXT, TEXT_DIM, TEXT_MUTED, SURFACE, ELEVATED,
+            GLASS_WINDOW, GLASS_PANEL, GLASS_CARD, GLASS_ACTIVE;
+    private static boolean light;
 
-    public static final int TEXT        = 0xFFE9E9F1;
-    public static final int TEXT_DIM    = 0xFF9B9BAB;
-    public static final int TEXT_MUTED  = 0xFF5E5E6D;
+    static {
+        dark();
+    }
+
+    public static boolean isLight() { return light; }
+
+    public static void dark() {
+        light = false;
+        WINDOW = 0xF50A0A0A;
+        SURFACE = 0xF2111111;
+        ELEVATED = 0xFF262626;
+        WINDOW_EDGE = 0xFF262626;
+        SHADOW = 0x66000000;
+        DIVIDER = 0xFF1F1F1F;
+        HOVER = 0x0DFFFFFF;
+        SELECTED = 0xFF222222;
+        CARD = 0xF0141414;
+        CARD_EDGE = 0xFF242424;
+        FIELD = 0xFF1A1A1A;
+        FIELD_HOVER = 0xFF262626;
+        POPUP = 0xF2101012;
+        TRACK = 0xFF2E2E2E;
+        KNOB_OFF = 0xFFA1A1A1;
+        KNOB_ON = 0xFF0A0A0A;
+        TEXT = 0xFFFAFAFA;
+        TEXT_DIM = 0xFFA1A1A1;
+        TEXT_MUTED = 0xFF737373;
+        GLASS_WINDOW = 0x8C0A0A0C;
+        GLASS_PANEL = 0x8C0C0C0E;
+        GLASS_CARD = 0x8C101012;
+        GLASS_ACTIVE = 0x1FFFFFFF;
+    }
+
+    public static void light() {
+        light = true;
+        WINDOW = 0xF7FFFFFF;
+        SURFACE = 0xF5FAFAFA;
+        ELEVATED = 0xFFE5E5E5;
+        WINDOW_EDGE = 0xFFE5E5E5;
+        SHADOW = 0x30000000;
+        DIVIDER = 0xFFEBEBEB;
+        HOVER = 0x0A000000;
+        SELECTED = 0xFFEDEDED;
+        CARD = 0xF5FFFFFF;
+        CARD_EDGE = 0xFFE5E5E5;
+        FIELD = 0xFFF5F5F5;
+        FIELD_HOVER = 0xFFE5E5E5;
+        POPUP = 0xFCFFFFFF;
+        TRACK = 0xFFCFCFCF;
+        KNOB_OFF = 0xFFFFFFFF;
+        KNOB_ON = 0xFFFFFFFF;
+        TEXT = 0xFF0A0A0A;
+        TEXT_DIM = 0xFF525252;
+        TEXT_MUTED = 0xFF8A8A8A;
+        GLASS_WINDOW = 0xB8F4F4F5;
+        GLASS_PANEL = 0x99FFFFFF;
+        GLASS_CARD = 0xA6FFFFFF;
+        GLASS_ACTIVE = 0xCCFFFFFF;
+    }
 
     private static int accent = DEFAULT_ACCENT;
     private static int accentSoft = Colors.withAlpha(DEFAULT_ACCENT, 0x55);
 
-    public static int accent() { return accent; }
-    public static int accentSoft() { return accentSoft; }
+    /** Акцент. Белый акцент в светлом режиме становится почти чёрным — иначе его не видно. */
+    public static int accent() {
+        if (light && (accent & 0xFFFFFF) >= 0xE0E0E0 && Colors.luma(accent) > 0.85f) return 0xFF171717;
+        return accent;
+    }
+
+    public static int accentSoft() {
+        return light ? Colors.withAlpha(accent(), 0x40) : accentSoft;
+    }
 
     public static void setAccent(int argb) {
         accent = argb | 0xFF000000;
@@ -41,15 +96,15 @@ public final class Theme {
     }
 
     // ── размеры (в единицах окна; 1 единица = 1–3 физических пикселя) ──
-    public static final int WINDOW_W   = 728;
-    public static final int WINDOW_H   = 384;
+    public static final int WINDOW_W   = 760;
+    public static final int WINDOW_H   = 448;
     public static final int WINDOW_MIN_W = 480;
     public static final int WINDOW_MIN_H = 280;
-    public static final int RADIUS     = 8;
+    public static final int RADIUS     = 10;
     public static final int RADIUS_SM  = 4;
 
-    public static final int TOPBAR_H   = 36;
-    public static final int SIDEBAR_W  = 178;
+    public static final int TOPBAR_H   = 42;
+    public static final int SIDEBAR_W  = 154;
     public static final int HEADER_H   = 44;
     public static final int BANNER_H   = 150;
     public static final int ROW_H      = 22;
@@ -61,11 +116,11 @@ public final class Theme {
     public static final int CARD_TITLE_H = 18;
     public static final int CARD_MIN_W   = 190;
 
-    public static final int SWITCH_W   = 15;
-    public static final int SWITCH_H   = 8;
+    public static final int SWITCH_W   = 20;
+    public static final int SWITCH_H   = 11;
     public static final int SLIDER_W   = 84;
     public static final int FIELD_H    = 14;
-    public static final int SEARCH_W   = 76;
+    public static final int SEARCH_W   = 150;
 
     // ── шрифт ────────────────────────────────────────────────
     public static final int FONT_H     = 8; // высота строчных глифов ванильного шрифта

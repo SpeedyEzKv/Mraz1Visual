@@ -77,7 +77,8 @@ public final class WallpaperScreen extends MenuBase {
         filterItems[0] = item("ВСЕ", () -> setFilter(Filter.ALL));
         filterItems[1] = item("ВИДЕО", () -> setFilter(Filter.VIDEO));
         filterItems[2] = item("СВОИ", () -> setFilter(Filter.OWN));
-        itemAfterGap("ФАЙЛ…", this::pickFile);
+        itemAfterGap("МАСТЕРСКАЯ", this::openWorkshop);
+        item("ФАЙЛ…", this::pickFile);
         item("ПАПКА", this::openFolder);
         item("ОБНОВИТЬ", this::rescan);
         itemAfterGap("НАЗАД", this::onClose);
@@ -216,6 +217,22 @@ public final class WallpaperScreen extends MenuBase {
         }
     }
 
+    /** Мастерская Wallpaper Engine в Steam: подписались — Steam скачал — «ОБНОВИТЬ», и обои в списке. */
+    private void openWorkshop() {
+        open("steam://url/SteamWorkshopPage/431960", "https://steamcommunity.com/app/431960/workshop/");
+    }
+
+    private static void open(String steamUrl, String webUrl) {
+        try {
+            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+            if (os.contains("win")) new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", steamUrl).start();
+            else if (os.contains("mac")) new ProcessBuilder("open", steamUrl).start();
+            else new ProcessBuilder("xdg-open", webUrl).start();
+        } catch (Throwable t) {
+            ModuleManager.LOG.warn("Can't open workshop", t);
+        }
+    }
+
     private void openFolder() {
         try {
             java.nio.file.Files.createDirectories(WallpaperScanner.OWN);
@@ -290,7 +307,7 @@ public final class WallpaperScreen extends MenuBase {
             int y = py + chh + GAP + 10 - sc;
             d.text(query.isEmpty() ? "Обоев Wallpaper Engine не найдено." : "Ничего не найдено.", px, y, Colors.mulAlpha(Theme.TEXT_DIM, fade));
             if (query.isEmpty()) {
-                d.text("Подпишитесь на обои в Мастерской Steam, нажмите «ФАЙЛ…» или положите видео/gif/картинки в «ПАПКУ».", px, y + 14, Colors.mulAlpha(Theme.TEXT_MUTED, fade));
+                d.text("Нажмите «МАСТЕРСКАЯ», подпишитесь на обои — Steam скачает их, затем «ОБНОВИТЬ».", px, y + 14, Colors.mulAlpha(Theme.TEXT_MUTED, fade));
             }
         }
         d.unclip();

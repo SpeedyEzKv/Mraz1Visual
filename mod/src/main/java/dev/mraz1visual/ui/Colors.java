@@ -57,4 +57,9 @@ public final class Colors {
         out[1] = max == 0 ? 0 : d / max;
         out[2] = max;
     }
+
+    /** Яркость 0..1. */
+    public static float luma(int c) {
+        return ((c >> 16 & 0xFF) * 0.299f + (c >> 8 & 0xFF) * 0.587f + (c & 0xFF) * 0.114f) / 255f;
+    }
 }

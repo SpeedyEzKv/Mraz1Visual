@@ -182,11 +182,56 @@ public final class Draw {
 
     /** Тумблер: t = 0 выкл, 1 вкл (анимированное значение). */
     public void toggle(int x, int y, float t) {
-        int track = Colors.lerp(Theme.TRACK, Theme.accentSoft(), t);
+        int track = Colors.lerp(Theme.TRACK, Theme.accent(), t);
         round(x, y, Theme.SWITCH_W, Theme.SWITCH_H, Theme.SWITCH_H / 2, track);
         int knob = Theme.SWITCH_H - 4;
         int kx = x + 2 + Math.round((Theme.SWITCH_W - 4 - knob) * t);
         round(kx, y + 2, knob, knob, knob / 2, Colors.lerp(Theme.KNOB_OFF, Theme.KNOB_ON, t));
+    }
+
+    // ── жидкое стекло ────────────────────────────────────────
+
+    /**
+     * Стеклянная панель: полупрозрачная заливка, мягкий блик сверху и светлый кант
+     * (ярче сверху — как свет на стекле). Размытый фон под ней рисуется отдельно (см. WallpaperPlayer.glass).
+     */
+    public void glass(int x, int y, int w, int h, int r, int tint, float strength) {
+        round(x, y, w, h, r, tint);
+        boolean light = Theme.isLight();
+        int sheenH = Math.max(4, Math.min(h - 2, Math.round(h * 0.45f)));
+        int sheen = Colors.withAlpha(0xFFFFFF, Math.round((light ? 70 : 20) * strength));
+        int rr = Math.min(r, Math.min(w, h) / 2);
+        if (sheenH > rr) gradientV(x + Math.max(1, rr / 2), y + 1, w - 2 * Math.max(1, rr / 2), sheenH, sheen, sheen & 0x00FFFFFF);
+        int top = Colors.withAlpha(0xFFFFFF, Math.round((light ? 200 : 64) * strength));
+        int bottom = Colors.withAlpha(0xFFFFFF, Math.round((light ? 90 : 14) * strength));
+        rim(x, y, w, h, r, top, bottom);
+    }
+
+    /** Кант по скруглённому контуру: сверху цвет top, снизу bottom, по бокам — переход. */
+    public void rim(int x, int y, int w, int h, int r, int top, int bottom) {
+        if (w <= 2 || h <= 2) return;
+        r = Math.min(r, Math.min(w, h) / 2);
+        if (r > 32) r = 32;
+        if (r <= 0) {
+            hLine(x, y, w, top);
+            hLine(x, y + h - 1, w, bottom);
+            gradientV(x, y + 1, 1, h - 2, top, bottom);
+            gradientV(x + w - 1, y + 1, 1, h - 2, top, bottom);
+            return;
+        }
+        int[] in = insets(r);
+        hLine(x + in[0], y, w - 2 * in[0], top);
+        hLine(x + in[0], y + h - 1, w - 2 * in[0], bottom);
+        for (int i = 1; i < r; i++) {
+            int a = in[i], prev = in[i - 1];
+            int len = Math.max(1, prev - a);
+            rect(x + a, y + i, len, 1, top);
+            rect(x + w - a - len, y + i, len, 1, top);
+            rect(x + a, y + h - 1 - i, len, 1, bottom);
+            rect(x + w - a - len, y + h - 1 - i, len, 1, bottom);
+        }
+        gradientV(x, y + r, 1, h - 2 * r, top, bottom);
+        gradientV(x + w - 1, y + r, 1, h - 2 * r, top, bottom);
     }
 
     /** Шахматка под полупрозрачными цветами. */

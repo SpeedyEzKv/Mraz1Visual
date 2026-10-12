@@ -60,6 +60,17 @@ public final class WallpaperPlayer {
     private static volatile BufferedImage pendingStill;
     private static volatile int stillGen;
 
+    // размытая копия для «стекла»: маленькая текстура, растянутая с линейной фильтрацией
+    private static final AtomicReference<int[]> blurLatest = new AtomicReference<>();
+    private static volatile int[] pendingStillBlur;
+    private static volatile int pendingBW, pendingBH;
+    private static DynamicTexture videoBlur, stillBlur;
+    private static Identifier videoBlurId, stillBlurId;
+    private static int vbw, vbh, sbw, sbh, stillBlurW, stillBlurH;
+    /** Что было нарисовано последним: видео (true) или картинка (false). */
+    private static boolean lastVideo;
+    private static int lastSrcW, lastSrcH;
+
     private static Field pixelPtr;
     private static boolean ptrProbed;
     private static int texCounter;
@@ -80,6 +91,8 @@ public final class WallpaperPlayer {
     public static void select(Wallpaper w) {
         load();
         stop();
+        if (webOpen) WebWallpaper.close();
+        webOpen = false;
         releaseTextures();
         current = w;
         gotFrame = false;
@@ -99,7 +112,8 @@ public final class WallpaperPlayer {
             if (!Files.exists(SAVE)) return;
             JsonObject j = JsonParser.parseString(Files.readString(SAVE, StandardCharsets.UTF_8)).getAsJsonObject();
             Wallpaper w = WallpaperScanner.fromSaved(j.get("key").getAsString(), j.get("title").getAsString(),
-                    j.get("kind").getAsString(), j.get("media").getAsString(), j.has("preview") ? j.get("preview").getAsString() : "");
+                    j.get("kind").getAsString(), j.get("media").getAsString(), j.has("preview") ? j.get("preview").getAsString() : "",
+                    j.has("folder") ? j.get("folder").getAsString() : "");
             if (w != null) {
                 current = w;
                 loadStillAsync(w);
@@ -122,20 +136,50 @@ public final class WallpaperPlayer {
             j.addProperty("kind", current.kind().name());
             j.addProperty("media", current.media().toString());
             j.addProperty("preview", current.preview() == null ? "" : current.preview().toString());
+            j.addProperty("folder", current.folder() == null ? "" : current.folder().toString());
             Files.writeString(SAVE, j.toString(), StandardCharsets.UTF_8);
         } catch (Throwable t) {
             ModuleManager.LOG.warn("Can't save wallpaper", t);
         }
     }
 
-    private static boolean needsStream(Wallpaper w) {
-        return w.kind() == Wallpaper.Kind.VIDEO || Wallpaper.isAnimated(w.media());
+    private static boolean sharpScenes() {
+        return !Modules.client.wallScene.getId().equals("anim");
     }
+
+    private static boolean webLive(Wallpaper w) {
+        return w.kind() == Wallpaper.Kind.WEB && dev.mraz1visual.browser.Browser.available() && !WebWallpaper.failed();
+    }
+
+    /** Что идёт через ffmpeg: видео и анимированные превью/картинки. */
+    private static boolean needsStream(Wallpaper w) {
+        return switch (w.kind()) {
+            case VIDEO -> true;
+            case SCENE -> !sharpScenes() && Wallpaper.isAnimated(w.media());
+            case WEB -> !webLive(w) && Wallpaper.isAnimated(w.media());
+            default -> Wallpaper.isAnimated(w.media());
+        };
+    }
+
+    /** Вызывается каждый тик: закрыть Chromium веб-обоев, если их давно не видно. */
+    public static void tick() {
+        if (webOpen && System.currentTimeMillis() - lastShown > 5000) {
+            WebWallpaper.close();
+            webOpen = false;
+        }
+    }
+
+    private static boolean webOpen;
 
     /** Строка состояния для экрана выбора. */
     public static String status() {
         Wallpaper w = current();
         if (w == null) return "Сейчас: затмение (стандартный фон)";
+        if (webLive(w)) {
+            String st = WebWallpaper.stage();
+            if (!st.isEmpty()) return st;
+        }
+        if (w.kind() == Wallpaper.Kind.SCENE && sharpScenes() && sceneLoading) return "Достаю чёткую картинку сцены…";
         if (needsStream(w)) {
             if (Ffmpeg.downloading()) return "Скачиваю ffmpeg для видео… " + Math.round(Ffmpeg.progress() * 100) + "%";
             if (!Ffmpeg.error().isEmpty()) return Ffmpeg.error();
@@ -147,13 +191,18 @@ public final class WallpaperPlayer {
 
     // ── поток видео ──────────────────────────────────────────
 
-    private static int[] size() {
-        String q = Modules.client.wallQuality.getId();
-        return switch (q) {
-            case "720" -> new int[]{1280, 720};
-            case "1440" -> new int[]{2560, 1440};
-            default -> new int[]{1920, 1080};
+    /** Размер кадра: как у исходника, но не больше выбранного предела (без лишнего растягивания). */
+    private static int[] size(Wallpaper w) {
+        int cap = switch (Modules.client.wallQuality.getId()) {
+            case "1080" -> 1080;
+            case "2160" -> 2160;
+            default -> 1440;
         };
+        int[] src = Ffmpeg.probe(w.kind() == Wallpaper.Kind.VIDEO ? w.media() : w.media());
+        int sw = src == null ? 1920 : src[0], sh = src == null ? 1080 : src[1];
+        float k = Math.min(1f, Math.min(cap / (float) sh, cap * 16f / 9f / sw));
+        int tw = Math.max(2, Math.round(sw * k) & ~1), th = Math.max(2, Math.round(sh * k) & ~1);
+        return new int[]{tw, th};
     }
 
     private static void start(Wallpaper w) {
@@ -162,7 +211,7 @@ public final class WallpaperPlayer {
             Ffmpeg.ensureAsync();
             return;
         }
-        int[] s = size();
+        int[] s = size(w);
         if (video == null || W != s[0] || H != s[1]) {
             releaseVideo();
             W = s[0];
@@ -175,12 +224,14 @@ public final class WallpaperPlayer {
         for (int i = 0; i < 3; i++) free.add(new byte[W * H * 4]);
         latest.set(null);
         int gen = ++generation;
-        int fps = Modules.client.wallFps.getId().equals("60") ? 60 : 30;
-        String vf = "scale=" + W + ":" + H + ":force_original_aspect_ratio=increase:flags=bicubic,crop=" + W + ":" + H;
+        String fpsId = Modules.client.wallFps.getId();
+        String vf = "scale=" + W + ":" + H + ":flags=lanczos";
         java.util.List<String> cmd = new java.util.ArrayList<>(java.util.List.of(ff, "-hide_banner", "-loglevel", "error", "-nostdin"));
         if (w.kind() == Wallpaper.Kind.VIDEO) cmd.addAll(java.util.List.of("-hwaccel", "auto"));
         cmd.addAll(java.util.List.of("-stream_loop", "-1", "-re", "-i", w.media().toString(),
-                "-an", "-sn", "-vf", vf, "-fpsmax", Integer.toString(fps), "-pix_fmt", "rgba", "-f", "rawvideo", "pipe:1"));
+                "-an", "-sn", "-vf", vf));
+        if (!fpsId.equals("orig")) cmd.addAll(java.util.List.of("-fpsmax", fpsId));
+        cmd.addAll(java.util.List.of("-pix_fmt", "rgba", "-f", "rawvideo", "pipe:1"));
         try {
             Files.createDirectories(LOG.getParent());
             ProcessBuilder pb = new ProcessBuilder(cmd).redirectError(LOG.toFile());
@@ -194,6 +245,62 @@ public final class WallpaperPlayer {
         }
     }
 
+    private static int blurCounter;
+
+    /** Уменьшить кадр в 8 раз (среднее по блокам) и размыть — получится «матовое стекло». */
+    static int[] blurFromRgba(byte[] rgba, int w, int h) {
+        int f = 8, bw = Math.max(1, w / f), bh = Math.max(1, h / f);
+        int[] out = new int[bw * bh];
+        for (int by = 0; by < bh; by++) {
+            for (int bx = 0; bx < bw; bx++) {
+                int r = 0, g = 0, b = 0, n = 0;
+                for (int yy = by * f; yy < by * f + f && yy < h; yy += 2) {
+                    int o = (yy * w + bx * f) * 4;
+                    for (int xx = 0; xx < f && bx * f + xx < w; xx += 2, o += 8) {
+                        r += rgba[o] & 0xFF;
+                        g += rgba[o + 1] & 0xFF;
+                        b += rgba[o + 2] & 0xFF;
+                        n++;
+                    }
+                }
+                out[by * bw + bx] = 0xFF000000 | (r / n) << 16 | (g / n) << 8 | (b / n);
+            }
+        }
+        boxBlur(out, bw, bh, 3);
+        boxBlur(out, bw, bh, 3);
+        return out;
+    }
+
+    /** Размытие «коробкой» по горизонтали и вертикали (ARGB, на месте). */
+    static void boxBlur(int[] px, int w, int h, int r) {
+        int[] tmp = new int[px.length];
+        for (int pass = 0; pass < 2; pass++) {
+            int[] src = pass == 0 ? px : tmp, dst = pass == 0 ? tmp : px;
+            int len = pass == 0 ? w : h, lines = pass == 0 ? h : w;
+            for (int l = 0; l < lines; l++) {
+                int sr = 0, sg = 0, sb = 0;
+                for (int i = -r; i <= r; i++) {
+                    int c = src[idx(pass, l, Math.max(0, Math.min(len - 1, i)), w)];
+                    sr += c >> 16 & 0xFF;
+                    sg += c >> 8 & 0xFF;
+                    sb += c & 0xFF;
+                }
+                int n = 2 * r + 1;
+                for (int i = 0; i < len; i++) {
+                    dst[idx(pass, l, i, w)] = 0xFF000000 | (sr / n) << 16 | (sg / n) << 8 | (sb / n);
+                    int cOut = src[idx(pass, l, Math.max(0, i - r), w)], cIn = src[idx(pass, l, Math.min(len - 1, i + r + 1), w)];
+                    sr += (cIn >> 16 & 0xFF) - (cOut >> 16 & 0xFF);
+                    sg += (cIn >> 8 & 0xFF) - (cOut >> 8 & 0xFF);
+                    sb += (cIn & 0xFF) - (cOut & 0xFF);
+                }
+            }
+        }
+    }
+
+    private static int idx(int pass, int line, int i, int w) {
+        return pass == 0 ? line * w + i : i * w + line;
+    }
+
     private static void read(Process p, int gen, int frameBytes) {
         try (DataInputStream in = new DataInputStream(new java.io.BufferedInputStream(p.getInputStream(), 1 << 20))) {
             while (generation == gen) {
@@ -204,6 +311,7 @@ public final class WallpaperPlayer {
                 byte[] buf = free.poll(250, java.util.concurrent.TimeUnit.MILLISECONDS);
                 if (buf == null) continue;
                 in.readFully(buf, 0, frameBytes);
+                if (++blurCounter % 2 == 0) blurLatest.set(blurFromRgba(buf, W, H));
                 byte[] old = latest.getAndSet(buf);
                 if (old != null) free.offer(old);
                 gotFrame = true;
@@ -238,15 +346,25 @@ public final class WallpaperPlayer {
 
     // ── картинка ─────────────────────────────────────────────
 
+    private static volatile boolean sceneLoading;
+
     private static void loadStillAsync(Wallpaper w) {
-        Path src = !Wallpaper.isAnimated(w.media()) ? w.media() : w.preview() != null ? w.preview() : null;
-        if (src == null) return;
+        boolean scene = w.kind() == Wallpaper.Kind.SCENE && sharpScenes() && w.folder() != null;
+        Path src = !Wallpaper.isAnimated(w.media()) ? w.media() : w.preview() != null && !Wallpaper.isAnimated(w.preview()) ? w.preview() : w.preview();
+        if (w.kind() == Wallpaper.Kind.SCENE && src != null && src.getFileName().toString().endsWith(".pkg")) src = null;
+        Path fsrc = src;
         int gen = ++stillGen;
+        sceneLoading = scene;
         Thread t = new Thread(() -> {
             try {
-                BufferedImage img = ImageIO.read(src.toFile());
+                BufferedImage img = null;
+                if (scene) {
+                    img = SceneImage.load(w.folder());
+                    sceneLoading = false;
+                }
+                if (img == null && fsrc != null) img = ImageIO.read(fsrc.toFile());
                 if (img == null || gen != stillGen) return;
-                int max = 2560;
+                int max = 3840;
                 if (img.getWidth() > max) {
                     int nh = Math.round(img.getHeight() * (max / (float) img.getWidth()));
                     BufferedImage s = new BufferedImage(max, nh, BufferedImage.TYPE_INT_ARGB);
@@ -256,18 +374,55 @@ public final class WallpaperPlayer {
                     g.dispose();
                     img = s;
                 }
-                if (gen == stillGen) pendingStill = img;
+                if (gen == stillGen) {
+                    int bw = Math.max(16, img.getWidth() / 10), bh = Math.max(9, img.getHeight() / 10);
+                    BufferedImage small = new BufferedImage(bw, bh, BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g2 = small.createGraphics();
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    g2.drawImage(img, 0, 0, bw, bh, null);
+                    g2.dispose();
+                    int[] px = small.getRGB(0, 0, bw, bh, null, 0, bw);
+                    boxBlur(px, bw, bh, 2);
+                    boxBlur(px, bw, bh, 2);
+                    pendingBW = bw;
+                    pendingBH = bh;
+                    pendingStillBlur = px;
+                    pendingStill = img;
+                }
             } catch (Throwable ignored) {
+            } finally {
+                if (gen == stillGen) sceneLoading = false;
             }
         }, "Mraz1Visual wallpaper image");
         t.setDaemon(true);
         t.start();
     }
 
+    /** Перечитать картинку (сменили режим сцен). */
+    public static void reload() {
+        Wallpaper w = current();
+        stop();
+        if (w != null) {
+            gotFrame = false;
+            streamError = "";
+            loadStillAsync(w);
+        }
+    }
+
     private static void uploadStill() {
         BufferedImage img = pendingStill;
         if (img == null) return;
         pendingStill = null;
+        int[] blur = pendingStillBlur;
+        if (blur != null) {
+            Identifier[] id = {stillBlurId};
+            stillBlur = uploadSmall(stillBlur, id, blur, pendingBW, pendingBH, sbw, sbh);
+            stillBlurId = id[0];
+            sbw = pendingBW;
+            sbh = pendingBH;
+            pendingStillBlur = null;
+        }
         if (still != null) Minecraft.getInstance().getTextureManager().release(stillId);
         stillW = img.getWidth();
         stillH = img.getHeight();
@@ -282,6 +437,20 @@ public final class WallpaperPlayer {
         Minecraft.getInstance().getTextureManager().register(stillId, still);
     }
 
+    private static DynamicTexture uploadSmall(DynamicTexture tex, Identifier[] id, int[] px, int w, int h, int curW, int curH) {
+        if (tex == null || curW != w || curH != h) {
+            if (tex != null) Minecraft.getInstance().getTextureManager().release(id[0]);
+            tex = new DynamicTexture(() -> "mraz1visual glass", w, h, false);
+            id[0] = Identifier.fromNamespaceAndPath("mraz1visual", "wallpaper/glass_" + (texCounter++));
+            Minecraft.getInstance().getTextureManager().register(id[0], tex);
+        }
+        NativeImage img = tex.getPixels();
+        if (img == null) return tex;
+        for (int y = 0, i = 0; y < h; y++) for (int x = 0; x < w; x++, i++) img.setPixel(x, y, px[i]);
+        tex.upload();
+        return tex;
+    }
+
     private static void releaseVideo() {
         if (video != null) Minecraft.getInstance().getTextureManager().release(videoId);
         video = null;
@@ -289,6 +458,11 @@ public final class WallpaperPlayer {
 
     private static void releaseTextures() {
         releaseVideo();
+        if (videoBlur != null) Minecraft.getInstance().getTextureManager().release(videoBlurId);
+        if (stillBlur != null) Minecraft.getInstance().getTextureManager().release(stillBlurId);
+        videoBlur = stillBlur = null;
+        vbw = vbh = sbw = sbh = 0;
+        blurLatest.set(null);
         if (still != null) Minecraft.getInstance().getTextureManager().release(stillId);
         still = null;
         pendingStill = null;
@@ -344,39 +518,82 @@ public final class WallpaperPlayer {
 
     /**
      * Нарисовать обои на весь прямоугольник (обрезка по краям, без полос).
-     * @return false — обоев нет или они ещё не готовы (тогда рисуйте свой фон)
+     * @return false — обоев нет (тогда рисуйте свой фон)
      */
     public static boolean render(GuiGraphics g, int x, int y, int w, int h) {
+        return render(g, x, y, w, h, 0, Modules.client.wallDim.get());
+    }
+
+    /**
+     * То же, но со скруглёнными углами радиуса r и своим затемнением (в процентах).
+     */
+    public static boolean render(GuiGraphics g, int x, int y, int w, int h, int r, double dimPercent) {
         Wallpaper wp = current();
         if (wp == null) return false;
         lastShown = System.currentTimeMillis();
         try {
             uploadStill();
             boolean drew = false;
-            if (needsStream(wp)) {
+            if (webLive(wp)) {
+                int[] s = webSize();
+                com.mojang.blaze3d.textures.GpuTextureView view = WebWallpaper.view(wp.media().toUri().toString(), s[0], s[1]);
+                webOpen = true;
+                if (view != null) {
+                    float[] uv = cover(w, h, s[0], s[1]);
+                    blitRounded(g, view, x, y, w, h, r, uv);
+                    drew = true;
+                }
+            } else if (needsStream(wp)) {
                 if (proc == null && System.currentTimeMillis() >= nextStart && streamError.isEmpty()) {
                     nextStart = System.currentTimeMillis() + 2000;
                     start(wp);
                 }
                 byte[] f = latest.getAndSet(null);
                 if (f != null && video != null) {
-                    uploadFrame(f);
+                    if (f.length == W * H * 4) uploadFrame(f);
                     free.offer(f);
+                }
+                int[] bl = blurLatest.getAndSet(null);
+                if (bl != null) {
+                    int bw = Math.max(1, W / 8), bh = Math.max(1, H / 8);
+                    if (bl.length == bw * bh) {
+                        Identifier[] id = {videoBlurId};
+                        videoBlur = uploadSmall(videoBlur, id, bl, bw, bh, vbw, vbh);
+                        videoBlurId = id[0];
+                        vbw = bw;
+                        vbh = bh;
+                    }
                 }
                 if (gotFrame && video != null) {
                     float[] uv = cover(w, h, W, H);
-                    blitLinear(g, video, x, y, w, h, uv[0], uv[1], uv[2], uv[3]);
+                    blitRounded(g, video.getTextureView(), x, y, w, h, r, uv);
                     drew = true;
+                    lastVideo = true;
+                    lastSrcW = W;
+                    lastSrcH = H;
                 }
             }
             if (!drew && still != null) {
                 float[] uv = cover(w, h, stillW, stillH);
-                blitLinear(g, still, x, y, w, h, uv[0], uv[1], uv[2], uv[3]);
+                blitRounded(g, still.getTextureView(), x, y, w, h, r, uv);
                 drew = true;
+                lastVideo = false;
+                lastSrcW = stillW;
+                lastSrcH = stillH;
             }
-            if (!drew) g.fill(x, y, x + w, y + h, 0xFF050508);
-            int dim = (int) Math.round(Modules.client.wallDim.get() * 2.55);
-            if (dim > 0) g.fill(x, y, x + w, y + h, dim << 24);
+            if (drew) {
+                glassWin[0] = x;
+                glassWin[1] = y;
+                glassWin[2] = w;
+                glassWin[3] = h;
+            }
+            int dim = (int) Math.round(dimPercent * 2.55);
+            if (!drew) dim = 255;
+            if (dim > 0) {
+                int c = Math.min(255, dim) << 24 | 0x050508;
+                if (r <= 0) g.fill(x, y, x + w, y + h, c);
+                else roundedFill(g, x, y, w, h, r, c);
+            }
             return true;
         } catch (Throwable t) {
             ModuleManager.LOG.warn("Wallpaper render failed", t);
@@ -384,6 +601,73 @@ public final class WallpaperPlayer {
             stop();
             return false;
         }
+    }
+
+    private static final int[] glassWin = new int[4];
+
+    /**
+     * Размытые обои под стеклянной панелью: тот же кусок картинки, что лежит под прямоугольником,
+     * но размытый. Координаты окна берутся из последнего render(). mapDy — сдвиг прокрутки
+     * (рисуем в (x, y), а картинку берём как для (x, y + mapDy)).
+     * @return false — размывать нечего (обоев нет или веб-обои)
+     */
+    public static boolean glass(GuiGraphics g, int x, int y, int w, int h, int r, int mapDy) {
+        DynamicTexture t = lastVideo ? videoBlur : stillBlur;
+        if (current() == null || t == null || glassWin[2] <= 0 || lastSrcW <= 0) return false;
+        float[] uv = cover(glassWin[2], glassWin[3], lastSrcW, lastSrcH);
+        float du = (uv[1] - uv[0]) / glassWin[2], dv = (uv[3] - uv[2]) / glassWin[3];
+        int sy = y + mapDy;
+        float[] sub = {uv[0] + (x - glassWin[0]) * du, uv[0] + (x + w - glassWin[0]) * du,
+                uv[2] + (sy - glassWin[1]) * dv, uv[2] + (sy + h - glassWin[1]) * dv};
+        blitRounded(g, t.getTextureView(), x, y, w, h, r, sub);
+        return true;
+    }
+
+    private static int[] webSize() {
+        int cap = switch (Modules.client.wallQuality.getId()) {
+            case "1080" -> 1080;
+            case "2160" -> 2160;
+            default -> 1440;
+        };
+        var win = Minecraft.getInstance().getWindow();
+        int sh = Math.min(cap, Math.max(360, win.getHeight()));
+        int sw = Math.round(sh * Math.max(1f, win.getWidth() / (float) Math.max(1, win.getHeight())));
+        return new int[]{sw, sh};
+    }
+
+    /** Полоски по высоте у скруглённых краёв — так картинка не вылезает за углы окна. */
+    private static int inset(int r, int row) {
+        double dy = r - row - 0.5;
+        return (int) Math.ceil(r - Math.sqrt(Math.max(0, (double) r * r - dy * dy)));
+    }
+
+    private static void blitRounded(GuiGraphics g, com.mojang.blaze3d.textures.GpuTextureView view, int x, int y, int w, int h, int r, float[] uv) {
+        if (view == null) return;
+        if (r <= 0 || h < 2 * r) {
+            blitView(g, view, x, y, w, h, uv[0], uv[1], uv[2], uv[3]);
+            return;
+        }
+        float du = (uv[1] - uv[0]) / w, dv = (uv[3] - uv[2]) / h;
+        for (int i = 0; i < r; i++) {
+            int in = inset(r, i);
+            blitView(g, view, x + in, y + i, w - 2 * in, 1, uv[0] + in * du, uv[1] - in * du, uv[2] + i * dv, uv[2] + (i + 1) * dv);
+            int yb = h - 1 - i;
+            blitView(g, view, x + in, y + yb, w - 2 * in, 1, uv[0] + in * du, uv[1] - in * du, uv[2] + yb * dv, uv[2] + (yb + 1) * dv);
+        }
+        blitView(g, view, x, y + r, w, h - 2 * r, uv[0], uv[1], uv[2] + r * dv, uv[2] + (h - r) * dv);
+    }
+
+    private static void roundedFill(GuiGraphics g, int x, int y, int w, int h, int r, int c) {
+        if (h < 2 * r) {
+            g.fill(x, y, x + w, y + h, c);
+            return;
+        }
+        for (int i = 0; i < r; i++) {
+            int in = inset(r, i);
+            g.fill(x + in, y + i, x + w - in, y + i + 1, c);
+            g.fill(x + in, y + h - 1 - i, x + w - in, y + h - i, c);
+        }
+        g.fill(x, y + r, x + w, y + h - r, c);
     }
 
     private static float[] cover(int w, int h, int tw, int th) {
@@ -395,8 +679,11 @@ public final class WallpaperPlayer {
 
     /** Текстура с линейной фильтрацией — без «пикселей» при растяжении. */
     public static void blitLinear(GuiGraphics g, DynamicTexture t, int x, int y, int w, int h, float u0, float u1, float v0, float v1) {
-        com.mojang.blaze3d.textures.GpuTextureView view = t.getTextureView();
-        if (view == null) return;
+        blitView(g, t.getTextureView(), x, y, w, h, u0, u1, v0, v1);
+    }
+
+    private static void blitView(GuiGraphics g, com.mojang.blaze3d.textures.GpuTextureView view, int x, int y, int w, int h, float u0, float u1, float v0, float v1) {
+        if (view == null || w <= 0 || h <= 0) return;
         g.guiRenderState.submitGuiElement(new net.minecraft.client.gui.render.state.BlitRenderState(
                 RenderPipelines.GUI_TEXTURED,
                 net.minecraft.client.gui.render.TextureSetup.singleTexture(view,

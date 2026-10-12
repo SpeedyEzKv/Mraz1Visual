@@ -41,8 +41,7 @@ public final class WallpaperScanner {
             scanProjects(we.resolve("defaultprojects"), "Встроенные", out, seen);
         }
         scanOwn(out, seen);
-        out.sort(Comparator.comparing((Wallpaper w) -> w.kind() != Wallpaper.Kind.VIDEO)
-                .thenComparing(w -> w.title().toLowerCase(Locale.ROOT)));
+        out.sort(Comparator.comparing((Wallpaper w) -> w.title().toLowerCase(Locale.ROOT)));
         return out;
     }
 
@@ -128,11 +127,20 @@ public final class WallpaperScanner {
             if (preview != null && !Files.exists(preview)) preview = null;
             if (preview == null) preview = firstExisting(folder, "preview.gif", "preview.jpg", "preview.png", "preview.webp");
             String key = folder.toAbsolutePath().normalize().toString();
-            if (type.equals("video") && !file.isEmpty() && Files.exists(folder.resolve(file))) {
-                return new Wallpaper(key, title, Wallpaper.Kind.VIDEO, source, folder.resolve(file), preview, type);
+            Path main = file.isEmpty() ? null : folder.resolve(file);
+            boolean hasMain = main != null && Files.exists(main);
+            if (type.equals("video") && hasMain) {
+                return new Wallpaper(key, title, Wallpaper.Kind.VIDEO, source, main, preview, folder);
             }
-            // сцены (.pkg), веб и программы сами по себе в игре не проиграть — берём их превью
-            if (preview != null) return new Wallpaper(key, title, Wallpaper.Kind.PREVIEW, source, preview, preview, type);
+            if (type.equals("web") && hasMain) {
+                return new Wallpaper(key, title, Wallpaper.Kind.WEB, source, main, preview, folder);
+            }
+            if (type.equals("scene") || Files.exists(folder.resolve("scene.pkg")) || Files.exists(folder.resolve("scene.json"))) {
+                Path m = preview != null ? preview : folder.resolve("scene.pkg");
+                return new Wallpaper(key, title, Wallpaper.Kind.SCENE, source, m, preview, folder);
+            }
+            // программы и прочее в игре не запустить — их превью
+            if (preview != null) return new Wallpaper(key, title, Wallpaper.Kind.PREVIEW, source, preview, preview, folder);
         } catch (Throwable ignored) {
         }
         return null;
@@ -181,8 +189,8 @@ public final class WallpaperScanner {
         int dot = title.lastIndexOf('.');
         if (dot > 0) title = title.substring(0, dot);
         String key = p.toAbsolutePath().normalize().toString();
-        if (VIDEO.contains(ext)) return new Wallpaper(key, title, Wallpaper.Kind.VIDEO, source, p, null, "video");
-        if (IMAGE.contains(ext)) return new Wallpaper(key, title, Wallpaper.Kind.IMAGE, source, p, p, "image");
+        if (VIDEO.contains(ext)) return new Wallpaper(key, title, Wallpaper.Kind.VIDEO, source, p, null, null);
+        if (IMAGE.contains(ext)) return new Wallpaper(key, title, Wallpaper.Kind.IMAGE, source, p, p, null);
         return null;
     }
 
@@ -192,13 +200,14 @@ public final class WallpaperScanner {
         return i < 0 ? "" : n.substring(i + 1).toLowerCase(Locale.ROOT);
     }
 
-    /** Wallpaper из сохранённого пути (после перезапуска игры). */
-    public static Wallpaper fromSaved(String key, String title, String kind, String media, String preview) {
+    /** Wallpaper из сохранённого (после перезапуска игры). */
+    public static Wallpaper fromSaved(String key, String title, String kind, String media, String preview, String folder) {
         try {
             Path m = Path.of(media);
-            if (!Files.exists(m)) return null;
+            Path f = folder == null || folder.isEmpty() ? null : Path.of(folder);
+            if (!Files.exists(m) && (f == null || !Files.exists(f))) return null;
             Path pv = preview == null || preview.isEmpty() ? null : Path.of(preview);
-            return new Wallpaper(key, title, Wallpaper.Kind.valueOf(kind), "", m, pv, "");
+            return new Wallpaper(key, title, Wallpaper.Kind.valueOf(kind), "", m, pv, f);
         } catch (Throwable t) {
             return null;
         }

@@ -57,6 +57,30 @@ public final class Ffmpeg {
         return null;
     }
 
+    private static final java.util.Map<String, int[]> SIZES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Размер кадра видео/gif (ширина, высота) — из вывода ffmpeg -i. null, если не удалось. */
+    public static int[] probe(Path media) {
+        String key = media.toString();
+        int[] cached = SIZES.get(key);
+        if (cached != null) return cached;
+        String ff = find();
+        if (ff == null) return null;
+        try {
+            Process p = new ProcessBuilder(ff, "-hide_banner", "-nostdin", "-i", key).redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("Video:.*?[ ,](\\d{2,5})x(\\d{2,5})[ ,\\[]").matcher(out);
+            if (m.find()) {
+                int[] s = {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+                SIZES.put(key, s);
+                return s;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
     public static boolean downloading() { return downloading; }
 
     public static float progress() { return progress; }

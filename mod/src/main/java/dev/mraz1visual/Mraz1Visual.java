@@ -68,6 +68,7 @@ public final class Mraz1Visual implements ClientModInitializer {
     }
 
     private static void tick(Minecraft mc) {
+        dev.mraz1visual.wallpaper.WallpaperPlayer.tick();
         int key = Modules.client.menuKey.get();
         boolean down = Keys.isDown(key);
         if (down && !menuKeyWasDown && mc.screen == null) openMenu(mc);

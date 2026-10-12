@@ -23,8 +23,12 @@ public final class ClientSettings extends Module {
             "auto", "Авто", "small", "Мелкий", "large", "Крупный")
             .group("Окно"));
 
-    public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 1,
+    public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 0,
             "blur", "Размытие", "dim", "Затемнение", "none", "Нет")
+            .group("Окно"));
+
+    public final EnumSetting theme = add(new EnumSetting("theme", "Тема", 0,
+            "dark", "Тёмная", "light", "Светлая")
             .group("Окно"));
 
     public final SliderSetting dim = add(new SliderSetting("dim", "Сила затемнения", 40, 0, 90, 5, "%")
@@ -60,20 +64,25 @@ public final class ClientSettings extends Module {
     public final BoolSetting wallMenus = add(new BoolSetting("wall_menus", "В меню игры", true)
             .group("Обои"));
 
-    public final BoolSetting wallGui = add(new BoolSetting("wall_gui", "За окном GUI", true)
+    public final BoolSetting wallGui = add(new BoolSetting("wall_gui", "Внутри окна GUI", true)
             .group("Обои"));
 
-    public final EnumSetting wallQuality = add(new EnumSetting("wall_quality", "Качество видео", 1,
-            "720", "720p", "1080", "1080p", "1440", "1440p")
+    public final EnumSetting wallQuality = add(new EnumSetting("wall_quality", "Макс. разрешение", 1,
+            "1080", "1080p", "1440", "1440p", "2160", "4K")
             .group("Обои")
             .onChange(dev.mraz1visual.wallpaper.WallpaperPlayer::stop));
 
-    public final EnumSetting wallFps = add(new EnumSetting("wall_fps", "Кадров в секунду", 1,
-            "30", "30", "60", "60")
+    public final EnumSetting wallFps = add(new EnumSetting("wall_fps", "Кадров в секунду", 2,
+            "30", "30", "60", "60", "orig", "Как в обоях")
             .group("Обои")
             .onChange(dev.mraz1visual.wallpaper.WallpaperPlayer::stop));
 
-    public final SliderSetting wallDim = add(new SliderSetting("wall_dim", "Затемнение обоев", 20, 0, 80, 5, "%")
+    public final EnumSetting wallScene = add(new EnumSetting("wall_scene", "Сцены", 0,
+            "sharp", "Чёткая картинка", "anim", "Gif-превью")
+            .group("Обои")
+            .onChange(dev.mraz1visual.wallpaper.WallpaperPlayer::reload));
+
+    public final SliderSetting wallDim = add(new SliderSetting("wall_dim", "Затемнение обоев", 35, 0, 90, 5, "%")
             .group("Обои"));
 
     public ClientSettings() {
