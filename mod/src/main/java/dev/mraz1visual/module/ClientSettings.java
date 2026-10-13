@@ -31,6 +31,10 @@ public final class ClientSettings extends Module {
             "dark", "Тёмная", "light", "Светлая")
             .group("Окно"));
 
+    public final BoolSetting vanillaFont = add(new BoolSetting("vanilla_font", "Шрифт Minecraft (без сглаживания)", false)
+            .group("Окно")
+            .onChange(dev.mraz1visual.ui.Fonts::clearWidths));
+
     public final SliderSetting dim = add(new SliderSetting("dim", "Сила затемнения", 40, 0, 90, 5, "%")
             .group("Окно"));
 

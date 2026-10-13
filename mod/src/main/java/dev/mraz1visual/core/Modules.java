@@ -106,6 +106,7 @@ public final class Modules {
         m.register(new ChatTweaks());
         m.register(new NoSounds());
         m.register(new UiSounds());
+        m.register(new DiscordRpc());
 
         // ── Music ────────────────────────────────────────────
         m.register(new Music());

@@ -87,7 +87,7 @@ public final class Icons {
             Map.entry("wings", CAPE), Map.entry("accessories", HAT), Map.entry("ambient_fx", SPARKLE), Map.entry("hit_marker", TARGET),
             Map.entry("chunk_borders", CHUNK), Map.entry("watermark", TAG), Map.entry("keybinds_hud", KEYBOARD), Map.entry("totem_counter", TOTEM),
             Map.entry("third_person", EYE),
-            Map.entry("attack_effects", BOLT), Map.entry("item_glow", DROP), Map.entry("chat_tweaks", CHAT), Map.entry("no_sounds", EAR), Map.entry("ui_sounds", NOTE));
+            Map.entry("attack_effects", BOLT), Map.entry("item_glow", DROP), Map.entry("chat_tweaks", CHAT), Map.entry("no_sounds", EAR), Map.entry("ui_sounds", NOTE), Map.entry("discord_rpc", CHAT));
 
     public static int forModule(String id, int fallback) {
         return MODULES.getOrDefault(id, fallback);
@@ -104,12 +104,38 @@ public final class Icons {
         };
     }
 
+    private static final int[] CELLS = {16, 24, 32, 64};
+    private static final Identifier[] ATLASES = {
+            Identifier.fromNamespaceAndPath("mraz1visual", "textures/gui/icons_16.png"),
+            Identifier.fromNamespaceAndPath("mraz1visual", "textures/gui/icons_24.png"),
+            Identifier.fromNamespaceAndPath("mraz1visual", "textures/gui/icons_32.png"),
+            ATLAS};
+
+    /**
+     * Иконка. Берём атлас, где клетка ближе всего к размеру на экране (в физических пикселях)
+     * и не меньше его, — уменьшение небольшое и сглаженное, без «пикселей».
+     */
     public static void draw(GuiGraphics g, int index, int x, int y, int size, int color) {
-        int u = (index % 8) * 64, v = (index / 8) * 64;
+        float ps = 1f;
+        try {
+            ps = (float) (Math.hypot(g.pose().m00(), g.pose().m01())
+                    * net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale());
+        } catch (Throwable ignored) {
+        }
+        float phys = size * ps;
+        int a = CELLS.length - 1;
+        for (int i = 0; i < CELLS.length; i++) {
+            if (CELLS[i] >= phys * 0.95f) {
+                a = i;
+                break;
+            }
+        }
+        int cell = CELLS[a];
+        int u = (index % 8) * cell, v = (index / 8) * cell;
         g.pose().pushMatrix();
         g.pose().translate(x, y);
-        g.pose().scale(size / 64f, size / 64f);
-        g.blit(RenderPipelines.GUI_TEXTURED, ATLAS, 0, 0, (float) u, (float) v, 64, 64, 64, 64, 512, 512, color);
+        g.pose().scale(size / (float) cell, size / (float) cell);
+        g.blit(RenderPipelines.GUI_TEXTURED, ATLASES[a], 0, 0, (float) u, (float) v, cell, cell, cell, cell, cell * 8, cell * 8, color);
         g.pose().popMatrix();
     }
 }

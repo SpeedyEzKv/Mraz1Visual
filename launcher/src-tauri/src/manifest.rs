@@ -27,6 +27,9 @@ pub struct Manifest {
     /// Видео-фон меню мода (кадры 60 fps), качается один раз, пока не сменится version.
     #[serde(default)]
     pub video: Option<VideoAsset>,
+    /// Application ID приложения «Mraz1Visual» в Discord (для статуса «Играет в Mraz1Visual»).
+    #[serde(default)]
+    pub discord_app_id: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -90,6 +93,7 @@ impl Manifest {
             launcher_version: String::new(),
             launcher_url: String::new(),
             video: None,
+            discord_app_id: String::new(),
         }
     }
 

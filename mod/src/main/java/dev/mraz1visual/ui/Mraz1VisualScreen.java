@@ -546,7 +546,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
         // логотип
         d.glass(wx + 16, wy + 16, 18, 18, 6, Theme.isLight() ? 0xFF0A0A0A : 0x26FFFFFF, 1f);
-        d.textCenter("M", wx + 25, wy + 21, Theme.isLight() ? 0xFFFAFAFA : 0xFFFAFAFA);
+        d.textCenter("M", wx + 25, wy + 21, 0xFFFAFAFA);
         d.text(BRAND, Fonts.Kind.HEAD, wx + 40, wy + 16, Theme.TEXT);
         d.text("liquid glass", wx + 40, wy + 26, Theme.TEXT_MUTED);
 
@@ -747,7 +747,11 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         }
         int on = 0;
         for (Module m : mm.all()) if (m.isEnabled() && !m.alwaysOn()) on++;
-        d.textRight("Включено: " + on, cX() + cW() - 16, ty, Theme.TEXT_MUTED);
+        if (!Fonts.crispError.isEmpty()) {
+            d.textRight(Draw.ellipsize("Сглаживание текста не запустилось: " + Fonts.crispError, 260), cX() + cW() - 16, ty, 0xFFFF8A8A);
+        } else {
+            d.textRight("Включено: " + on, cX() + cW() - 16, ty, Theme.TEXT_MUTED);
+        }
     }
 
     /** Аватар игрока: лицо со скина, в меню — буква ника. */

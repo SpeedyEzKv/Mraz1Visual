@@ -4,6 +4,7 @@ mod install;
 mod launch;
 mod manifest;
 mod market;
+mod discord;
 mod media;
 mod net;
 mod paths;
@@ -73,6 +74,8 @@ async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
         None => {
             let (m, online) = Manifest::fetch(&net::client()).await;
             *state.manifest.lock().unwrap() = Some(m.clone());
+            discord::set_app_id(&m.discord_app_id);
+            discord::launcher();
             (m, online)
         }
     };
@@ -155,6 +158,9 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     let account = launch::current_account(&state.paths);
     // мост «Сейчас играет»: порт и токен уходят в игру системными свойствами
     let mut extra = Vec::new();
+    if !manifest.discord_app_id.is_empty() {
+        extra.push(format!("-Dmraz1visual.discord={}", manifest.discord_app_id.trim()));
+    }
     if let Some(m) = state.media.get_or_init(media::start).await {
         extra.push(format!("-Dmraz1visual.media.port={}", m.port));
         extra.push(format!("-Dmraz1visual.media.token={}", m.token));
@@ -162,6 +168,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     let mut cmd = launch::build_command(&state.paths, &installed, ram, &account, &extra)?;
     launch::ensure_logs(&state.paths)?;
     let mut child = cmd.spawn()?;
+    discord::clear();
     let _ = app.emit("progress", ProgressEvent { percent: 100.0, label: "Запуск".into() });
 
     let stdout = child.stdout.take();
@@ -206,6 +213,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
             }
         }
         let code = child.wait().await.ok().and_then(|s| s.code()).unwrap_or(-1);
+        discord::launcher();
         let state = app_handle.state::<AppState>();
         state.busy.store(false, Ordering::SeqCst);
         if close {
