@@ -27,7 +27,7 @@ public final class Emotes extends Module {
     private double sx, sz;
 
     public Emotes() {
-        super("emotes", "Emotes", "Эмоции от третьего лица. Видно только тебе.", Category.MISC);
+        super("emotes", "Emotes", "Эмоции от третьего лица. Видно только тебе.", Category.COSMETICS);
         instance = this;
     }
 

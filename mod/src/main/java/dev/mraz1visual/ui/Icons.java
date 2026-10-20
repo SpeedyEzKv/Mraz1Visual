@@ -87,7 +87,11 @@ public final class Icons {
             Map.entry("wings", CAPE), Map.entry("accessories", HAT), Map.entry("ambient_fx", SPARKLE), Map.entry("hit_marker", TARGET),
             Map.entry("chunk_borders", CHUNK), Map.entry("watermark", TAG), Map.entry("keybinds_hud", KEYBOARD), Map.entry("totem_counter", TOTEM),
             Map.entry("third_person", EYE),
-            Map.entry("attack_effects", BOLT), Map.entry("item_glow", DROP), Map.entry("chat_tweaks", CHAT), Map.entry("no_sounds", EAR), Map.entry("ui_sounds", NOTE), Map.entry("discord_rpc", CHAT));
+            Map.entry("attack_effects", BOLT), Map.entry("item_glow", DROP), Map.entry("chat_tweaks", CHAT), Map.entry("no_sounds", EAR), Map.entry("ui_sounds", NOTE), Map.entry("discord_rpc", CHAT),
+            Map.entry("auto_eat", HEART), Map.entry("auto_potion", DROP), Map.entry("auto_leave", EYE_OFF), Map.entry("elytra_swap", CAPE),
+            Map.entry("auto_reconnect", REPLAY), Map.entry("item_scroller", LAYERS), Map.entry("custom_scoreboard", HUD),
+            Map.entry("custom_sky", CLOUD), Map.entry("desktop", GLOBE),
+            Map.entry("spirit_pet", SPARKLE), Map.entry("emblem", STAR), Map.entry("ui_animations", WAVE));
 
     public static int forModule(String id, int fallback) {
         return MODULES.getOrDefault(id, fallback);
@@ -97,6 +101,7 @@ public final class Icons {
         return switch (c) {
             case PLAYER -> PLAYER;
             case VISUALS -> EYE;
+            case COSMETICS -> HAT;
             case MISC -> GRID;
             case MUSIC -> NOTE;
             case CONFIGS -> SLIDERS;

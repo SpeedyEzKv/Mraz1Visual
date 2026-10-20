@@ -49,7 +49,7 @@ import java.util.Map;
 public final class Mraz1VisualScreen extends Screen implements Host {
     private static final String BRAND = "MRAZ1VISUAL";
     private static final int SEARCH_MAX = 32;
-    private static final Category[] MODULE_TABS = {Category.PLAYER, Category.VISUALS, Category.MISC, Category.MUSIC};
+    private static final Category[] MODULE_TABS = {Category.PLAYER, Category.VISUALS, Category.COSMETICS, Category.MISC, Category.MUSIC};
     private static final int NAV_H = 24, HINT_H = 20, CARD_HEAD = 38, CARD_R = 7, COL_GAP = 8, CARD_GAP = 8;
     private static final int TILE = 20, ICON = 9;
     private static final Path FAV_FILE = dev.mraz1visual.util.TextFiles.DIR.resolve("favorites.txt");
@@ -127,6 +127,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private long lastNanos;
     private final ProfilesPanel profiles = new ProfilesPanel();
     private float openT, contentT = 1f;
+    /** Окно закрывается: проигрываем анимацию и только потом уходим с экрана. */
+    private boolean closing;
+    /** Плашка активного пункта меню — плавно переезжает между пунктами. */
+    private float selY = -1;
     private String subtitle = "";
 
     /** Куда вернуться при закрытии: null — в игру, иначе в меню, откуда открыли. */
@@ -155,6 +159,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             restoreState();
         }
         openT = cs.animations.get() ? 0f : 1f;
+        closing = false;
         profiles.refresh();
         relayout();
     }
@@ -178,6 +183,17 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
     @Override
     public void onClose() {
+        // сначала красиво сворачиваем окно, закрытие — в конце анимации (см. renderWindow)
+        if (cs.animations.get() && !closing && openT > 0.05f) {
+            closing = true;
+            popup = null;
+            return;
+        }
+        finishClose();
+    }
+
+    private void finishClose() {
+        closing = false;
         popup = null;
         if (listening != null) listening.cancel();
         listening = null;
@@ -477,12 +493,28 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         double mx = overPopup ? -1e6 : rmx, my = overPopup ? -1e6 : rmy;
 
         contentScroll = Anim.to(contentScroll, contentTarget, dt);
-        if (openT < 1f) openT = Math.min(1f, openT + animDt / 0.32f);
-        if (contentT < 1f) contentT = Math.min(1f, contentT + animDt / 0.2f);
+        if (closing) {
+            openT = Math.max(0f, openT - animDt / 0.16f);
+            if (openT <= 0f) {
+                finishClose();
+                return;
+            }
+        } else if (openT < 1f) openT = Math.min(1f, openT + animDt / 0.32f);
+        if (contentT < 1f) contentT = Math.min(1f, contentT + animDt / 0.38f);
         for (Card c : cards) c.openT = Anim.enabled ? approach(c.openT, c.open ? 1 : 0, dt * 5f) : c.open ? 1 : 0;
         layoutCards();
 
         float e = ease(openT);
+        // появление: окно «выплывает» из 92% с лёгким перелётом, при закрытии — сжимается
+        float s = closing ? 0.94f + 0.06f * e : 0.92f + 0.08f * easeBack(openT);
+        boolean scaled = s < 0.999f || s > 1.001f;
+        if (scaled) {
+            float cx = (wx + ww / 2f) * k, cy = (wy + wh / 2f) * k;
+            g.pose().pushMatrix();
+            g.pose().translate(cx, cy);
+            g.pose().scale(s, s);
+            g.pose().translate(-cx, -cy);
+        }
         d.begin(g, font, k);
         drawWindow();
         d.clip(wx, wy, ww, wh);
@@ -500,6 +532,14 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             }
         }
         d.end();
+        if (scaled) g.pose().popMatrix();
+    }
+
+    /** Плавный выход с небольшим перелётом за 1 и возвратом — «пружинка». */
+    private static float easeBack(float t) {
+        float c1 = 1.4f, c3 = c1 + 1f;
+        float x = t - 1f;
+        return 1f + c3 * x * x * x + c1 * x * x;
     }
 
     private static float approach(float v, float target, float step) {
@@ -553,12 +593,20 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         d.textScaled("МОДУЛИ", Fonts.Kind.HEAD, wx + 19, sectionModulesY, 0.72f, Theme.TEXT_MUTED);
         d.textScaled("КЛИЕНТ", Fonts.Kind.HEAD, wx + 19, sectionClientY, 0.72f, Theme.TEXT_MUTED);
         int nx = wx + 8, nw = sw - 16;
+        Nav activeNav = null;
+        for (Nav n : nav) if (navActive(n)) activeNav = n;
+        if (activeNav != null) {
+            if (selY < 0) selY = activeNav.y;
+            selY = Anim.to(selY, activeNav.y, dt * 0.8f);
+            d.glass(nx + 3, Math.round(selY), nw - 6, NAV_H, 6, Theme.GLASS_ACTIVE, 0.9f);
+            // акцентная полоска слева у активного пункта
+            d.round(nx + 3, Math.round(selY) + 5, 2, NAV_H - 10, 1, Theme.accent());
+        } else selY = -1;
         for (Nav n : nav) {
             boolean on = navActive(n);
             boolean hov = Widget.hit(mx, my, nx, n.y, nw, NAV_H);
             n.hover = Anim.to(n.hover, hov ? 1 : 0, dt);
-            if (on) d.glass(nx + 3, n.y, nw - 6, NAV_H, 6, Theme.GLASS_ACTIVE, 0.9f);
-            else if (n.hover > 0.01f) d.round(nx + 3, n.y, nw - 6, NAV_H, 6, Colors.mulAlpha(Theme.HOVER, n.hover * 1.4f));
+            if (!on && n.hover > 0.01f) d.round(nx + 3, n.y, nw - 6, NAV_H, 6, Colors.mulAlpha(Theme.HOVER, n.hover * 1.4f));
             int c = on ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, n.hover);
             d.icon(n.icon, nx + 12, n.y + (NAV_H - ICON) / 2, ICON, c);
             d.text(n.label, nx + 28, Draw.textY(n.y, NAV_H), c);
@@ -654,9 +702,18 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         d.g.pose().pushMatrix();
         d.g.pose().translate(0, -scroll);
         int top = ay + scroll, bottom = ay + ah + scroll;
-        for (Card c : cards) {
+        for (int i = 0; i < cards.size(); i++) {
+            Card c = cards.get(i);
             if (c.y > bottom || c.y + c.h < top) continue;
-            drawCard(c, cmx, cmy, dt);
+            // карточки въезжают снизу по очереди при смене вкладки
+            float ci = Math.max(0f, Math.min(1f, contentT * 1.8f - Math.min(i, 12) * 0.07f));
+            float off = (1f - ease(ci)) * 18f;
+            if (off > 0.05f) {
+                d.g.pose().pushMatrix();
+                d.g.pose().translate(0, off);
+                drawCard(c, cmx, cmy - off, dt);
+                d.g.pose().popMatrix();
+            } else drawCard(c, cmx, cmy, dt);
         }
         d.g.pose().popMatrix();
         d.unclip();

@@ -603,6 +603,55 @@ public final class WallpaperPlayer {
         }
     }
 
+    /** Кадр обоев для неба: текстура (зарегистрирована в TextureManager) и её размер. */
+    public record SkyFrame(Identifier id, int w, int h) {}
+
+    /**
+     * Подготовить текущий кадр для Custom Sky, ничего не рисуя: запускает ffmpeg, забирает свежий кадр,
+     * грузит картинку. Веб-обои в небе показываются картинкой-превью.
+     * @return null — обоев нет или кадр ещё не готов
+     */
+    public static SkyFrame skyFrame() {
+        Wallpaper wp = current();
+        if (wp == null) return null;
+        lastShown = System.currentTimeMillis();
+        try {
+            uploadStill();
+            if (needsStream(wp)) {
+                if (proc == null && System.currentTimeMillis() >= nextStart && streamError.isEmpty()) {
+                    nextStart = System.currentTimeMillis() + 2000;
+                    start(wp);
+                }
+                byte[] f = latest.getAndSet(null);
+                if (f != null && video != null) {
+                    if (f.length == W * H * 4) uploadFrame(f);
+                    free.offer(f);
+                }
+                if (gotFrame && video != null && videoId != null) {
+                    smooth(video);
+                    return new SkyFrame(videoId, W, H);
+                }
+            }
+            if (still != null && stillId != null) {
+                smooth(still);
+                return new SkyFrame(stillId, stillW, stillH);
+            }
+        } catch (Throwable t) {
+            ModuleManager.LOG.warn("Sky wallpaper failed", t);
+        }
+        return null;
+    }
+
+    /** Линейная фильтрация у самой текстуры — иначе в мире (через RenderType) она рисуется «пикселями». */
+    private static void smooth(DynamicTexture t) {
+        try {
+            ((dev.mraz1visual.mixin.AbstractTextureAccessor) t).mraz1visual$setSampler(
+                    com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR));
+        } catch (Throwable ignored) {
+            // миксин не применился — останется стандартная фильтрация
+        }
+    }
+
     private static final int[] glassWin = new int[4];
 
     /**

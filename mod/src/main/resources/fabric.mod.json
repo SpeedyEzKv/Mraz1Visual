@@ -16,7 +16,7 @@
     "iris": "*",
     "mcef-modern": "*"
   },
-  "mixins": ["mraz1visual.mixins.json"],
+  "mixins": ["mraz1visual.mixins.json", "mraz1visual.optional.mixins.json"],
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "~1.21.11",

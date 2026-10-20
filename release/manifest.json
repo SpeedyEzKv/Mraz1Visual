@@ -29,11 +29,24 @@
       ]
     },
     {
+      "modrinth": [
+        "immediatelyfast",
+        "1.14.0+1.21.11-fabric"
+      ]
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SpeedyEzKv/Mraz1Visual/main/release/mods/zakoopt-1.1.6-1.21.11.jar",
+      "file": "zakoopt-1.1.6+1.21.11.jar",
+      "sha1": "56ba41a4c7189e997e3085633c787e06ca832de6"
+    },
+    {
       "url": "https://github.com/SpeedyEzKv/Mraz1Visual/releases/latest/download/mraz1visual.jar",
       "file": "mraz1visual.jar"
     }
   ],
   "changelog": [
+    "Вкладка «Косметика», эмблемы под ногами как в Dota 2, волшебные питомцы и 17 новых питомцев-мобов.",
+    "Оптимизация ZakoOpt + ImmediatelyFast ставятся вместе с клиентом (настройки: Misc → Optimization).",
     "Текст и иконки ещё глаже: буквы рисуются с 9-кратным сглаживанием, иконки — из уменьшенных копий нужного размера.",
     "Новый рендер текста: буквы сглажены и ровно стоят на пиксельной сетке — шрифт больше не «рвётся» при любом масштабе.",
     "Статус в Discord: «Играет в Mraz1Visual» — меню, мир или сервер, время в игре.",

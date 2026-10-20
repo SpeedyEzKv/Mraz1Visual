@@ -4,6 +4,7 @@ package dev.mraz1visual.core;
 public enum Category {
     PLAYER("Player", "Здесь появятся визуалы игрока."),
     VISUALS("Visuals", "Здесь появятся визуалы."),
+    COSMETICS("Cosmetics", "Здесь появится косметика."),
     MISC("Misc", "Здесь появятся мелочи."),
     MUSIC("Music", "Музыка с компьютера."),
     CONFIGS("Configs", "Профили настроек."),

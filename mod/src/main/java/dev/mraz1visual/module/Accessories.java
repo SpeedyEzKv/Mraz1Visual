@@ -24,7 +24,7 @@ public final class Accessories extends Module implements WorldLayer {
     private final BodyFrame f = new BodyFrame();
 
     public Accessories() {
-        super("accessories", "Accessories", "Корона, ушки и сердечки на голове.", Category.VISUALS);
+        super("accessories", "Accessories", "Корона, ушки и сердечки на голове.", Category.COSMETICS);
     }
 
     @Override

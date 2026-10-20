@@ -20,7 +20,7 @@ public final class ChinaHat extends Module implements WorldLayer {
     final dev.mraz1visual.setting.BoolSetting rim = add(new dev.mraz1visual.setting.BoolSetting("rim", "Светящийся край", true));
 
     public ChinaHat() {
-        super("china_hat", "China Hat", "Полупрозрачная шляпа-конус над головой.", Category.VISUALS);
+        super("china_hat", "China Hat", "Полупрозрачная шляпа-конус над головой.", Category.COSMETICS);
     }
 
     @Override

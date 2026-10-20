@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.mraz1visual.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ChatComponentAccessor",
+    "AvatarRendererMixin",
+    "AbstractTextureAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

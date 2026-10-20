@@ -19,7 +19,10 @@ import net.minecraft.world.entity.Mob;
 public final class CustomPet extends Module {
     private static final int ID = -0x0FE7;
     final EnumSetting kind = add(new EnumSetting("kind", "Питомец", 0,
-            "allay", "Тихоня", "bee", "Пчела", "parrot", "Попугай", "fox", "Лиса", "cat", "Кошка", "axolotl", "Аксолотль", "frog", "Лягушка", "chicken", "Цыплёнок"));
+            "allay", "Тихоня", "bee", "Пчела", "parrot", "Попугай", "fox", "Лиса", "cat", "Кошка", "axolotl", "Аксолотль", "frog", "Лягушка", "chicken", "Цыплёнок",
+            "wolf", "Волк", "panda", "Панда", "rabbit", "Кролик", "turtle", "Черепаха", "sniffer", "Нюхач", "armadillo", "Броненосец",
+            "bat", "Летучая мышь", "vex", "Вредина", "goat", "Козёл", "pig", "Свинка", "ghastling", "Гастлинг", "ocelot", "Оцелот",
+            "polar_bear", "Белый мишка", "copper_golem", "Медный голем", "breeze", "Бриз", "strider", "Лавомерка", "mooshroom", "Грибная корова"));
     final BoolSetting baby = add(new BoolSetting("baby", "Детёныш", true));
     final EnumSetting side = add(new EnumSetting("side", "Где", 0, "right", "Справа", "left", "Слева", "back", "Сзади"));
 
@@ -28,7 +31,7 @@ public final class CustomPet extends Module {
     private double px, py, pz;
 
     public CustomPet() {
-        super("custom_pet", "Custom Pet", "Питомец рядом с тобой. Виден только тебе.", Category.VISUALS);
+        super("custom_pet", "Custom Pet", "Питомец рядом с тобой. Виден только тебе.", Category.COSMETICS);
     }
 
     @Override
@@ -45,6 +48,23 @@ public final class CustomPet extends Module {
             case "axolotl" -> EntityType.AXOLOTL;
             case "frog" -> EntityType.FROG;
             case "chicken" -> EntityType.CHICKEN;
+            case "wolf" -> EntityType.WOLF;
+            case "panda" -> EntityType.PANDA;
+            case "rabbit" -> EntityType.RABBIT;
+            case "turtle" -> EntityType.TURTLE;
+            case "sniffer" -> EntityType.SNIFFER;
+            case "armadillo" -> EntityType.ARMADILLO;
+            case "bat" -> EntityType.BAT;
+            case "vex" -> EntityType.VEX;
+            case "goat" -> EntityType.GOAT;
+            case "pig" -> EntityType.PIG;
+            case "ghastling" -> EntityType.HAPPY_GHAST;
+            case "ocelot" -> EntityType.OCELOT;
+            case "polar_bear" -> EntityType.POLAR_BEAR;
+            case "copper_golem" -> EntityType.COPPER_GOLEM;
+            case "breeze" -> EntityType.BREEZE;
+            case "strider" -> EntityType.STRIDER;
+            case "mooshroom" -> EntityType.MOOSHROOM;
             default -> EntityType.ALLAY;
         };
     }
@@ -63,7 +83,7 @@ public final class CustomPet extends Module {
             if (e == null) return;
             e.setId(ID);
             if (e instanceof Mob m) m.setNoAi(true);
-            if (e instanceof AgeableMob a && baby.get()) a.setBaby(true);
+            if (e instanceof AgeableMob a && (baby.get() || kind.getId().equals("ghastling") || kind.getId().equals("sniffer"))) a.setBaby(true);
             e.setNoGravity(true);
             e.setSilent(true);
             px = p.getX();

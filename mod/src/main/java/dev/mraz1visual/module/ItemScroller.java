@@ -1,0 +1,83 @@
+package dev.mraz1visual.module;
+
+import dev.mraz1visual.core.Category;
+import dev.mraz1visual.core.Module;
+import dev.mraz1visual.input.Keys;
+import dev.mraz1visual.mixin.ContainerScreenAccessor;
+import dev.mraz1visual.setting.BoolSetting;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Быстрое перекладывание в сундуках и инвентаре:
+ * Shift + ЛКМ, проведённая по слотам, — переносит каждый слот;
+ * колесо над слотом — переносит стак (как Shift+клик).
+ */
+public final class ItemScroller extends Module {
+    private static ItemScroller instance;
+    final BoolSetting drag = add(new BoolSetting("drag", "Shift + провести ЛКМ по слотам", true));
+    final BoolSetting wheel = add(new BoolSetting("wheel", "Колесо над слотом — перенести стак", true));
+    final BoolSetting wheelShift = add(new BoolSetting("wheel_shift", "Колесо только с Shift", false));
+
+    private final Set<Integer> visited = new HashSet<>();
+
+    public ItemScroller() {
+        super("item_scroller", "Item Scroller", "Перекладывание предметов протягиванием мыши и колесом.", Category.MISC);
+        instance = this;
+    }
+
+    private static boolean shift() {
+        return Keys.isDown(GLFW.GLFW_KEY_LEFT_SHIFT) || Keys.isDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+    }
+
+    private static void quickMove(Minecraft mc, AbstractContainerScreen<?> cs, Slot slot) {
+        if (mc.player == null || mc.gameMode == null) return;
+        mc.gameMode.handleInventoryMouseClick(cs.getMenu().containerId, slot.index, 0, ClickType.QUICK_MOVE, mc.player);
+    }
+
+    private static boolean supported(Object screen) {
+        return screen instanceof AbstractContainerScreen<?> && !(screen instanceof CreativeModeInventoryScreen);
+    }
+
+    public static void register() {
+        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!supported(screen)) return;
+            AbstractContainerScreen<?> cs = (AbstractContainerScreen<?>) screen;
+            ScreenMouseEvents.allowMouseScroll(screen).register((s, mx, my, horizontal, vertical) -> {
+                ItemScroller is = instance;
+                if (is == null || !is.isEnabled() || !is.wheel.get()) return true;
+                if (is.wheelShift.get() && !shift()) return true;
+                if (!cs.getMenu().getCarried().isEmpty()) return true;
+                Slot slot = ((ContainerScreenAccessor) cs).mraz1visual$hoveredSlot();
+                if (slot == null || !slot.hasItem()) return true;
+                quickMove(client, cs, slot);
+                return false;
+            });
+            // протягивание проверяем каждый кадр, а не раз в тик — иначе быстрые движения пропускают слоты
+            ScreenEvents.afterRender(screen).register((s, g, mx, my, delta) -> {
+                ItemScroller is = instance;
+                if (is != null && is.isEnabled()) is.dragFrame(client, cs);
+            });
+        });
+    }
+
+    private void dragFrame(Minecraft mc, AbstractContainerScreen<?> cs) {
+        if (!drag.get() || mc.screen != cs || !shift() || !mc.mouseHandler.isLeftPressed()) {
+            visited.clear();
+            return;
+        }
+        if (!cs.getMenu().getCarried().isEmpty()) return;
+        Slot slot = ((ContainerScreenAccessor) cs).mraz1visual$hoveredSlot();
+        if (slot == null || !visited.add(slot.index)) return;
+        if (slot.hasItem()) quickMove(mc, cs, slot);
+    }
+}

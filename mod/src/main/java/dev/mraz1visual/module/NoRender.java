@@ -30,6 +30,7 @@ public final class NoRender extends Module {
 
     public static boolean hideFire() { return instance != null && on(instance.fire); }
     public static boolean hideTotem() { return instance != null && on(instance.totem); }
+    public static boolean hideScoreboard() { return instance != null && on(instance.scoreboard); }
 
     public static void register() {
         HudElementRegistry.replaceElement(VanillaHudElements.MISC_OVERLAYS, original -> (g, delta) -> {

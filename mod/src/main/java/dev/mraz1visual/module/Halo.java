@@ -18,7 +18,7 @@ public final class Halo extends Module implements WorldLayer {
     final BoolSetting rainbow = add(new BoolSetting("rainbow", "Переливается", false));
 
     public Halo() {
-        super("halo", "Halo", "Светящийся нимб над головой.", Category.VISUALS);
+        super("halo", "Halo", "Светящийся нимб над головой.", Category.COSMETICS);
     }
 
     @Override

@@ -22,6 +22,10 @@ public final class Modules {
         m.register(new AutoRespawn());
         m.register(new NoDelay());
         m.register(new LockSlot());
+        m.register(new AutoEat());
+        m.register(new AutoPotion());
+        m.register(new AutoLeave());
+        m.register(new ElytraSwap());
 
         // ── Visuals ──────────────────────────────────────────
         m.register(new Hud());
@@ -50,6 +54,8 @@ public final class Modules {
         m.register(new LocalSkin());
         m.register(new WorldEffects());
         m.register(new CustomPet());
+        m.register(new SpiritPet());
+        m.register(new Emblem());
         m.register(new BetterMinecraft());
         m.register(new ItemPhysic());
         m.register(new NoRender());
@@ -58,6 +64,8 @@ public final class Modules {
         m.register(new ItemCooldowns());
         m.register(new TargetHud());
         m.register(new Keystrokes());
+        m.register(new CustomScoreboard());
+        m.register(new CustomSky());
         m.register(new Crosshair());
         m.register(new CritIndicator());
         m.register(new Zoom());
@@ -80,6 +88,7 @@ public final class Modules {
         m.register(new ShieldIndicator());
         m.register(new Hotbar());
         m.register(new Notifications());
+        m.register(new UiAnimations());
         m.register(new Wings());
         m.register(new Accessories());
         m.register(new AmbientFx());
@@ -101,6 +110,9 @@ public final class Modules {
         m.register(new FriendsModule());
         m.register(new KillMessage());
         m.register(new AutoAccept());
+        m.register(new AutoReconnect());
+        m.register(new ItemScroller());
+        m.register(new Desktop());
         m.register(new AutoCommand());
         m.register(new StreamerMode());
         m.register(new ChatTweaks());

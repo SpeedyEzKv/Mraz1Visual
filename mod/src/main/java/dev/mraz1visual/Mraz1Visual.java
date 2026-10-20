@@ -45,6 +45,11 @@ public final class Mraz1Visual implements ClientModInitializer {
         ShulkerPreview.register();
         Crosshair.register();
         NoRender.register();
+        dev.mraz1visual.module.CustomScoreboard.register(); // строго после NoRender
+        dev.mraz1visual.module.AutoReconnect.register();
+        dev.mraz1visual.module.ItemScroller.register();
+        dev.mraz1visual.module.CustomSky.register();
+        dev.mraz1visual.module.UiAnimations.register();
         AutoAccept.register();
         AutoCommand.register();
         dev.mraz1visual.module.AuctionHelper.register();

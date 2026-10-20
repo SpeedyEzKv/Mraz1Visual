@@ -31,7 +31,7 @@ public final class LocalSkin extends Module {
     private long stamp = -2;
 
     public LocalSkin() {
-        super("local_skin", "Local Skin", "Свой скин из файла config/mraz1visual/skins/skin.png. Виден только тебе.", Category.VISUALS);
+        super("local_skin", "Local Skin", "Свой скин из файла config/mraz1visual/skins/skin.png. Виден только тебе.", Category.COSMETICS);
         instance = this;
     }
 

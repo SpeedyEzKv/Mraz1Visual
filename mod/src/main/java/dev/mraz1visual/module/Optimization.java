@@ -17,6 +17,9 @@ public final class Optimization extends Module {
     final SliderSetting items = add(new SliderSetting("items", "Предметы на земле дальше", 24, 4, 64, 2, " бл."));
     final BoolSetting stands = add(new BoolSetting("stands", "Прятать далёкие стойки для брони", true));
     final BoolSetting keepPlayers = add(new BoolSetting("keep_players", "Игроков рисовать всегда", true));
+    /** Глубокая оптимизация — мод ZakoOpt (LGPL), лаунчер ставит его вместе с клиентом. */
+    final dev.mraz1visual.setting.ActionSetting zako = add(new dev.mraz1visual.setting.ActionSetting("zakoopt",
+            "Расширенная оптимизация (ZakoOpt)", "Настроить ›", Optimization::openZako));
 
     public Optimization() {
         super("optimization", "Optimization", "Не рисует далёкие мобы и предметы — больше FPS.", Category.MISC);
@@ -37,5 +40,22 @@ public final class Optimization extends Module {
 
     private static boolean far(Minecraft mc, Entity e, double dist) {
         return mc.player.distanceToSqr(e) > dist * dist;
+    }
+
+    /** Открыть настройки ZakoOpt, если мод установлен; иначе — подсказка в чат. */
+    private static void openZako() {
+        Minecraft mc = Minecraft.getInstance();
+        if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("zakoopt")) {
+            if (mc.player != null) mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "ZakoOpt не установлен — обнови клиент через лаунчер Mraz1Visual."), false);
+            return;
+        }
+        try {
+            Object screen = Class.forName("zako.opt.ZakoOptScreen")
+                    .getConstructor(net.minecraft.client.gui.screens.Screen.class).newInstance(mc.screen);
+            mc.setScreen((net.minecraft.client.gui.screens.Screen) screen);
+        } catch (Throwable t) {
+            dev.mraz1visual.core.ModuleManager.LOG.warn("Can't open ZakoOpt settings", t);
+        }
     }
 }
