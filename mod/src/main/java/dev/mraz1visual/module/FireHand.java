@@ -63,6 +63,23 @@ public final class FireHand extends Module implements AttackListener {
 
     // силуэт текущей модели (центры рёбер и нормали наружу), в долях от начала модели и S
     private static final Map<List<BakedQuad>, float[]> OUTLINES = new IdentityHashMap<>();
+    /** Контур своего клинка: точки по обе стороны диагонали (в долях модели) и нормали наружу. */
+    private static final float[] BLADE = new float[32 * 4];
+    static {
+        float n = 0.70710678f;
+        for (int i = 0; i < 16; i++) {
+            float t = 0.36f + 0.62f * i / 15f;
+            float w = 0.05f * (t > 0.9f ? (1f - t) / 0.1f : 1f);
+            for (int side = 0; side < 2; side++) {
+                int k = (i * 2 + side) * 4;
+                float sg = side == 0 ? 1 : -1;
+                BLADE[k] = t + (-n) * w * sg;
+                BLADE[k + 1] = t + n * w * sg;
+                BLADE[k + 2] = -n * sg;
+                BLADE[k + 3] = n * sg;
+            }
+        }
+    }
     private float[] outline = new float[0];
     private final float[] box = new float[6];
     private float bx0, by0, bz, bS;
@@ -93,6 +110,8 @@ public final class FireHand extends Module implements AttackListener {
         if (f.when.getId().equals("weapon") && !ItemFx.currentIsWeapon()) return;
         if (!ItemFx.bounds(quads, f.box)) return;
         f.useOutline(quads);
+        // меч заменён своим — контур ауры по его клинку (диагональ модели), а не по ванильному спрайту
+        if (sword && CustomSwords.replacing()) f.outline = BLADE;
         f.simulate(ps.last().normal(), first, gui);
         if (f.count == 0 && f.activeK < 0.02f) return;
         // оси экрана для «спрайтов» — в пространстве, куда поза переводит модель

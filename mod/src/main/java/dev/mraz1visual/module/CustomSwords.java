@@ -89,6 +89,11 @@ public final class CustomSwords extends Module {
 
     // ── вход из ItemFx ───────────────────────────────────────
 
+    /** Сейчас свои мечи включены (аура тогда обтекает свой клинок). */
+    public static boolean replacing() {
+        return instance != null && instance.isEnabled();
+    }
+
     /** Свой меч вместо квадов модели. Поза — в пространстве модели предмета. */
     public static boolean submitModel(PoseStack ps, SubmitNodeCollector c, ItemDisplayContext ctx, List<BakedQuad> quads, Item item, boolean gui) {
         CustomSwords s = instance;
