@@ -215,13 +215,9 @@ public final class Draw {
     public void glass(int x, int y, int w, int h, int r, int tint, float strength) {
         boolean light = Theme.isLight();
         if (!Sdf.broken) {
-            // заливка, блик сверху (затухает к середине) и кромка с градиентом — три элемента вместо сотен полосок
-            Sdf.fill(g, x, y, w, h, r, tint);
-            int sheenTop = Colors.withAlpha(0xFFFFFF, Math.round((light ? 60 : 18) * strength));
-            Sdf.shape(g, x + 1, y + 1, w - 2, Math.max(2, h * 0.55f), Math.max(0, r - 1), Sdf.FILL, 0, sheenTop, sheenTop & 0x00FFFFFF);
-            int top = Colors.withAlpha(0xFFFFFF, Math.round((light ? 200 : 90) * strength));
-            int bottom = Colors.withAlpha(0xFFFFFF, Math.round((light ? 70 : 20) * strength));
-            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, top, bottom);
+            // заливка, блик сверху и кромка с градиентом — один элемент (режим «стекло» шейдера)
+            // сила ×8: параметр в шейдер идёт с шагом 1/4 — так шаг силы 1/32
+            Sdf.shape(g, x, y, w, h, r, Sdf.GLASS, strength * (light ? 2.2f : 1f) * 8f, tint, tint);
             return;
         }
         round(x, y, w, h, r, tint);

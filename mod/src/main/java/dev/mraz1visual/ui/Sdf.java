@@ -25,7 +25,7 @@ public final class Sdf {
     private Sdf() {}
 
     /** Режимы шейдера (младшие 3 бита UV2.y). */
-    public static final int FILL = 0, RING = 1, SHADOW = 2;
+    public static final int FILL = 0, RING = 1, SHADOW = 2, GLASS = 3;
 
     /** Позиция, цвет, локальная точка (UV0), полуразмеры (UV1, ×4), радиус и параметр (UV2, ×4). */
     public static final VertexFormat FORMAT = VertexFormat.builder()
@@ -53,8 +53,8 @@ public final class Sdf {
      * extra: для RING — толщина кромки, для SHADOW — мягкость (на сколько тень расползается наружу).
      */
     public static void shape(GuiGraphics g, float x, float y, float w, float h, float r, int mode, float extra, int top, int bottom) {
-        if (w <= 0 || h <= 0 || ((top | bottom) >>> 24) == 0) return;
-        float pad = mode == SHADOW ? extra : 1f; // запас под сглаживание / размытие края
+        if (w <= 0 || h <= 0 || (((top | bottom) >>> 24) == 0 && mode != GLASS)) return;
+        float pad = mode == SHADOW ? extra : 0.5f; // запас под сглаживание / размытие края
         r = Math.max(0, Math.min(r, Math.min(w, h) / 2f));
         Matrix3x2f pose = new Matrix3x2f(g.pose());
         ScreenRectangle scissor = g.scissorStack.peek();

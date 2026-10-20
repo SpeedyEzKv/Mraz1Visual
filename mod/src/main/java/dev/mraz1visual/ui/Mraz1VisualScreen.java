@@ -75,6 +75,8 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         float hover;
         /** Масштаб подписи: 1 — влезает, меньше — сжать (считается в relayout, не в кадре). */
         float labelScale = 1f;
+        String count;
+        long countAt;
 
         Nav(NavKind kind, Category category, String label, int icon) {
             this.kind = kind;
@@ -495,7 +497,11 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         String mode = cs.background.getId();
         if (mode.equals("none")) return;
-        if (mode.equals("blur")) super.renderBackground(g, mouseX, mouseY, partialTick);
+        if (mode.equals("blur")) {
+            // своё размытие пирамидой (доли мс) вместо ванильного полноэкранного (~1 мс)
+            if (minecraft.level != null && GlassBlur.update(4)) GlassBlur.draw(g, 0, 0, width, height, 0xFFFFFFFF);
+            else super.renderBackground(g, mouseX, mouseY, partialTick);
+        }
         int a = (int) Math.round(cs.dim.get() * 2.55);
         if (a > 0) g.fill(0, 0, width, height, a << 24);
     }
@@ -651,14 +657,19 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     }
 
     private String navCount(Nav n) {
-        if (n.kind == NavKind.FAVORITES) return favs.isEmpty() ? "" : Integer.toString(favs.size());
-        if (n.kind != NavKind.CATEGORY || n.category == Category.CONFIGS || n.category == Category.CLIENT) return "";
+        // строка счётчика пересобирается не чаще 4 раз в секунду, а не каждый кадр
+        long now = System.nanoTime();
+        if (n.count != null && now - n.countAt < 250_000_000L) return n.count;
+        n.countAt = now;
+        if (n.kind == NavKind.FAVORITES) return n.count = favs.isEmpty() ? "" : Integer.toString(favs.size());
+        if (n.kind != NavKind.CATEGORY || n.category == Category.CONFIGS || n.category == Category.CLIENT) return n.count = "";
         int on = 0, all = 0;
         for (Module m : mm.in(n.category)) {
             all++;
             if (m.isEnabled() && !m.alwaysOn()) on++;
         }
-        return on + "/" + all;
+        String s = on + "/" + all;
+        return n.count = s.equals(n.count) ? n.count : s;
     }
 
     private void drawProfile(double mx, double my, float dt) {
@@ -743,6 +754,9 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         for (int i = 0; i < cards.size(); i++) {
             Card c = cards.get(i);
             if (c.y > bottom || c.y + c.h < top) continue;
+            // каждая карточка — свой слой GUI: ванильный поиск пересечений (O(n²) от числа элементов)
+            // перебирает только элементы этой карточки, а не всего окна
+            d.g.nextStratum();
             // карточки въезжают снизу по очереди при смене вкладки
             float ci = Math.max(0f, Math.min(1f, contentT * 1.8f - Math.min(i, 12) * 0.07f));
             float off = (1f - ease(ci)) * 18f;

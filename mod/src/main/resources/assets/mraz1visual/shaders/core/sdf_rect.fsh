@@ -41,6 +41,28 @@ void main() {
         float s = max(shape.w, 0.5);
         float t = clamp(1.0 - (d + s * 0.15) / s, 0.0, 1.0);
         a = t * t * (3.0 - 2.0 * t);
+    } else if (mode == 3) {
+        // стекло одним проходом: тонировка + блик сверху + кромка 1 px со светом сверху (shape.w — сила)
+        float cover = clamp(0.5 - d / aa, 0.0, 1.0);
+        if (cover <= 0.002) {
+            discard;
+        }
+        float s = shape.w / 8.0;
+        float ty = clamp((local.y + shape.y) / max(2.0 * shape.y, 1.0), 0.0, 1.0); // 0 сверху → 1 снизу
+        float sheen = 0.075 * s * (1.0 - smoothstep(0.0, 0.55, ty));
+        float edgeW = max(aa, 1.0);
+        float rim = clamp(0.5 + (d + edgeW) / aa, 0.0, 1.0) * mix(0.36, 0.08, ty) * s;
+        vec4 p = vec4(vertexColor.rgb * vertexColor.a, vertexColor.a);
+        p = p * (1.0 - sheen) + vec4(sheen);
+        p = p * (1.0 - rim) + vec4(rim);
+        p *= cover;
+        if (p.a <= 0.002) {
+            discard;
+        }
+        vec4 outC = vec4(p.rgb / p.a, p.a);
+        outC.rgb += grain(gl_FragCoord.xy) * 0.012;
+        fragColor = outC * ColorModulator;
+        return;
     } else {
         a = clamp(0.5 - d / aa, 0.0, 1.0);
     }
