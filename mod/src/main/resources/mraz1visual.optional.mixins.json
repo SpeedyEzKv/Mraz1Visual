@@ -6,7 +6,9 @@
   "client": [
     "ChatComponentAccessor",
     "AvatarRendererMixin",
-    "AbstractTextureAccessor"
+    "AbstractTextureAccessor",
+    "FramerateLimitTrackerMixin",
+    "ItemInHandFxMixin"
   ],
   "injectors": {
     "defaultRequire": 0

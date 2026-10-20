@@ -22,7 +22,7 @@ public final class Optimization extends Module {
             "Расширенная оптимизация (ZakoOpt)", "Настроить ›", Optimization::openZako));
 
     public Optimization() {
-        super("optimization", "Optimization", "Не рисует далёкие мобы и предметы — больше FPS.", Category.MISC);
+        super("optimization", "Optimization", "Не рисует далёкие мобы и предметы — больше FPS.", Category.PERFORMANCE);
         instance = this;
     }
 

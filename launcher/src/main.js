@@ -84,14 +84,7 @@ function renderInfo() {
   $("build").textContent = `${info.version} · сборка ${info.build}`;
   $("newsVer").textContent = info.version;
   $("account").textContent = info.account;
-  const ul = $("changelog");
-  ul.innerHTML = "";
-  info.changelog.forEach((line, i) => {
-    const li = document.createElement("li");
-    li.textContent = line;
-    if (i === 0 && info.changelog.length > 1) li.className = "head";
-    ul.appendChild(li);
-  });
+  renderChangelog();
   const links = $("links");
   links.innerHTML = "";
   if (info.launcher_update) {
@@ -116,6 +109,54 @@ function renderInfo() {
   document.querySelectorAll("#closeSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.close_on_launch));
   idleStatus();
 }
+// ── что нового: новые обновления сверху ──────────────────────
+function verKey(v) {
+  return String(v || "").split(/[^0-9]+/).filter(Boolean).map(Number);
+}
+function cmpVer(a, b) {
+  const x = verKey(a), y = verKey(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] || 0) - (y[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+function fmtDate(d) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || "");
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : (d || "");
+}
+function renderChangelog() {
+  const ul = $("changelog");
+  ul.innerHTML = "";
+  let releases = (info.releases || []).filter((r) => r && r.items && r.items.length);
+  if (!releases.length) {
+    // старый формат: просто список строк — показываем как одно обновление
+    releases = [{ version: info.version, date: "", items: info.changelog || [] }];
+  }
+  // сортировка: по дате, потом по версии — по убыванию (новые сверху)
+  releases.sort((a, b) => (b.date || "").localeCompare(a.date || "") || cmpVer(b.version, a.version));
+  releases.forEach((r, i) => {
+    const li = document.createElement("li");
+    li.className = "release" + (i === 0 ? " latest open" : "");
+    const head = document.createElement("button");
+    head.className = "release-head";
+    head.innerHTML = `<span class="rv"></span><span class="rd"></span>${i === 0 ? '<span class="badge">новое</span>' : ""}<span class="chev">›</span>`;
+    head.querySelector(".rv").textContent = r.version ? "v" + r.version : "Обновление";
+    head.querySelector(".rd").textContent = fmtDate(r.date);
+    head.onclick = () => li.classList.toggle("open");
+    const items = document.createElement("ul");
+    items.className = "release-items";
+    r.items.forEach((t) => {
+      const it = document.createElement("li");
+      it.textContent = t;
+      items.appendChild(it);
+    });
+    li.appendChild(head);
+    li.appendChild(items);
+    ul.appendChild(li);
+  });
+}
+
 async function saveSettings() {
   await invoke("set_settings", { ramMb: Number($("ram").value), closeOnLaunch: info.close_on_launch });
 }

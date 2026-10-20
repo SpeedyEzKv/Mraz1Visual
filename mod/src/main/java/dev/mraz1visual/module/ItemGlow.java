@@ -22,7 +22,7 @@ public final class ItemGlow extends Module implements WorldLayer {
     final BoolSetting blink = add(new BoolSetting("blink", "Мигать", true));
 
     public ItemGlow() {
-        super("item_glow", "Item Glow", "Подсветка ценных предметов на земле.", Category.VISUALS);
+        super("item_glow", "Item Glow", "Подсветка ценных предметов на земле.", Category.SWORDS);
     }
 
     private static boolean valuable(ItemStack s) {

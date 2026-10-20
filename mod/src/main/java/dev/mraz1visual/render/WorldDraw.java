@@ -32,6 +32,8 @@ public final class WorldDraw {
     private double cx, cy, cz;
     private MultiBufferSource src;
     private org.joml.Quaternionf rot = new org.joml.Quaternionf();
+    /** Оси экрана в мире — считаются раз за кадр, а не в каждом billboard-вызове (меньше мусора для GC). */
+    private final org.joml.Vector3f camRight = new org.joml.Vector3f(1, 0, 0), camUp = new org.joml.Vector3f(0, 1, 0);
 
     private WorldDraw() {}
 
@@ -56,6 +58,10 @@ public final class WorldDraw {
         d.src = src;
         org.joml.Quaternionf o = ctx.worldState().cameraRenderState.orientation;
         if (o != null) d.rot = o;
+        d.camRight.set(1, 0, 0);
+        d.rot.transform(d.camRight);
+        d.camUp.set(0, 1, 0);
+        d.rot.transform(d.camUp);
         d.vc = src.getBuffer(RenderTypes.debugQuads());
         float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         for (WorldLayer l : layers) {
@@ -78,6 +84,19 @@ public final class WorldDraw {
 
     private void v(double x, double y, double z, int argb) {
         vc.addVertex(pose, (float) (x - cx), (float) (y - cy), (float) (z - cz)).setColor(argb);
+    }
+
+    /**
+     * Дальше — «светящиеся» квады: аддитивное смешивание (как у молнии), даёт мягкое свечение-bloom
+     * без шейдеров. После — обязательно {@link #glowEnd()}.
+     */
+    public void glowBegin() {
+        if (src != null) vc = src.getBuffer(RenderTypes.lightning());
+    }
+
+    /** Вернуться к обычным полупрозрачным квадам. */
+    public void glowEnd() {
+        if (src != null) vc = src.getBuffer(RenderTypes.debugQuads());
     }
 
     /** Четырёхугольник. Отсечения граней у этого типа нет — виден с обеих сторон. */
@@ -190,8 +209,8 @@ public final class WorldDraw {
 
     /** Кольцо, всегда развёрнутое к камере (как частица). */
     public void billboardRing(double x, double y, double z, double r, double w, int segments, int color) {
-        org.joml.Vector3f right = rot.transform(new org.joml.Vector3f(1, 0, 0));
-        org.joml.Vector3f up = rot.transform(new org.joml.Vector3f(0, 1, 0));
+        org.joml.Vector3f right = camRight;
+        org.joml.Vector3f up = camUp;
         int n = Math.min(SEG_MAX, Math.max(8, segments));
         double ri = Math.max(0, r - w / 2), ro = r + w / 2;
         for (int i = 0; i < n; i++) {
@@ -210,8 +229,8 @@ public final class WorldDraw {
 
     /** То же с заданным числом сегментов: 6 — дёшево для тысяч частиц. */
     public void billboardDot(double x, double y, double z, double r, int color, int n) {
-        org.joml.Vector3f right = rot.transform(new org.joml.Vector3f(1, 0, 0));
-        org.joml.Vector3f up = rot.transform(new org.joml.Vector3f(0, 1, 0));
+        org.joml.Vector3f right = camRight;
+        org.joml.Vector3f up = camUp;
         int edge = color & 0x00FFFFFF;
         for (int i = 0; i < n; i++) {
             float c0 = cos(i, n), s0 = sin(i, n), c1 = cos(i + 1, n), s1 = sin(i + 1, n);
@@ -223,8 +242,8 @@ public final class WorldDraw {
 
     /** Четыре уголка-скобки в плоскости экрана, повёрнутые на angle (рад). Маркер цели. */
     public void billboardCorners(double x, double y, double z, double size, double angle, double thick, int color) {
-        org.joml.Vector3f r0 = rot.transform(new org.joml.Vector3f(1, 0, 0));
-        org.joml.Vector3f u0 = rot.transform(new org.joml.Vector3f(0, 1, 0));
+        org.joml.Vector3f r0 = camRight;
+        org.joml.Vector3f u0 = camUp;
         double ca = Math.cos(angle), sa = Math.sin(angle);
         double rx = r0.x() * ca + u0.x() * sa, ry = r0.y() * ca + u0.y() * sa, rz = r0.z() * ca + u0.z() * sa;
         double ux = -r0.x() * sa + u0.x() * ca, uy = -r0.y() * sa + u0.y() * ca, uz = -r0.z() * sa + u0.z() * ca;
@@ -300,8 +319,8 @@ public final class WorldDraw {
 
     /** Луч в плоскости экрана из точки под углом ang: от r0 до r1, ширина w у основания, к концу сходится в точку. */
     public void billboardRay(double x, double y, double z, double ang, double r0, double r1, double w, int color) {
-        org.joml.Vector3f right = rot.transform(new org.joml.Vector3f(1, 0, 0));
-        org.joml.Vector3f up = rot.transform(new org.joml.Vector3f(0, 1, 0));
+        org.joml.Vector3f right = camRight;
+        org.joml.Vector3f up = camUp;
         double ca = Math.cos(ang), sa = Math.sin(ang);
         double dx = right.x() * ca + up.x() * sa, dy = right.y() * ca + up.y() * sa, dz = right.z() * ca + up.z() * sa;
         double nx = -right.x() * sa + up.x() * ca, ny = -right.y() * sa + up.y() * ca, nz = -right.z() * sa + up.z() * ca;
@@ -312,11 +331,26 @@ public final class WorldDraw {
                 x + dx * r1, y + dy * r1, z + dz * r1, x + dx * r1, y + dy * r1, z + dz * r1, color, color, tip, tip);
     }
 
+    /** Таблицы cos/sin для каждого числа сегментов — без тригонометрии в каждом кадре. */
+    private static final float[][][] TABLES = new float[SEG_MAX + 1][][];
+
+    private static float[][] table(int n) {
+        float[][] t = n <= SEG_MAX ? TABLES[n] : null;
+        if (t != null) return t;
+        t = new float[2][n];
+        for (int i = 0; i < n; i++) {
+            t[0][i] = (float) Math.cos(i * Math.PI * 2 / n);
+            t[1][i] = (float) Math.sin(i * Math.PI * 2 / n);
+        }
+        if (n <= SEG_MAX) TABLES[n] = t;
+        return t;
+    }
+
     private static float cos(int i, int n) {
-        return (float) Math.cos(i * Math.PI * 2 / n);
+        return table(n)[0][i % n];
     }
 
     private static float sin(int i, int n) {
-        return (float) Math.sin(i * Math.PI * 2 / n);
+        return table(n)[1][i % n];
     }
 }

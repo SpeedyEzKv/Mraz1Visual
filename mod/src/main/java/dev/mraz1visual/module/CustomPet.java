@@ -31,7 +31,7 @@ public final class CustomPet extends Module {
     private double px, py, pz;
 
     public CustomPet() {
-        super("custom_pet", "Custom Pet", "Питомец рядом с тобой. Виден только тебе.", Category.COSMETICS);
+        super("custom_pet", "Custom Pet", "Питомец рядом с тобой. Виден только тебе.", Category.PETS);
     }
 
     @Override

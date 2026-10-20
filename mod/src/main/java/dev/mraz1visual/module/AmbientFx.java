@@ -30,7 +30,7 @@ public final class AmbientFx extends Module implements WorldLayer {
     private long last;
 
     public AmbientFx() {
-        super("ambient_fx", "Ambient FX", "Светлячки, кубики или руны вокруг тебя.", Category.VISUALS);
+        super("ambient_fx", "Ambient FX", "Светлячки, кубики или руны вокруг тебя.", Category.SKY);
     }
 
     private void respawn(int i, LocalPlayer p) {

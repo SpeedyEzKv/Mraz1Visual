@@ -36,7 +36,7 @@ public final class UiAnimations extends Module {
     private static long tabStart;
 
     public UiAnimations() {
-        super("ui_animations", "UI Animations", "Плавное появление инвентаря, чата, Tab и окон клиента.", Category.VISUALS);
+        super("ui_animations", "UI Animations", "Плавное появление инвентаря, чата, Tab и окон клиента.", Category.PERFORMANCE);
         instance = this;
         loadEnabled(true);
     }

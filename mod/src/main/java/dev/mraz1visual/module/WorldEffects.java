@@ -21,7 +21,7 @@ public final class WorldEffects extends Module {
     private final RandomSource rnd = RandomSource.create();
 
     public WorldEffects() {
-        super("world_effects", "World Effects", "Снег, пепел или огоньки вокруг тебя.", Category.VISUALS);
+        super("world_effects", "World Effects", "Снег, пепел или огоньки вокруг тебя.", Category.SKY);
     }
 
     @Override

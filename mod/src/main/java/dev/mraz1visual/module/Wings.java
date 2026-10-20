@@ -35,7 +35,7 @@ public final class Wings extends Module implements WorldLayer {
     private long last;
 
     public Wings() {
-        super("wings", "Wings", "Крылья за спиной: ангел, демон или бабочка.", Category.COSMETICS);
+        super("wings", "Wings", "Крылья за спиной: ангел, демон или бабочка.", Category.WINGS);
     }
 
     @Override

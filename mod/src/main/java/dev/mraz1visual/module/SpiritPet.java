@@ -34,7 +34,7 @@ public final class SpiritPet extends Module implements WorldLayer {
     private float trailTimer;
 
     public SpiritPet() {
-        super("spirit_pet", "Spirit Pet", "Волшебный питомец-огонёк, кристалл или куб. Виден только тебе.", Category.COSMETICS);
+        super("spirit_pet", "Spirit Pet", "Волшебный питомец-огонёк, кристалл или куб. Виден только тебе.", Category.PETS);
     }
 
     @Override

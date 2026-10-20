@@ -101,6 +101,15 @@ jobs:
              '.client_version=$v | .build=$b | .launcher_version=$v | .launcher_url=$url' \
              release/manifest.json > dist/manifest.json
           jq -r '.changelog | map("- " + .) | join("\n")' dist/manifest.json > notes.md
+          # история обновлений: берём её из прошлого релиза и добавляем новое сверху (с версией и датой)
+          curl -fsSL "https://github.com/${{ github.repository }}/releases/latest/download/manifest.json" -o prev.json || echo '{}' > prev.json
+          jq . prev.json > /dev/null 2>&1 || echo '{}' > prev.json
+          jq --arg v "$VERSION" --arg d "$(date -u +%Y-%m-%d)" --slurpfile prev prev.json '
+            (($prev[0].releases // []) | map(select(.items != null))) as $old
+            | (if (.releases // []) | length > 0 then .releases
+               elif ($old | length) > 0 and ($old[0].items == .changelog) then $old
+               else [{version: $v, date: $d, items: .changelog}] + $old end) as $rel
+            | .releases = ($rel | .[:30])' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}

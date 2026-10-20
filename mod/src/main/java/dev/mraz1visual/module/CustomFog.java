@@ -15,7 +15,7 @@ public final class CustomFog extends Module {
     final SliderSetting skyMix = add(new SliderSetting("sky_mix", "Сила для неба", 0.6, 0, 1, 0.05, ""));
 
     public CustomFog() {
-        super("custom_fog", "Custom Fog", "Свой цвет тумана и неба.", Category.VISUALS);
+        super("custom_fog", "Custom Fog", "Свой цвет тумана и неба.", Category.SKY);
         instance = this;
     }
 

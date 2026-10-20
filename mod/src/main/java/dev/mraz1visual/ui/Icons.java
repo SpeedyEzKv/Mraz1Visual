@@ -91,7 +91,9 @@ public final class Icons {
             Map.entry("auto_eat", HEART), Map.entry("auto_potion", DROP), Map.entry("auto_leave", EYE_OFF), Map.entry("elytra_swap", CAPE),
             Map.entry("auto_reconnect", REPLAY), Map.entry("item_scroller", LAYERS), Map.entry("custom_scoreboard", HUD),
             Map.entry("custom_sky", CLOUD), Map.entry("desktop", GLOBE),
-            Map.entry("spirit_pet", SPARKLE), Map.entry("emblem", STAR), Map.entry("ui_animations", WAVE));
+            Map.entry("spirit_pet", SPARKLE), Map.entry("emblem", STAR), Map.entry("ui_animations", WAVE),
+            Map.entry("frame_pacing", GAUGE), Map.entry("frame_stats", CLOCK),
+            Map.entry("wings_3d", CAPE), Map.entry("fire_hand", BOLT), Map.entry("custom_swords", SWORD), Map.entry("pets", PAW));
 
     public static int forModule(String id, int fallback) {
         return MODULES.getOrDefault(id, fallback);
@@ -102,6 +104,11 @@ public final class Icons {
             case PLAYER -> PLAYER;
             case VISUALS -> EYE;
             case COSMETICS -> HAT;
+            case SWORDS -> SWORD;
+            case WINGS -> CAPE;
+            case PETS -> PAW;
+            case SKY -> CLOUD;
+            case PERFORMANCE -> GAUGE;
             case MISC -> GRID;
             case MUSIC -> NOTE;
             case CONFIGS -> SLIDERS;

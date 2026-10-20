@@ -12,7 +12,7 @@ public final class Modules {
     static void registerAll(ModuleManager m) {
         client = m.register(new ClientSettings());
 
-        // ── Player ───────────────────────────────────────────
+        // ── Игрок ────────────────────────────────────────────
         m.register(new AutoSprint());
         m.register(new HotbarSwap());
         m.register(new OffhandTotem());
@@ -90,6 +90,10 @@ public final class Modules {
         m.register(new Notifications());
         m.register(new UiAnimations());
         m.register(new Wings());
+        m.register(new Wings3D());
+        m.register(new FireHand());
+        m.register(new CustomSwords());
+        m.register(new Pets());
         m.register(new Accessories());
         m.register(new AmbientFx());
         m.register(new HitMarker());
@@ -103,6 +107,8 @@ public final class Modules {
 
         // ── Misc ─────────────────────────────────────────────
         m.register(new AuctionHelper());
+        m.register(new FramePacing());
+        m.register(new FrameStats());
         m.register(new Optimization());
         m.register(new DeathCoords());
         m.register(new Waypoints());

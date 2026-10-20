@@ -15,6 +15,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Hands → «Стеклянная рука»: рука от первого лица рисуется полупрозрачной.
@@ -49,5 +51,12 @@ public abstract class AvatarRendererMixin {
             return;
         }
         original.call(collector, part, pose, RenderTypes.entityTranslucent(skin), light, overlay, sprite, sheeted, foil, tint, crumbling, outline);
+    }
+
+    /** Fire Hand: огонь у кулака пустой руки от 1-го лица. */
+    @Inject(method = "renderHand", at = @At("HEAD"), require = 0)
+    private void mraz1visual$fireFist(PoseStack ps, SubmitNodeCollector collector, int light, Identifier skin, ModelPart arm,
+                                      boolean sleeve, CallbackInfo ci) {
+        dev.mraz1visual.module.FireHand.renderFist(ps, collector, arm);
     }
 }

@@ -62,10 +62,24 @@ header { position: absolute; left: 0; right: 0; top: 0; height: 64px; padding: 0
 .news { margin-top: 52px; }
 .news-title { font-family: Head; font-size: 14px; color: var(--cream); letter-spacing: .05em; }
 .news-title span { font-family: Text; font-size: 12px; color: var(--muted); margin-left: 8px; }
-#changelog { list-style: none; margin-top: 12px; }
-#changelog li { color: var(--dim); font-size: 13px; line-height: 1.55; padding-left: 16px; position: relative; }
-#changelog li::before { content: "–"; position: absolute; left: 0; color: var(--muted); }
-#changelog li.head { color: var(--text); }
+/* список обновлений: новые сверху, старые свёрнуты; прокрутка внутри, чтобы не наезжать на ссылки */
+#changelog { list-style: none; margin-top: 12px; max-height: 210px; overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
+#changelog::-webkit-scrollbar { width: 4px; }
+#changelog::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+#changelog .release { margin-bottom: 6px; border-radius: 10px; transition: background .2s; }
+#changelog .release.latest { background: rgba(255,255,255,.05); padding: 6px 10px 8px; }
+#changelog .release-head { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 4px 0; color: var(--dim); }
+#changelog .release.latest .release-head { color: var(--text); }
+#changelog .rv { font-family: Bold; font-size: 13px; }
+#changelog .rd { font-size: 12px; color: var(--muted); }
+#changelog .badge { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; background: var(--accent, #b9a6ff); color: #0b0b10; }
+#changelog .chev { margin-left: auto; color: var(--muted); transition: transform .2s; }
+#changelog .release.open .chev { transform: rotate(90deg); }
+#changelog .release-items { list-style: none; display: none; }
+#changelog .release.open .release-items { display: block; }
+#changelog .release-items li { color: var(--dim); font-size: 13px; line-height: 1.55; padding-left: 16px; position: relative; }
+#changelog .release.latest .release-items li { color: var(--text); }
+#changelog .release-items li::before { content: "–"; position: absolute; left: 0; color: var(--muted); }
 .links { position: absolute; top: 395px; display: flex; gap: 30px; }
 .links button { color: var(--muted); font-size: 14px; transition: color .15s; }
 .links button:hover { color: var(--text); }

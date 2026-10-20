@@ -19,7 +19,7 @@ public final class Hands extends Module {
     final SliderSetting glassAlpha = add(new SliderSetting("glass_alpha", "Прозрачность руки", 40, 5, 95, 5, " %"));
 
     public Hands() {
-        super("hands", "Hands", "Скрыть руку, щит или тотем, стеклянная рука.", Category.VISUALS);
+        super("hands", "Hands", "Скрыть руку, щит или тотем, стеклянная рука.", Category.SWORDS);
         instance = this;
     }
 

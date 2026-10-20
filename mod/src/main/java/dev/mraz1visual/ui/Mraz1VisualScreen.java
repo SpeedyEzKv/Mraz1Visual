@@ -49,8 +49,8 @@ import java.util.Map;
 public final class Mraz1VisualScreen extends Screen implements Host {
     private static final String BRAND = "MRAZ1VISUAL";
     private static final int SEARCH_MAX = 32;
-    private static final Category[] MODULE_TABS = {Category.PLAYER, Category.VISUALS, Category.COSMETICS, Category.MISC, Category.MUSIC};
-    private static final int NAV_H = 24, HINT_H = 20, CARD_HEAD = 38, CARD_R = 7, COL_GAP = 8, CARD_GAP = 8;
+    private static final Category[] MODULE_TABS = {Category.PLAYER, Category.VISUALS, Category.COSMETICS, Category.SWORDS, Category.WINGS, Category.PETS, Category.SKY, Category.PERFORMANCE, Category.MISC};
+    private static final int NAV_H = 19, HINT_H = 20, CARD_HEAD = 38, CARD_R = 7, COL_GAP = 8, CARD_GAP = 8;
     private static final int TILE = 20, ICON = 9;
     private static final Path FAV_FILE = dev.mraz1visual.util.TextFiles.DIR.resolve("favorites.txt");
 
@@ -170,6 +170,8 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             if (!Mraz1Visual.CONFIG.uiCategory.isEmpty()) c = Category.valueOf(Mraz1Visual.CONFIG.uiCategory);
         } catch (IllegalArgumentException ignored) {
         }
+        // вкладку могли убрать (старый конфиг) — тогда открываем Визуалы
+        if (c != Category.CONFIGS && c != Category.CLIENT && !java.util.Arrays.asList(MODULE_TABS).contains(c)) c = Category.VISUALS;
         category = c;
         Module m = mm.find(Mraz1Visual.CONFIG.uiModule);
         rebuildList();

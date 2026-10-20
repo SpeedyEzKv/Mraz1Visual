@@ -17,6 +17,9 @@ pub struct Manifest {
     pub mods: Vec<ModEntry>,
     #[serde(default)]
     pub changelog: Vec<String>,
+    /// История обновлений: версия, дата и что нового. Лаунчер показывает новые сверху.
+    #[serde(default)]
+    pub releases: Vec<Release>,
     #[serde(default)]
     pub links: Vec<Link>,
     /// Версия лаунчера в релизе и ссылка на установщик — для кнопки «Обновить лаунчер».
@@ -30,6 +33,17 @@ pub struct Manifest {
     /// Application ID приложения «Mraz1Visual» в Discord (для статуса «Играет в Mraz1Visual»).
     #[serde(default)]
     pub discord_app_id: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct Release {
+    #[serde(default)]
+    pub version: String,
+    /// Дата в виде ГГГГ-ММ-ДД.
+    #[serde(default)]
+    pub date: String,
+    #[serde(default)]
+    pub items: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -89,6 +103,7 @@ impl Manifest {
                 },
             ],
             changelog: vec!["Первая сборка лаунчера.".into()],
+            releases: vec![],
             links: vec![],
             launcher_version: String::new(),
             launcher_url: String::new(),

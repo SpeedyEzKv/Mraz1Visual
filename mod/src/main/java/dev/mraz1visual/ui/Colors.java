@@ -62,4 +62,12 @@ public final class Colors {
     public static float luma(int c) {
         return ((c >> 16 & 0xFF) * 0.299f + (c >> 8 & 0xFF) * 0.587f + (c & 0xFF) * 0.114f) / 255f;
     }
+
+    /** Умножить RGB на k (затемнить/осветлить), альфа как была. */
+    public static int shade(int argb, float k) {
+        int r = Math.min(255, Math.round(((argb >> 16) & 255) * k));
+        int g = Math.min(255, Math.round(((argb >> 8) & 255) * k));
+        int b = Math.min(255, Math.round((argb & 255) * k));
+        return (argb & 0xFF000000) | (Math.max(0, r) << 16) | (Math.max(0, g) << 8) | Math.max(0, b);
+    }
 }

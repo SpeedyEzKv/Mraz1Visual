@@ -15,7 +15,7 @@ public final class SwingAnimations extends Module {
             "smooth", "Плавный", "down", "Сверху вниз", "spin", "Вращение", "push", "Толчок", "old", "Как в 1.7"));
 
     public SwingAnimations() {
-        super("swing_animations", "Swing Animations", "Другой стиль взмаха рукой.", Category.VISUALS);
+        super("swing_animations", "Swing Animations", "Другой стиль взмаха рукой.", Category.SWORDS);
         instance = this;
     }
 

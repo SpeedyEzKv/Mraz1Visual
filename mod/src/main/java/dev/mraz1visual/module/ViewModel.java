@@ -17,7 +17,7 @@ public final class ViewModel extends Module {
     private boolean pushed;
 
     public ViewModel() {
-        super("view_model", "View Model", "Сдвиг и размер рук и предметов в руках.", Category.VISUALS);
+        super("view_model", "View Model", "Сдвиг и размер рук и предметов в руках.", Category.SWORDS);
         instance = this;
     }
 

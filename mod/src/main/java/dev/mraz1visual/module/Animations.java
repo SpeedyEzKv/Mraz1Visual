@@ -15,7 +15,7 @@ public final class Animations extends Module {
             .hint("Меньше 1 — медленнее и плавнее, больше 1 — резче."));
 
     public Animations() {
-        super("animations", "Animations", "Скорость анимации взмаха рукой.", Category.VISUALS);
+        super("animations", "Animations", "Скорость анимации взмаха рукой.", Category.SWORDS);
         instance = this;
     }
 

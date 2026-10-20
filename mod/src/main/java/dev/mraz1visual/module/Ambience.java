@@ -14,7 +14,7 @@ public final class Ambience extends Module {
     final BoolSetting clear = add(new BoolSetting("clear", "Без дождя", true));
 
     public Ambience() {
-        super("ambience", "Ambience", "Время суток и погода только для тебя.", Category.VISUALS);
+        super("ambience", "Ambience", "Время суток и погода только для тебя.", Category.SKY);
     }
 
     @Override
