@@ -1,0 +1,21 @@
+# Ассеты и лицензии
+
+## Добавлено в редизайне «iOS 26 / Liquid Glass» (ветка `redesign-ios26`)
+
+**Сторонних ассетов не добавлено.** Всё новое сделано своими руками, кодом и шейдерами, без чужих моделей, текстур, HDR и звуков:
+
+| Что | Как сделано |
+|---|---|
+| Скругления, стекло, тени GUI | свой шейдер `assets/mraz1visual/shaders/core/sdf_rect.{vsh,fsh}` (signed distance field, суперэллипс) |
+| Размытие фона меню | пирамида уменьшения кадра (`GlassBlur`), без шейдеров |
+| 3D-мечи (6 стилей) | процедурная геометрия в коде (`CustomSwords`) |
+| «Аура предмета» | частицы и мягкие пятна по контуру модели предмета (`FireHand`) |
+| Крылья, ореол, аура игрока, «Световые шаги», волна удара | процедурная геометрия (`Wings3D`, `Halo`, `PlayerAura`, `LightSteps`, `HitEffects`) |
+| Питомцы | оригинальные персонажи, собраны из примитивов в коде (`Pets`) |
+| Палитры Эфир/Аметист/Закат/Изумруд/Обсидиан/Хром | свои (`render/Palette`) |
+
+## Уже были в проекте
+
+- Шрифты интерфейса: Manrope, Unbounded, Inter, DejaVu — SIL Open Font License / свободная лицензия DejaVu
+  (файлы лицензий: `mod/src/main/resources/assets/mraz1visual/font/OFL-*.txt`, `LICENSE-DejaVu.txt`, `launcher/src/fonts/OFL-*.txt`).
+- ZakoOpt — LGPL, лицензия и NOTICE в `release/mods/`.
