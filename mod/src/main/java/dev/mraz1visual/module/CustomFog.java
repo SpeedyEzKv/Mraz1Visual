@@ -25,7 +25,8 @@ public final class CustomFog extends Module {
         if (f == null || !f.isEnabled() || v == null) return v;
         int c = f.color.get();
         float k = f.mix.getF();
-        return new Vector4f(lerp(v.x(), (c >> 16 & 255) / 255f, k), lerp(v.y(), (c >> 8 & 255) / 255f, k), lerp(v.z(), (c & 255) / 255f, k), v.w());
+        // на месте: вектор свой у каждого вызова computeFogColor, лишний объект в кадре не нужен
+        return v.set(lerp(v.x(), (c >> 16 & 255) / 255f, k), lerp(v.y(), (c >> 8 & 255) / 255f, k), lerp(v.z(), (c & 255) / 255f, k), v.w());
     }
 
     /** Из миксина неба: цвет купола неба (RGB int). */

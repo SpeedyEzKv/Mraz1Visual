@@ -34,6 +34,7 @@ public final class WorldDraw {
     private org.joml.Quaternionf rot = new org.joml.Quaternionf();
     /** Оси экрана в мире — считаются раз за кадр, а не в каждом billboard-вызове (меньше мусора для GC). */
     private final org.joml.Vector3f camRight = new org.joml.Vector3f(1, 0, 0), camUp = new org.joml.Vector3f(0, 1, 0);
+    private final PoseStack labelStack = new PoseStack();
 
     private WorldDraw() {}
 
@@ -51,9 +52,9 @@ public final class WorldDraw {
         PoseStack ps = ctx.matrices();
         MultiBufferSource src = ctx.consumers();
         if (src == null) return;
-        d.cx = cam.x;
-        d.cy = cam.y;
-        d.cz = cam.z;
+        d.cx = d.eyeX = cam.x;
+        d.cy = d.eyeY = cam.y;
+        d.cz = d.eyeZ = cam.z;
         d.pose = ps.last().pose();
         d.src = src;
         org.joml.Quaternionf o = ctx.worldState().cameraRenderState.orientation;
@@ -83,6 +84,8 @@ public final class WorldDraw {
     // ── примитивы ────────────────────────────────────────────
 
     private void v(double x, double y, double z, int argb) {
+        // локальный режим: два прохода, в каждом — только своя половина (обычные квады или свечение)
+        if (local && glowing != glowPass) return;
         vc.addVertex(pose, (float) (x - cx), (float) (y - cy), (float) (z - cz)).setColor(argb);
     }
 
@@ -91,12 +94,74 @@ public final class WorldDraw {
      * без шейдеров. После — обязательно {@link #glowEnd()}.
      */
     public void glowBegin() {
+        if (local) { glowing = true; return; }
         if (src != null) vc = src.getBuffer(RenderTypes.lightning());
     }
 
     /** Вернуться к обычным полупрозрачным квадам. */
     public void glowEnd() {
+        if (local) { glowing = false; return; }
         if (src != null) vc = src.getBuffer(RenderTypes.debugQuads());
+    }
+
+    // ── локальный режим: рисование у модели игрока (слой рендера, инвентарь, превью) ──
+
+    /** Что рисовать в локальном режиме. Вызывается дважды за кадр: обычный проход и проход свечения. */
+    public interface Painter {
+        void paint(WorldDraw d);
+    }
+
+    private static final WorldDraw LOCAL = new WorldDraw();
+    private boolean local, glowing, glowPass, ortho;
+    /** Точка камеры (для лент к камере) и направление взгляда для ортографии инвентаря. */
+    private double eyeX, eyeY, eyeZ, viewX, viewY, viewZ;
+    private final Matrix4f inv = new Matrix4f();
+    private final org.joml.Vector3f tmp = new org.joml.Vector3f();
+
+    /**
+     * Рисует painter в координатах текущей позы ps (например, у тела модели). Координаты — как в мире,
+     * только без камеры: {@link #camX()} и т. п. здесь 0. gui — модель в инвентаре (ортографическая камера).
+     */
+    public static void submitLocal(PoseStack ps, net.minecraft.client.renderer.SubmitNodeCollector c, boolean gui, Painter painter) {
+        c.submitCustomGeometry(ps, RenderTypes.debugQuads(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, false, painter));
+        c.submitCustomGeometry(ps, RenderTypes.lightning(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, true, painter));
+    }
+
+    private void runLocal(Matrix4f m, VertexConsumer consumer, boolean gui, boolean glow, Painter painter) {
+        local = true;
+        glowPass = glow;
+        glowing = false;
+        ortho = gui;
+        vc = consumer;
+        pose = m;
+        src = null;
+        cx = cy = cz = 0;
+        inv.set(m).invert();
+        // оси экрана: в мире поза без поворота камеры (он в modelview), в инвентаре — уже экранная
+        camRight.set(1, 0, 0);
+        camUp.set(0, 1, 0);
+        if (!gui) {
+            org.joml.Quaternionf q = Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+            q.transform(camRight);
+            q.transform(camUp);
+        }
+        inv.transformDirection(camRight).normalize();
+        inv.transformDirection(camUp).normalize();
+        if (gui) {
+            inv.transformDirection(tmp.set(0, 0, 1)).normalize();
+            viewX = tmp.x; viewY = tmp.y; viewZ = tmp.z;
+        } else {
+            inv.transformPosition(tmp.set(0, 0, 0));
+            eyeX = tmp.x; eyeY = tmp.y; eyeZ = tmp.z;
+        }
+        try {
+            painter.paint(this);
+        } catch (Throwable t) {
+            ModuleManager.LOG.error("Local layer failed", t);
+        } finally {
+            vc = null;
+            glowing = false;
+        }
     }
 
     /** Четырёхугольник. Отсечения граней у этого типа нет — виден с обеих сторон. */
@@ -178,7 +243,9 @@ public final class WorldDraw {
     /** Отрезок толщиной w, развёрнутый к камере. */
     public void line(double x1, double y1, double z1, double x2, double y2, double z2, double w, int c) {
         double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
-        double vx = (x1 + x2) / 2 - cx, vy = (y1 + y2) / 2 - cy, vz = (z1 + z2) / 2 - cz;
+        double vx, vy, vz;
+        if (ortho) { vx = viewX; vy = viewY; vz = viewZ; }
+        else { vx = (x1 + x2) / 2 - eyeX; vy = (y1 + y2) / 2 - eyeY; vz = (z1 + z2) / 2 - eyeZ; }
         double px = dy * vz - dz * vy, py = dz * vx - dx * vz, pz = dx * vy - dy * vx;
         double len = Math.sqrt(px * px + py * py + pz * pz);
         if (len < 1e-6) return;
@@ -192,9 +259,10 @@ public final class WorldDraw {
      * После текста буфер квадов берётся заново: смена типа рендера закрывает прошлый.
      */
     public void label(net.minecraft.network.chat.Component text, double x, double y, double z, float scale, int color, int background) {
-        if (src == null) return;
+        if (src == null || local) return;
         Minecraft mc = Minecraft.getInstance();
-        PoseStack ps = new PoseStack();
+        PoseStack ps = labelStack;
+        ps.setIdentity();
         ps.last().pose().set(pose);
         ps.translate((float) (x - cx), (float) (y - cy), (float) (z - cz));
         ps.mulPose(rot);
@@ -262,20 +330,19 @@ public final class WorldDraw {
         double da = a1 - a0, db = b1 - b0, len = Math.sqrt(da * da + db * db);
         if (len < 1e-6) return;
         double na = -db / len * t / 2, nb = da / len * t / 2;
-        double[][] pts = {{a0 - na - da / len * t / 2, b0 - nb - db / len * t / 2}, {a0 + na - da / len * t / 2, b0 + nb - db / len * t / 2},
-                {a1 + na, b1 + nb}, {a1 - na, b1 - nb}};
-        double[] q = new double[12];
-        for (int i = 0; i < 4; i++) {
-            q[i * 3] = x + rx * pts[i][0] + ux * pts[i][1];
-            q[i * 3 + 1] = y + ry * pts[i][0] + uy * pts[i][1];
-            q[i * 3 + 2] = z + rz * pts[i][0] + uz * pts[i][1];
-        }
-        quad(q[0], q[1], q[2], q[3], q[4], q[5], q[6], q[7], q[8], q[9], q[10], q[11], c, c, c, c);
+        double ea = da / len * t / 2, eb = db / len * t / 2;
+        // 4 угла в плоскости экрана (a — вдоль right, b — вдоль up) → мир; без временных массивов
+        double a0a = a0 - na - ea, b0a = b0 - nb - eb, a0b = a0 + na - ea, b0b = b0 + nb - eb;
+        double a1a = a1 + na, b1a = b1 + nb, a1b = a1 - na, b1b = b1 - nb;
+        quad(x + rx * a0a + ux * b0a, y + ry * a0a + uy * b0a, z + rz * a0a + uz * b0a,
+                x + rx * a0b + ux * b0b, y + ry * a0b + uy * b0b, z + rz * a0b + uz * b0b,
+                x + rx * a1a + ux * b1a, y + ry * a1a + uy * b1a, z + rz * a1a + uz * b1a,
+                x + rx * a1b + ux * b1b, y + ry * a1b + uy * b1b, z + rz * a1b + uz * b1b, c, c, c, c);
     }
 
     /** Кристалл-октаэдр, повёрнутый на yaw вокруг вертикали. */
     public void crystal(double x, double y, double z, double r, double h, double yaw, int cTop, int cMid) {
-        double[] px = new double[4], pz = new double[4];
+        double[] px = tmpX, pz = tmpZ;
         for (int i = 0; i < 4; i++) {
             double a = yaw + i * Math.PI / 2;
             px[i] = x + Math.cos(a) * r;
@@ -291,7 +358,7 @@ public final class WorldDraw {
     /** Кубик с центром (x,y,z), повёрнутый на yaw и pitch: грани цветом fill, рёбра цветом edge (0 — без рёбер). */
     public void cube(double x, double y, double z, double half, double yaw, double pitch, int fill, int edge) {
         double cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-        double[][] p = new double[8][3];
+        double[][] p = cubePts;
         for (int i = 0; i < 8; i++) {
             double lx = (i & 1) == 0 ? -half : half, ly = (i & 2) == 0 ? -half : half, lz = (i & 4) == 0 ? -half : half;
             double y1 = ly * cp - lz * sp, z1 = ly * sp + lz * cp;
@@ -299,18 +366,22 @@ public final class WorldDraw {
             p[i][1] = y + y1;
             p[i][2] = z + lx * sy + z1 * cy;
         }
-        int[][] f = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
         if ((fill >>> 24) != 0) {
-            for (int[] q : f) {
+            for (int[] q : CUBE_FACES) {
                 quad(p[q[0]][0], p[q[0]][1], p[q[0]][2], p[q[1]][0], p[q[1]][1], p[q[1]][2],
                         p[q[2]][0], p[q[2]][1], p[q[2]][2], p[q[3]][0], p[q[3]][1], p[q[3]][2], fill, fill, fill, fill);
             }
         }
         if ((edge >>> 24) != 0) {
-            int[][] e = {{0, 1}, {2, 3}, {4, 5}, {6, 7}, {0, 2}, {1, 3}, {4, 6}, {5, 7}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
-            for (int[] l : e) line(p[l[0]][0], p[l[0]][1], p[l[0]][2], p[l[1]][0], p[l[1]][1], p[l[1]][2], half * 0.12, edge);
+            for (int[] l : CUBE_EDGES) line(p[l[0]][0], p[l[0]][1], p[l[0]][2], p[l[1]][0], p[l[1]][1], p[l[1]][2], half * 0.12, edge);
         }
     }
+
+    // временные буферы для crystal/cube — рисование идёт только в потоке рендера
+    private final double[] tmpX = new double[4], tmpZ = new double[4];
+    private final double[][] cubePts = new double[8][3];
+    private static final int[][] CUBE_FACES = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
+    private static final int[][] CUBE_EDGES = {{0, 1}, {2, 3}, {4, 5}, {6, 7}, {0, 2}, {1, 3}, {4, 6}, {5, 7}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
 
     /** Треугольник (как вырожденный четырёхугольник). */
     public void tri(double x1, double y1, double z1, double x2, double y2, double z2, double x3, double y3, double z3, int c1, int c2, int c3) {

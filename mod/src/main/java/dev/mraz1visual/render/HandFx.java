@@ -23,6 +23,16 @@ public final class HandFx {
         ps.translate(-0.5f, -0.5f, -0.5f);
     }
 
+    /** То же для 3-го лица: display.thirdperson_righthand/lefthand из item/handheld.json. */
+    public static void handheldThird(PoseStack ps, boolean left) {
+        float s = left ? -1f : 1f;
+        ps.translate(0f, 4f / 16f, 0.5f / 16f);
+        Q.rotationXYZ(0f, (float) Math.toRadians(-90 * s), (float) Math.toRadians(55 * s));
+        ps.mulPose(Q);
+        ps.scale(0.85f, 0.85f, 0.85f);
+        ps.translate(-0.5f, -0.5f, -0.5f);
+    }
+
     // Диагональ меча в модели: рукоять внизу слева, остриё вверху справа (плоскость z = 0.5).
     public static final float BASE_X = 0.12f, BASE_Y = 0.12f, TIP_X = 0.96f, TIP_Y = 0.96f, Z = 0.5f;
 }

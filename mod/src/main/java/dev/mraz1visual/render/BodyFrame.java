@@ -28,6 +28,18 @@ public final class BodyFrame {
         return this;
     }
 
+    /**
+     * Спина в локальной позе слоя модели ({@link PlayerLayer}): поза уже повёрнута по телу (с наклоном
+     * при приседании), оси — вправо +X, вверх +Y, вперёд −Z, начало — на шее, единица — блок.
+     */
+    public BodyFrame localBody() {
+        ox = 0; oy = -0.057; oz = 0;
+        rx = 1; ry = 0; rz = 0;
+        ux = 0; uy = 1; uz = 0;
+        fx = 0; fy = 0; fz = -1;
+        return this;
+    }
+
     private void base(LocalPlayer p, float pt) {
         ox = p.xo + (p.getX() - p.xo) * pt;
         oy = p.yo + (p.getY() - p.yo) * pt;

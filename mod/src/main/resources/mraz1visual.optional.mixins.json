@@ -8,6 +8,9 @@
     "AvatarRendererMixin",
     "AbstractTextureAccessor",
     "FramerateLimitTrackerMixin",
+    "RenderSystemMixin",
+    "ItemInHandLayerMixin",
+    "InventoryScreenMixin",
     "ItemInHandFxMixin"
   ],
   "injectors": {

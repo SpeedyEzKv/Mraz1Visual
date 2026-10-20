@@ -63,19 +63,36 @@ public final class SkyTextures {
 
     // ── пресеты ──────────────────────────────────────────────
 
+    // цвета градиента пресетов: зенит, середина, горизонт
+    private static final int[] C_SUNSET = {0xFF27336E, 0xFFC8678C, 0xFFFFB778};
+    private static final int[] C_PASTEL = {0xFF7F95EA, 0xFFB9B4F0, 0xFFF5CBE4};
+    private static final int[] C_AURORA = {0xFF040812, 0xFF0A1628, 0xFF14263A};
+    private static final int[] C_STARS = {0xFF020309, 0xFF060914, 0xFF101626};
+    private static final int[] C_NEBULA = {0xFF05060F, 0xFF0C0F24, 0xFF181A36};
+    private static final int[] C_SOFT = {0xFF4F86D6, 0xFF86B4EA, 0xFFC8DEF4};
+
+    private static int[] colors(String preset) {
+        return switch (preset) {
+            case "day_sunset" -> C_SUNSET;
+            case "day_pastel" -> C_PASTEL;
+            case "night_aurora" -> C_AURORA;
+            case "night_stars" -> C_STARS;
+            case "night_nebula" -> C_NEBULA;
+            default -> C_SOFT; // day_soft
+        };
+    }
+
+    /** Цвет у горизонта пресета — под него подстраивается ванильный туман (без шва на краю прорисовки). */
+    public static int horizon(String preset) {
+        return colors(preset)[2];
+    }
+
     /** Основной слой неба. v = 0 — зенит, 0.5 — горизонт, 1 — надир. */
     public static int[] base(String preset) {
         int[] px = new int[W * H];
         boolean night = preset.startsWith("night");
-        int zen, mid, hor;
-        switch (preset) {
-            case "day_sunset" -> { zen = 0xFF27336E; mid = 0xFFC8678C; hor = 0xFFFFB778; }
-            case "day_pastel" -> { zen = 0xFF7F95EA; mid = 0xFFB9B4F0; hor = 0xFFF5CBE4; }
-            case "night_aurora" -> { zen = 0xFF040812; mid = 0xFF0A1628; hor = 0xFF14263A; }
-            case "night_stars" -> { zen = 0xFF020309; mid = 0xFF060914; hor = 0xFF101626; }
-            case "night_nebula" -> { zen = 0xFF05060F; mid = 0xFF0C0F24; hor = 0xFF181A36; }
-            default -> { zen = 0xFF4F86D6; mid = 0xFF86B4EA; hor = 0xFFC8DEF4; } // day_soft
-        }
+        int[] cs = colors(preset);
+        int zen = cs[0], mid = cs[1], hor = cs[2];
         java.util.Random rnd = new java.util.Random(preset.hashCode());
         for (int y = 0; y < H; y++) {
             float v = y / (float) (H - 1);

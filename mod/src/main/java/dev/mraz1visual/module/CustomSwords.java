@@ -73,16 +73,54 @@ public final class CustomSwords extends Module {
         return true;
     }
 
+    /**
+     * Из миксина ItemInHandLayer: меч в руке модели игрока — от 3-го лица, в инвентаре и в превью меню.
+     * true — свой меч отправлен, ванильный не рисуем. Следа здесь нет: он считается в пространстве вида 1-го лица.
+     */
+    public static boolean renderThird(int entityId, ItemStack stack, boolean left, PoseStack ps, SubmitNodeCollector c) {
+        CustomSwords s = instance;
+        Minecraft mc = Minecraft.getInstance();
+        if (s == null || !s.isEnabled() || stack.isEmpty() || !stack.is(ItemTags.SWORDS)) return false;
+        if (mc.player == null || entityId != mc.player.getId()) return false;
+        float time = (System.nanoTime() - START) / 1e9f * s.speed.getF();
+        ps.pushPose();
+        HandFx.handheldThird(ps, left);
+        c.submitCustomGeometry(ps, RenderTypes.debugQuads(), (pose, vc) -> s.solid(vc, pose.pose(), time));
+        c.submitCustomGeometry(ps, RenderTypes.lightning(), (pose, vc) -> s.glowOnly(vc, pose.pose(), time));
+        ps.popPose();
+        return true;
+    }
+
+    private void glowOnly(VertexConsumer vc, Matrix4f m, float time) {
+        // тот же ореол клинка, что от 1-го лица, но без ленты следа
+        try {
+            trailOff = true;
+            glowPass(vc, m, time, 0f);
+        } finally {
+            trailOff = false;
+        }
+    }
+
+    private boolean trailOff;
+
     // ── палитры стилей: лезвие у основания, у острия, кромка, свечение, гарда, рукоять ──
 
+    private static final int[] P_ENERGY = {0xFFFFFFFF, 0xFFE8FBFF, 0xFFFFFFFF, 0xFF4FD8FF, 0xFF3A3F4A, 0xFF22252C};
+    private static final int[] P_CRYSTAL = {0xC07FE8FF, 0xA0D8C8FF, 0xFFFFFFFF, 0xFF9FE0FF, 0xFFB8B4F2, 0xFF5A4FA0};
+    private static final int[] P_SHADOW = {0xFF1A1024, 0xFF3A1A5A, 0xFFB070FF, 0xFF8A2BE2, 0xFF2A1A3A, 0xFF120A18};
+    private static final int[] P_ICE = {0xD0BFEFFF, 0xC0E8FBFF, 0xFFFFFFFF, 0xFF8FE3FF, 0xFFDFF6FF, 0xFF6FA8C8};
+    private static final int[] P_FIRE = {0xFFD0301A, 0xFFFFB347, 0xFFFFF0B0, 0xFFFF7A1A, 0xFF3A2010, 0xFF5A2A10};
+    private static final int[] P_KATANA = {0xFFC8CCD4, 0xFFE8ECF2, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF2A2A2E, 0xFF8A1F2A};
+
+    /** Палитры — константы: в кадре ничего не создаётся. */
     private int[] palette() {
         return switch (style.getId()) {
-            case "energy" -> new int[]{0xFFFFFFFF, 0xFFE8FBFF, 0xFFFFFFFF, 0xFF4FD8FF, 0xFF3A3F4A, 0xFF22252C};
-            case "crystal" -> new int[]{0xC07FE8FF, 0xA0D8C8FF, 0xFFFFFFFF, 0xFF9FE0FF, 0xFFB8B4F2, 0xFF5A4FA0};
-            case "shadow" -> new int[]{0xFF1A1024, 0xFF3A1A5A, 0xFFB070FF, 0xFF8A2BE2, 0xFF2A1A3A, 0xFF120A18};
-            case "ice" -> new int[]{0xD0BFEFFF, 0xC0E8FBFF, 0xFFFFFFFF, 0xFF8FE3FF, 0xFFDFF6FF, 0xFF6FA8C8};
-            case "fire" -> new int[]{0xFFD0301A, 0xFFFFB347, 0xFFFFF0B0, 0xFFFF7A1A, 0xFF3A2010, 0xFF5A2A10};
-            default -> new int[]{0xFFC8CCD4, 0xFFE8ECF2, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF2A2A2E, 0xFF8A1F2A}; // катана
+            case "energy" -> P_ENERGY;
+            case "crystal" -> P_CRYSTAL;
+            case "shadow" -> P_SHADOW;
+            case "ice" -> P_ICE;
+            case "fire" -> P_FIRE;
+            default -> P_KATANA;
         };
     }
 
@@ -159,7 +197,7 @@ public final class CustomSwords extends Module {
                         Colors.withAlpha(gc0, Math.round(45 * g * pulse)), Colors.withAlpha(gc1, Math.round(45 * g * pulse)), Colors.withAlpha(gc0, 0));
             }
         }
-        if (trail.get()) trailPass(vc, m, x0, y0, z, L, swing, glowColor(p[3], 0.5f));
+        if (trail.get() && !trailOff) trailPass(vc, m, x0, y0, z, L, swing, glowColor(p[3], 0.5f));
     }
 
     /** Лента следа: точки клинка в пространстве вида копятся во время взмаха и гаснут за 0.18 с. */

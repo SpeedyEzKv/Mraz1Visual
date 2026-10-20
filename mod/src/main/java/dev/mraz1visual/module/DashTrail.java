@@ -69,18 +69,21 @@ public final class DashTrail extends Module implements WorldLayer {
         box(d, x - Math.cos(a) * 0.375, y + 1.05, z - Math.sin(a) * 0.375, a, 0.125, 0.375, 0.125, c);
     }
 
+    // буфер углов и грани — общие, рисование только в потоке рендера (без мусора в кадре)
+    private static final double[][] PTS = new double[8][3];
+    private static final int[][] FACES = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
+
     /** Брусок с центром (x,y,z), полуразмерами hw/hh/hd, повёрнутый на a вокруг вертикали. */
     private static void box(WorldDraw d, double x, double y, double z, double a, double hw, double hh, double hd, int c) {
         double cx = Math.cos(a), sz = Math.sin(a);
-        double[][] p = new double[8][3];
+        double[][] p = PTS;
         for (int i = 0; i < 8; i++) {
             double lx = (i & 1) == 0 ? -hw : hw, ly = (i & 2) == 0 ? -hh : hh, lz = (i & 4) == 0 ? -hd : hd;
             p[i][0] = x + lx * cx - lz * sz;
             p[i][1] = y + ly;
             p[i][2] = z + lx * sz + lz * cx;
         }
-        int[][] f = {{0, 1, 3, 2}, {4, 6, 7, 5}, {0, 4, 5, 1}, {2, 3, 7, 6}, {0, 2, 6, 4}, {1, 5, 7, 3}};
-        for (int[] q : f) {
+        for (int[] q : FACES) {
             d.quad(p[q[0]][0], p[q[0]][1], p[q[0]][2], p[q[1]][0], p[q[1]][1], p[q[1]][2],
                     p[q[2]][0], p[q[2]][1], p[q[2]][2], p[q[3]][0], p[q[3]][1], p[q[3]][2], c, c, c, c);
         }
