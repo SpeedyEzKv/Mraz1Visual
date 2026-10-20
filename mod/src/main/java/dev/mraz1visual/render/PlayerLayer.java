@@ -47,6 +47,14 @@ public final class PlayerLayer extends RenderLayer<AvatarRenderState, PlayerMode
             Wings3D.submit(ps, c, gui);
             ps.popPose();
         }
+        if (dev.mraz1visual.module.Halo.active()) {
+            // к голове: ореол повторяет наклон и поворот головы
+            ps.pushPose();
+            getParentModel().head.translateAndRotate(ps);
+            ps.scale(-K, -K, K);
+            dev.mraz1visual.module.Halo.submit(ps, c, gui);
+            ps.popPose();
+        }
         if (gui) {
             ps.pushPose();
             ps.scale(-K, -K, K);

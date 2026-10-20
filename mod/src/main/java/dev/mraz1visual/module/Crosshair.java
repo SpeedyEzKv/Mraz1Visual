@@ -15,7 +15,9 @@ import net.minecraft.client.gui.GuiGraphics;
 public final class Crosshair extends Module {
     private static Crosshair instance;
 
-    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "cross", "Крест", "dot", "Точка", "corners", "Уголки"));
+    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "ios", "Точка и кольцо (iOS)", "cross", "Крест", "dot", "Точка", "corners", "Уголки"));
+    final BoolSetting critGlow = add(new BoolSetting("crit_glow", "Подсветка, когда крит готов", true));
+    final ColorSetting critColor = add(new ColorSetting("crit_color", "Цвет крита", 0xFFFFC266));
     final SliderSetting size = add(new SliderSetting("size", "Длина", 4, 1, 12, 1, " px"));
     final SliderSetting gap = add(new SliderSetting("gap", "Зазор", 2, 0, 8, 1, " px"));
     final SliderSetting thickness = add(new SliderSetting("thickness", "Толщина", 1, 1, 4, 1, " px"));
@@ -43,6 +45,10 @@ public final class Crosshair extends Module {
         int len = size.getI(), gp = gap.getI(), t = thickness.getI();
         int col = color.get();
         int o = outline.get() ? 0xA0000000 : 0;
+        if (style.getId().equals("ios")) {
+            ios(g, mc);
+            return;
+        }
         switch (style.getId()) {
             case "dot" -> rect(g, cx - t, cy - t, t * 2, t * 2, col, o);
             case "corners" -> {
@@ -66,6 +72,53 @@ public final class Crosshair extends Module {
                 int w = 16;
                 g.fill(cx - w / 2, cy + gp + len + 4, cx + w / 2, cy + gp + len + 5, 0x60000000);
                 g.fill(cx - w / 2, cy + gp + len + 4, cx - w / 2 + Math.round(w * s), cy + gp + len + 5, col);
+            }
+        }
+    }
+
+    // ── iOS: точка и тонкое кольцо, сглаженные (SDF); крит готов — кольцо светится и чуть сжимается, после крита — вспышка ──
+
+    private float critK;
+    private long lastNs;
+    private static long critAt;
+
+    /** Из Hit Marker: был крит — короткая вспышка прицела (как в CritGlow). */
+    public static void critHappened() {
+        critAt = System.currentTimeMillis();
+    }
+
+    private void ios(GuiGraphics g, Minecraft mc) {
+        long now = System.nanoTime();
+        float dt = lastNs == 0 ? 0 : Math.min(0.1f, (now - lastNs) / 1e9f);
+        lastNs = now;
+        boolean ready = critGlow.get() && CritIndicator.critReady(mc.player);
+        critK += ((ready ? 1f : 0f) - critK) * Math.min(1f, dt * 10f);
+        float flash = Math.max(0f, 1f - (System.currentTimeMillis() - critAt) / 420f);
+        flash = flash * flash;
+        float cx = g.guiWidth() / 2f, cy = g.guiHeight() / 2f;
+        int col = color.get();
+        int cc = critColor.get();
+        float r = 4.5f + gap.getF() * 0.5f - critK * 0.8f + flash * 2.5f;
+        float t = Math.max(0.8f, thickness.getF() * 0.9f);
+        // мягкая тень — прицел читается на любом фоне
+        if (outline.get()) {
+            dev.mraz1visual.ui.Sdf.shape(g, cx - r - 1, cy - r - 1, (r + 1) * 2, (r + 1) * 2, r + 1, dev.mraz1visual.ui.Sdf.RING, t + 1.2f, 0x55000000, 0x55000000);
+            dev.mraz1visual.ui.Sdf.fill(g, cx - 1.9f, cy - 1.9f, 3.8f, 3.8f, 1.9f, 0x66000000);
+        }
+        int ringC = dev.mraz1visual.ui.Colors.lerp(dev.mraz1visual.ui.Colors.mulAlpha(col, 0.75f), cc, Math.max(critK, flash));
+        dev.mraz1visual.ui.Sdf.shape(g, cx - r, cy - r, r * 2, r * 2, r, dev.mraz1visual.ui.Sdf.RING, t, ringC, ringC);
+        if (critK > 0.02f || flash > 0.02f) {
+            // свечение вокруг кольца
+            float k = Math.max(critK * 0.6f, flash);
+            dev.mraz1visual.ui.Sdf.shape(g, cx - r, cy - r, r * 2, r * 2, r, dev.mraz1visual.ui.Sdf.SHADOW, 4f, dev.mraz1visual.ui.Colors.mulAlpha(cc, 0.45f * k), dev.mraz1visual.ui.Colors.mulAlpha(cc, 0.45f * k));
+        }
+        dev.mraz1visual.ui.Sdf.fill(g, cx - 1.25f, cy - 1.25f, 2.5f, 2.5f, 1.25f, col);
+        if (cooldown.get()) {
+            float s = mc.player.getAttackStrengthScale(0f);
+            if (s < 1f) {
+                float w = 14f, y = cy + r + 4f;
+                dev.mraz1visual.ui.Sdf.fill(g, cx - w / 2, y, w, 2f, 1f, 0x50000000);
+                dev.mraz1visual.ui.Sdf.fill(g, cx - w / 2, y, Math.max(2f, w * s), 2f, 1f, dev.mraz1visual.ui.Colors.mulAlpha(col, 0.9f));
             }
         }
     }

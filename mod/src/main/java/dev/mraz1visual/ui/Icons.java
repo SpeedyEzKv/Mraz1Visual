@@ -93,6 +93,7 @@ public final class Icons {
             Map.entry("custom_sky", CLOUD), Map.entry("desktop", GLOBE),
             Map.entry("spirit_pet", SPARKLE), Map.entry("emblem", STAR), Map.entry("ui_animations", WAVE),
             Map.entry("frame_pacing", GAUGE), Map.entry("frame_stats", CLOCK),
+            Map.entry("player_aura", SPARKLE), Map.entry("light_steps", SPRINT),
             Map.entry("wings_3d", CAPE), Map.entry("fire_hand", BOLT), Map.entry("custom_swords", SWORD), Map.entry("pets", PAW));
 
     public static int forModule(String id, int fallback) {

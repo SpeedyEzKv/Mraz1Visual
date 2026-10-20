@@ -147,7 +147,7 @@ public final class Wings3D extends Module {
     private void setupWing() {
         double flap = Math.sin(phase) * amp;
         // крыло со стороны поворота прижимается, другое раскрывается — отставание по инерции
-        double open = Math.toRadians(15 + 55 * spread * (1 - fold * 0.8)) + flap * 0.9 + side * lag * 0.35;
+        double open = Math.toRadians(8 + 38 * spread * (1 - fold * 0.8) + 50 * fold) + flap * 0.7 + side * lag * 0.3;
         double lift = 0.25 + flap * 0.6;
         // направление размаха
         sR = side * Math.cos(open) * Math.cos(lift);

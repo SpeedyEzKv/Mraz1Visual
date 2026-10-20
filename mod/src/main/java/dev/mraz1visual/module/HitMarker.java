@@ -6,7 +6,6 @@ import dev.mraz1visual.core.HudLayer;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.setting.ColorSetting;
 import dev.mraz1visual.ui.Colors;
-import dev.mraz1visual.ui.Draw;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.Entity;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.Entity;
 public final class HitMarker extends Module implements AttackListener, HudLayer {
     final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFFFFFFF));
     final ColorSetting critColor = add(new ColorSetting("crit_color", "Цвет крита", 0xFFFF6A6A));
-    private final Draw d = new Draw();
     private long at;
     private boolean crit;
 
@@ -27,22 +25,28 @@ public final class HitMarker extends Module implements AttackListener, HudLayer 
     public void onAttack(Entity e) {
         Minecraft mc = Minecraft.getInstance();
         at = System.currentTimeMillis();
-        crit = mc.player != null && mc.player.fallDistance > 0 && !mc.player.onGround();
+        crit = mc.player != null && CritIndicator.critReady(mc.player);
+        if (crit) Crosshair.critHappened();
     }
 
     @Override
     public void renderHud(GuiGraphics g, float pt) {
-        float t = (System.currentTimeMillis() - at) / 350f;
+        float t = (System.currentTimeMillis() - at) / 380f;
         if (t >= 1) return;
-        float a = 1 - t * t;
+        // появление с лёгким «выстрелом» наружу (ease-out), затухание к концу
+        float e = 1f - (float) Math.pow(1f - Math.min(1f, t * 2.2f), 3);
+        float a = t < 0.5f ? 1f : 1f - (t - 0.5f) / 0.5f;
         float cx = g.guiWidth() / 2f, cy = g.guiHeight() / 2f;
-        float in = 3 + t * 3, out = 8 + t * 4;
+        float dist = 5f + e * 3f, len = 4.5f - t * 1.5f;
         int c = Colors.mulAlpha(crit ? critColor.get() : color.get(), a);
-        d.begin(g, Minecraft.getInstance().font, 1f);
         for (int i = 0; i < 4; i++) {
-            float sx = (i & 1) == 0 ? -1 : 1, sy = i < 2 ? -1 : 1;
-            d.line(cx + sx * in, cy + sy * in, cx + sx * out, cy + sy * out, 1.5f, c);
+            g.pose().pushMatrix();
+            g.pose().translate(cx, cy);
+            g.pose().rotate((float) (Math.PI / 4 + i * Math.PI / 2));
+            // капсула со сглаженными краями (SDF) и мягкой тенью
+            dev.mraz1visual.ui.Sdf.fill(g, dist - 0.5f, -1.3f, len + 1f, 2.6f, 1.3f, Colors.mulAlpha(0x60000000, a));
+            dev.mraz1visual.ui.Sdf.fill(g, dist, -0.8f, len, 1.6f, 0.8f, c);
+            g.pose().popMatrix();
         }
-        d.end();
     }
 }
