@@ -23,6 +23,12 @@ public abstract class MinecraftMixin {
         return dev.mraz1visual.module.WorldMusic.apply(original);
     }
 
+    /** Dev-стенд: отметка начала кадра для замеров (в обычной игре — пустой вызов). */
+    @Inject(method = "runTick", at = @At("HEAD"), require = 0)
+    private void mraz1visual$frame(boolean advance, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        dev.mraz1visual.dev.Harness.frame();
+    }
+
     /** Заголовок окна: «Mraz1Visual 0.1.x» вместо «Minecraft* 1.21.11 — Одиночная игра». */
     @Inject(method = "createTitle", at = @At("HEAD"), cancellable = true, require = 0)
     private void mraz1visual$title(CallbackInfoReturnable<String> cir) {

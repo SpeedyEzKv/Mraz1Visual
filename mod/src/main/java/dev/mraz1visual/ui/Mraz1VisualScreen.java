@@ -377,6 +377,11 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         if (c == Category.CONFIGS) profiles.refresh();
     }
 
+    /** Dev-стенд: открыть вкладку из сценария. */
+    public void harnessCategory(Category c) {
+        selectCategory(c);
+    }
+
     private void showFavorites() {
         favorites = true;
         clearSearch();

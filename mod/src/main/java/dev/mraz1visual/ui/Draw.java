@@ -47,6 +47,10 @@ public final class Draw {
 
     public void round(int x, int y, int w, int h, int r, int color) {
         if (w <= 0 || h <= 0 || (color >>> 24) == 0) return;
+        if (!Sdf.broken) {
+            Sdf.fill(g, x, y, w, h, r, color);
+            return;
+        }
         r = Math.min(r, Math.min(w, h) / 2);
         if (r > 32) r = 32;
         if (r <= 0) {
@@ -64,6 +68,11 @@ public final class Draw {
 
     /** Скруглённый прямоугольник с обводкой в 1 единицу. */
     public void card(int x, int y, int w, int h, int r, int fill, int edge) {
+        if (!Sdf.broken) {
+            Sdf.fill(g, x, y, w, h, r, fill);
+            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, edge, edge);
+            return;
+        }
         round(x, y, w, h, r, edge);
         round(x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), fill);
     }
@@ -98,6 +107,10 @@ public final class Draw {
 
     /** Окружность-кольцо. */
     public void ring(float cx, float cy, float r, float t, int color) {
+        if (!Sdf.broken) {
+            Sdf.shape(g, cx - r - t / 2, cy - r - t / 2, 2 * r + t, 2 * r + t, r + t / 2, Sdf.RING, t, color, color);
+            return;
+        }
         int seg = Math.max(12, Math.min(64, Math.round(r * 2.2f)));
         float px = cx + r, py = cy;
         for (int i = 1; i <= seg; i++) {
@@ -125,6 +138,10 @@ public final class Draw {
     /** Закрашенный круг с точностью 1/4 единицы. */
     public void disc(float cx, float cy, float r, int color) {
         if (r <= 0) return;
+        if (!Sdf.broken) {
+            Sdf.fill(g, cx - r, cy - r, 2 * r, 2 * r, r, color);
+            return;
+        }
         float step = 0.25f;
         for (float y = -r; y < r; y += step) {
             float yy = y + step / 2;
@@ -196,8 +213,18 @@ public final class Draw {
      * (ярче сверху — как свет на стекле). Размытый фон под ней рисуется отдельно (см. WallpaperPlayer.glass).
      */
     public void glass(int x, int y, int w, int h, int r, int tint, float strength) {
-        round(x, y, w, h, r, tint);
         boolean light = Theme.isLight();
+        if (!Sdf.broken) {
+            // заливка, блик сверху (затухает к середине) и кромка с градиентом — три элемента вместо сотен полосок
+            Sdf.fill(g, x, y, w, h, r, tint);
+            int sheenTop = Colors.withAlpha(0xFFFFFF, Math.round((light ? 60 : 18) * strength));
+            Sdf.shape(g, x + 1, y + 1, w - 2, Math.max(2, h * 0.55f), Math.max(0, r - 1), Sdf.FILL, 0, sheenTop, sheenTop & 0x00FFFFFF);
+            int top = Colors.withAlpha(0xFFFFFF, Math.round((light ? 200 : 90) * strength));
+            int bottom = Colors.withAlpha(0xFFFFFF, Math.round((light ? 70 : 20) * strength));
+            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, top, bottom);
+            return;
+        }
+        round(x, y, w, h, r, tint);
         int sheenH = Math.max(4, Math.min(h - 2, Math.round(h * 0.45f)));
         int sheen = Colors.withAlpha(0xFFFFFF, Math.round((light ? 70 : 20) * strength));
         int rr = Math.min(r, Math.min(w, h) / 2);
@@ -210,6 +237,10 @@ public final class Draw {
     /** Кант по скруглённому контуру: сверху цвет top, снизу bottom, по бокам — переход. */
     public void rim(int x, int y, int w, int h, int r, int top, int bottom) {
         if (w <= 2 || h <= 2) return;
+        if (!Sdf.broken) {
+            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, top, bottom);
+            return;
+        }
         r = Math.min(r, Math.min(w, h) / 2);
         if (r > 32) r = 32;
         if (r <= 0) {
@@ -232,6 +263,12 @@ public final class Draw {
         }
         gradientV(x, y + r, 1, h - 2 * r, top, bottom);
         gradientV(x + w - 1, y + r, 1, h - 2 * r, top, bottom);
+    }
+
+    /** Мягкая тень под фигурой: расползается наружу на soft единиц. */
+    public void shadow(int x, int y, int w, int h, int r, float soft, int color) {
+        if (!Sdf.broken) Sdf.shape(g, x, y, w, h, r, Sdf.SHADOW, soft, color, color);
+        else round(x - 2, y, w + 4, h + 4, r + 2, Colors.mulAlpha(color, 0.5f));
     }
 
     /** Шахматка под полупрозрачными цветами. */

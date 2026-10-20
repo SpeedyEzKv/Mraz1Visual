@@ -33,7 +33,7 @@ import java.util.Map;
  */
 final class GlyphAtlas {
     private static final int PAGE = 1024;
-    private static final int MAX_ATLASES = 16;
+    private static final int MAX_ATLASES = 24;
     private static final Map<String, GlyphAtlas> ATLASES = new LinkedHashMap<>(16, 0.75f, true);
     private static final Map<String, Font> FONTS = new HashMap<>();
     private static Font fallback;
@@ -195,6 +195,78 @@ final class GlyphAtlas {
                 physical,
                 px + gl.bx(), py + gl.by(), px + gl.bx() + gl.w(), py + gl.by() + gl.h(),
                 gl.u0(), gl.u1(), gl.v0(), gl.v1(), color, g.scissorStack.peek()));
+    }
+
+    // ── строка целиком: один элемент GUI на страницу атласа, а не на каждую букву ──
+    // (ванильный GUI ищет пересечения каждого нового элемента со всеми прежними — O(n²) от числа элементов)
+
+    private static final int RUN_MAX = 256;
+    private final float[] run = new float[RUN_MAX * 8];
+    private final int[] runPage = new int[RUN_MAX];
+    private int runCount;
+
+    /** Поставить букву в очередь строки. */
+    void queue(Glyph gl, int px, int py) {
+        if (gl.page() < 0 || runCount >= RUN_MAX) return;
+        int o = runCount * 8;
+        run[o] = px + gl.bx(); run[o + 1] = py + gl.by(); run[o + 2] = px + gl.bx() + gl.w(); run[o + 3] = py + gl.by() + gl.h();
+        run[o + 4] = gl.u0(); run[o + 5] = gl.v0(); run[o + 6] = gl.u1(); run[o + 7] = gl.v1();
+        runPage[runCount++] = gl.page();
+    }
+
+    /** Отправить очередь строки: по элементу на каждую задействованную страницу атласа. */
+    void flush(GuiGraphics g, Matrix3x2f physical, int color) {
+        int n = runCount;
+        runCount = 0;
+        if (n == 0) return;
+        var scissor = g.scissorStack.peek();
+        for (int page = 0; page < pages.size(); page++) {
+            int count = 0;
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            for (int i = 0; i < n; i++) {
+                if (runPage[i] != page) continue;
+                count++;
+                minX = Math.min(minX, run[i * 8]); minY = Math.min(minY, run[i * 8 + 1]);
+                maxX = Math.max(maxX, run[i * 8 + 2]); maxY = Math.max(maxY, run[i * 8 + 3]);
+            }
+            if (count == 0) continue;
+            if (dirty[page]) {
+                textures.get(page).upload();
+                dirty[page] = false;
+            }
+            var view = textures.get(page).getTextureView();
+            if (view == null) continue;
+            float[] q = new float[count * 8];
+            int k = 0;
+            for (int i = 0; i < n; i++) {
+                if (runPage[i] != page) continue;
+                System.arraycopy(run, i * 8, q, k * 8, 8);
+                k++;
+            }
+            var b = new net.minecraft.client.gui.navigation.ScreenRectangle((int) Math.floor(minX), (int) Math.floor(minY),
+                    (int) Math.ceil(maxX - minX) + 1, (int) Math.ceil(maxY - minY) + 1).transformMaxBounds(physical);
+            if (scissor != null) b = scissor.intersection(b);
+            if (b == null) continue;
+            g.guiRenderState.submitGuiElement(new Run(TextureSetup.singleTexture(view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)),
+                    physical, q, color, scissor, b));
+        }
+    }
+
+    private record Run(TextureSetup textureSetup, org.joml.Matrix3x2fc pose, float[] q, int color,
+                       net.minecraft.client.gui.navigation.ScreenRectangle scissorArea,
+                       net.minecraft.client.gui.navigation.ScreenRectangle bounds) implements net.minecraft.client.gui.render.state.GuiElementRenderState {
+        @Override
+        public void buildVertices(com.mojang.blaze3d.vertex.VertexConsumer vc) {
+            for (int o = 0; o < q.length; o += 8) {
+                vc.addVertexWith2DPose(pose, q[o], q[o + 1]).setUv(q[o + 4], q[o + 5]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o], q[o + 3]).setUv(q[o + 4], q[o + 7]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o + 2], q[o + 3]).setUv(q[o + 6], q[o + 7]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o + 2], q[o + 1]).setUv(q[o + 6], q[o + 5]).setColor(color);
+            }
+        }
+
+        @Override
+        public com.mojang.blaze3d.pipeline.RenderPipeline pipeline() { return RenderPipelines.GUI_TEXTURED; }
     }
 
     private void release() {
