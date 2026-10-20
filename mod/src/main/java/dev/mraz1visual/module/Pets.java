@@ -134,7 +134,7 @@ public final class Pets extends Module implements WorldLayer {
         try {
             s = 0.9 * size.get();
             // у правого плеча, чуть впереди: в узкой панели превью не обрезается краем
-            x = 0.46; y = 0.16 + Math.sin(t * 1.7) * 0.04; z = -0.12;
+            x = 0.40; y = 0.10 + Math.sin(t * 1.7) * 0.04; z = -0.20;
             cyaw = Math.PI - 0.45;
             moving = 0;
             drawPet(d);

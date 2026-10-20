@@ -41,7 +41,16 @@ public final class ClientSettings extends Module {
     public final BoolSetting animations = add(new BoolSetting("animations", "Анимации", true)
             .group("Окно"));
 
-    public final ColorSetting accent = add(new ColorSetting("accent", "Акцент", Theme.DEFAULT_ACCENT)
+    public final BoolSetting reduceMotion = add(new BoolSetting("reduce_motion", "Уменьшить движение", false)
+            .group("Окно"));
+
+    /** Один акцент на весь интерфейс; «Свой» — цвет ниже. */
+    public final EnumSetting accentPreset = add(new EnumSetting("accent_preset", "Акцент", 0,
+            "sky", "Голубой", "violet", "Фиолетовый", "mint", "Мятный", "pink", "Розовый", "amber", "Янтарный", "graphite", "Графит", "custom", "Свой")
+            .group("Цвет")
+            .onChange(this::applyAccent));
+
+    public final ColorSetting accent = add(new ColorSetting("accent", "Свой акцент", Theme.DEFAULT_ACCENT)
             .group("Цвет")
             .onChange(this::applyAccent));
 
@@ -95,5 +104,15 @@ public final class ClientSettings extends Module {
 
     @Override public boolean alwaysOn() { return true; }
 
-    public void applyAccent() { Theme.setAccent(accent.get()); }
+    public void applyAccent() {
+        Theme.setAccent(switch (accentPreset.getId()) {
+            case "violet" -> 0xFFA88BFF;
+            case "mint" -> 0xFF5FE3C0;
+            case "pink" -> 0xFFFF7DB4;
+            case "amber" -> 0xFFFFC266;
+            case "graphite" -> 0xFFB9BEC9;
+            case "custom" -> accent.get();
+            default -> 0xFF5AC8FA; // голубой
+        });
+    }
 }

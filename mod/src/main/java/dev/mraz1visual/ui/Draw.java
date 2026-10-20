@@ -199,11 +199,29 @@ public final class Draw {
 
     /** Тумблер: t = 0 выкл, 1 вкл (анимированное значение). */
     public void toggle(int x, int y, float t) {
-        int track = Colors.lerp(Theme.TRACK, Theme.accent(), t);
-        round(x, y, Theme.SWITCH_W, Theme.SWITCH_H, Theme.SWITCH_H / 2, track);
-        int knob = Theme.SWITCH_H - 4;
-        int kx = x + 2 + Math.round((Theme.SWITCH_W - 4 - knob) * t);
-        round(kx, y + 2, knob, knob, knob / 2, Colors.lerp(Theme.KNOB_OFF, Theme.KNOB_ON, t));
+        float tc = Math.max(0f, Math.min(1f, t));
+        int w = Theme.SWITCH_W, h = Theme.SWITCH_H;
+        int track = Colors.lerp(Theme.TRACK, Theme.accent(), tc);
+        Sdf.fill(g, x, y, w, h, h / 2f, track);
+        // кнопка-«капля»: белая, с мягкой тенью; на середине хода чуть вытягивается, как в iOS
+        float knob = h - 3f;
+        float stretch = (float) Math.sin(Math.PI * tc) * knob * 0.35f;
+        float kw = knob + stretch;
+        float kx = x + 1.5f + (w - 3f - kw) * tc;
+        Sdf.shape(g, kx, y + 2f, kw, knob, knob / 2f, Sdf.SHADOW, 2.5f, 0x40000000, 0x40000000);
+        Sdf.fill(g, kx, y + 1.5f, kw, knob, knob / 2f, 0xFFFFFFFF);
+    }
+
+    /** Слайдер: тонкая дорожка-капсула, заливка акцентом, ручка-«капля» (при перетаскивании крупнее). */
+    public void slider(int x, int cy, int w, float f, float grab) {
+        f = Math.max(0f, Math.min(1f, f));
+        Sdf.fill(g, x, cy - 2f, w, 4f, 2f, Theme.TRACK);
+        int a = Theme.accent();
+        if (f > 0.001f) Sdf.shape(g, x, cy - 2f, Math.max(4f, w * f), 4f, 2f, Sdf.FILL, 0, a, Colors.shade(a, 0.85f));
+        float kw = 14f + 4f * grab, kh = 10f + 2f * grab;
+        float kx = x + w * f - kw / 2f;
+        Sdf.shape(g, kx, cy - kh / 2f + 1f, kw, kh, kh / 2f, Sdf.SHADOW, 3f, 0x48000000, 0x48000000);
+        Sdf.fill(g, kx, cy - kh / 2f, kw, kh, kh / 2f, 0xFFFFFFFF);
     }
 
     // ── жидкое стекло ────────────────────────────────────────

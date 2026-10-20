@@ -5,6 +5,8 @@ public final class Anim {
     private Anim() {}
 
     public static boolean enabled = true;
+    /** «Уменьшить движение»: пружины и сдвиги — сразу в цель, остаются только плавные проявления. */
+    public static boolean reduceMotion;
 
     public static float to(float current, float target, float dt) {
         if (!enabled) return target;
