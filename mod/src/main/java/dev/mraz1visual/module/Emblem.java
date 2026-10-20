@@ -33,16 +33,23 @@ public final class Emblem extends Module implements WorldLayer {
         super("emblem", "Emblem", "Эмблема под ногами как в Dota 2: руны, звезда и искры.", Category.COSMETICS);
     }
 
+    // палитра в общем буфере: заполняется каждый кадр, без новых массивов
+    private final int[] palBuf = new int[2];
+
     private int[] palette() {
-        return switch (style.getId()) {
-            case "inferno" -> new int[]{0xFFFF6A1A, 0xFFFFD27A};
-            case "frost" -> new int[]{0xFF5FD4FF, 0xFFEAFBFF};
-            case "void" -> new int[]{0xFF7A2BD9, 0xFFFF4FD8};
-            case "gold" -> new int[]{0xFFF2C14E, 0xFFFFF4C9};
-            case "nature" -> new int[]{0xFF3FD97A, 0xFFC8FF7A};
-            case "custom" -> new int[]{color.get(), color2.get()};
-            default -> new int[]{0xFF8A5CFF, 0xFF6FE8FF};
-        };
+        int a, b;
+        switch (style.getId()) {
+            case "inferno" -> { a = 0xFFFF6A1A; b = 0xFFFFD27A; }
+            case "frost" -> { a = 0xFF5FD4FF; b = 0xFFEAFBFF; }
+            case "void" -> { a = 0xFF7A2BD9; b = 0xFFFF4FD8; }
+            case "gold" -> { a = 0xFFF2C14E; b = 0xFFFFF4C9; }
+            case "nature" -> { a = 0xFF3FD97A; b = 0xFFC8FF7A; }
+            case "custom" -> { a = color.get(); b = color2.get(); }
+            default -> { a = 0xFF8A5CFF; b = 0xFF6FE8FF; }
+        }
+        palBuf[0] = a;
+        palBuf[1] = b;
+        return palBuf;
     }
 
     @Override

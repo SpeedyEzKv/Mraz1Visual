@@ -130,8 +130,8 @@ function renderChangelog() {
   ul.innerHTML = "";
   let releases = (info.releases || []).filter((r) => r && r.items && r.items.length);
   if (!releases.length) {
-    // старый формат: просто список строк — показываем как одно обновление
-    releases = [{ version: info.version, date: "", items: info.changelog || [] }];
+    // старый формат: просто список строк, новые дописывают в конец — показываем их сверху
+    releases = [{ version: info.version, date: "", items: (info.changelog || []).slice().reverse() }];
   }
   // сортировка: по дате, потом по версии — по убыванию (новые сверху)
   releases.sort((a, b) => (b.date || "").localeCompare(a.date || "") || cmpVer(b.version, a.version));

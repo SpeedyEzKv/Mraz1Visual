@@ -73,6 +73,8 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         final int icon;
         int y;
         float hover;
+        /** Масштаб подписи: 1 — влезает, меньше — сжать (считается в relayout, не в кадре). */
+        float labelScale = 1f;
 
         Nav(NavKind kind, Category category, String label, int icon) {
             this.kind = kind;
@@ -296,6 +298,12 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             nav.add(n);
             y += NAV_H + 2;
         }
+        // место под подпись: от текста до счётчика «10/12» справа
+        int avail = Theme.SIDEBAR_W - 16 - 28 - 11 - d.width("10/12") - 6;
+        for (Nav n : nav) {
+            int lw = d.width(n.label);
+            n.labelScale = lw > avail ? Math.max(0.7f, avail / (float) lw) : 1f;
+        }
         for (Card c : cardState.values()) c.descW = -1;
         rebuildList();
     }
@@ -304,7 +312,23 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private int cW() { return ww - Theme.SIDEBAR_W; }
     private int areaX() { return cX() + 12; }
     private int areaY() { return wy + Theme.TOPBAR_H + 2; }
-    private int areaW() { return cW() - 24; }
+    private int areaW() { return cW() - 24 - previewSpace(); }
+
+    // ── живое превью: модель игрока с крыльями, мечом и питомцем ──
+    private static final int PREVIEW_W = 168;
+    private final PlayerPreview preview = new PlayerPreview();
+    private boolean previewDrag;
+
+    /** Превью — на вкладках косметики, где его видно: мечи, крылья, питомцы. */
+    private boolean previewMode() {
+        return search.isEmpty() && !favorites && (category == Category.SWORDS || category == Category.WINGS || category == Category.PETS)
+                && cW() - 24 - PREVIEW_W - COL_GAP >= 240;
+    }
+
+    private int previewSpace() { return previewMode() ? PREVIEW_W + COL_GAP : 0; }
+    private int previewX() { return cX() + cW() - 12 - PREVIEW_W; }
+    private int previewY() { return areaY() + 4; }
+    private int previewH() { return areaH() - 8; }
     private int areaH() { return wh - Theme.TOPBAR_H - 4 - HINT_H; }
     private int searchX() { return wx + ww - 14 - Theme.SEARCH_W; }
     private int searchY() { return wy + (Theme.TOPBAR_H - 22) / 2; }
@@ -611,7 +635,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             if (!on && n.hover > 0.01f) d.round(nx + 3, n.y, nw - 6, NAV_H, 6, Colors.mulAlpha(Theme.HOVER, n.hover * 1.4f));
             int c = on ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, n.hover);
             d.icon(n.icon, nx + 12, n.y + (NAV_H - ICON) / 2, ICON, c);
-            d.text(n.label, nx + 28, Draw.textY(n.y, NAV_H), c);
+            if (n.labelScale < 1f) {
+                // длинное название («Производительность») чуть уменьшаем, чтобы не наезжало на счётчик
+                d.textScaled(n.label, Fonts.Kind.TEXT, nx + 28, Draw.textY(n.y, NAV_H) + Math.round(Theme.FONT_H * (1f - n.labelScale) / 2f), n.labelScale, c);
+            } else d.text(n.label, nx + 28, Draw.textY(n.y, NAV_H), c);
             String count = navCount(n);
             if (!count.isEmpty()) d.textRight(count, nx + nw - 11, Draw.textY(n.y, NAV_H), Theme.TEXT_MUTED);
         }
@@ -690,6 +717,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             profiles.renderContent(d, mx, my, dt, areaX() + lw + 8, ay, cX() + cW() - (areaX() + lw + 8), ah);
             return;
         }
+        if (previewMode()) {
+            aw -= previewSpace();
+            drawPreview(mx, my, dt);
+        }
         if (cards.isEmpty()) {
             String t = favorites ? "Нажмите звезду на модуле — он появится здесь." : search.isEmpty() ? category.emptyText : "Ничего не найдено";
             d.textCenter(t, ax + aw / 2, ay + ah / 2 - 4, Theme.TEXT_MUTED);
@@ -724,9 +755,24 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             int trackH = ah - 8;
             int thumbH = Math.max(18, trackH * ah / (ah + contentMax));
             int thumbY = ay + 4 + Math.round((trackH - thumbH) * (contentScroll / contentMax));
-            d.round(cX() + cW() - 6, thumbY, 3, thumbH, 1, Theme.ELEVATED);
+            d.round(cX() + cW() - 6 - previewSpace(), thumbY, 3, thumbH, 1, Theme.ELEVATED);
         }
 
+    }
+
+    /** Панель превью: стекло, подпись, модель (крутится мышкой). Во время анимации окна модель не рисуем — она вне масштаба окна. */
+    private void drawPreview(double mx, double my, float dt) {
+        int x = previewX(), y = previewY(), w = PREVIEW_W, h = previewH();
+        glassPanel(x, y, w, h, CARD_R + 2, Theme.GLASS_CARD, 1.1f, 0);
+        d.textScaled("ПРЕВЬЮ", Fonts.Kind.HEAD, x + 10, y + 9, 0.72f, Theme.TEXT_MUTED);
+        boolean steady = openT >= 1f && !closing;
+        if (!preview.render(d.g, k, x + 4, y + 18, w - 8, h - 36, steady, dt)) {
+            d.textCenter("Зайдите в мир —", x + w / 2, y + h / 2 - 10, Theme.TEXT_MUTED);
+            d.textCenter("здесь будет ваша модель", x + w / 2, y + h / 2 + 2, Theme.TEXT_MUTED);
+        }
+        boolean hov = Widget.hit(mx, my, x, y, w, h);
+        d.textCenter(previewDrag ? "Отпустите" : hov ? "Тяните, чтобы повернуть" : "Мечи, крылья, питомец",
+                x + w / 2, y + h - 14, Theme.TEXT_MUTED);
     }
 
     private int toggleX(Card c) { return c.x + c.w - 12 - Theme.SWITCH_W - 4; }
@@ -886,6 +932,13 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             else profiles.clickContent(mx, my, areaX() + lw + 8, ay);
             return true;
         }
+        if (previewMode() && Widget.hit(mx, my, previewX(), previewY(), PREVIEW_W, previewH())) {
+            if (b == 0) {
+                previewDrag = true;
+                preview.dragStart(mx);
+            }
+            return true;
+        }
         if (!Widget.hit(mx, my, cX(), ay, cW(), ah)) return true;
         double cmy = my + contentScroll;
         for (Card c : cards) {
@@ -927,6 +980,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
+        if (previewDrag) {
+            previewDrag = false;
+            preview.dragEnd();
+        }
         if (active != null) {
             active.mouseReleased(e.x() / k, activeY(e.y() / k));
             active = null;
@@ -936,6 +993,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dragX, double dragY) {
+        if (previewDrag) preview.drag(e.x() / k);
         if (active != null) active.mouseDragged(e.x() / k, activeY(e.y() / k));
         return true;
     }

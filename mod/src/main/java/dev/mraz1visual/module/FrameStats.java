@@ -16,7 +16,7 @@ public final class FrameStats extends Module implements HudLayer {
     final EnumSetting corner = add(new EnumSetting("corner", "Угол", 0, "tl", "Слева сверху", "tr", "Справа сверху", "bl", "Слева снизу", "br", "Справа снизу"));
     final EnumSetting scale = add(new EnumSetting("scale", "Шкала графика", 1, "16", "16 мс", "33", "33 мс", "66", "66 мс"));
 
-    private final float[] ms = new float[N];
+    private final float[] ms = new float[N], sorted = new float[N];
     private int head;
     private long last;
     private long textAt;
@@ -56,12 +56,18 @@ public final class FrameStats extends Module implements HudLayer {
             }
             if (count > 0) {
                 float avg = sum / count;
-                line1 = Math.round(1000f / avg) + " FPS";
+                // 1% low — FPS самых медленных кадров окна: статтеры видны цифрой, а не только на графике
+                for (int i = 0; i < count; i++) sorted[i] = ms[(head - i + N) % N];
+                java.util.Arrays.sort(sorted, 0, count);
+                int lowN = Math.max(1, count / 100);
+                float lowSum = 0;
+                for (int i = count - lowN; i < count; i++) lowSum += sorted[i];
+                line1 = Math.round(1000f / avg) + " FPS  ·  1% low " + Math.round(1000f / (lowSum / lowN));
                 line2 = String.format(java.util.Locale.ROOT, "%.1f / %.1f / %.1f мс", min, avg, max);
             }
         }
 
-        int w = 150, h = 74;
+        int w = 170, h = 74;
         int c = switch (corner.getId()) { case "tr" -> 1; case "bl" -> 2; case "br" -> 3; default -> 0; };
         int[] p = HudKit.anchor(g, c, w, h, 6);
         int x = p[0], y = p[1];

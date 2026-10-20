@@ -10,6 +10,7 @@ import dev.mraz1visual.setting.ActionSetting;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.setting.SliderSetting;
+import dev.mraz1visual.ui.Colors;
 import dev.mraz1visual.ui.menu.WallpaperScreen;
 import dev.mraz1visual.wallpaper.WallpaperPlayer;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -126,6 +127,7 @@ public final class CustomSky extends Module {
     // ── кадр ─────────────────────────────────────────────────
 
     private void render() {
+        fogK = 0;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         if (overworldOnly.get() && mc.level.dimension() != Level.OVERWORLD) return;
@@ -133,32 +135,67 @@ public final class CustomSky extends Module {
         float dt = last == 0 ? 0 : Math.min(0.1f, (now - last) / 1e9f);
         last = now;
         t += dt;
+        float comfortK = comfort.getF() / 100f;
 
-        // день ↔ ночь — плавно, секунд за 8, без скачков
+        // день ↔ ночь — плавно, секунд за 8 (с комфортом — ещё мягче), без скачков
         float target = mc.level.isDarkOutside() ? 1f : 0f;
         if (nightK < 0) nightK = target;
-        nightK += (target - nightK) * Math.min(1f, dt * 0.15f);
+        nightK += (target - nightK) * Math.min(1f, dt * 0.15f * (1f - 0.5f * comfortK));
 
         if (buffer == null) {
             buffer = new ByteBufferBuilder(1 << 18);
             src = MultiBufferSource.immediate(buffer);
         }
-        float comfortK = comfort.getF() / 100f;
         // комфорт: потолок яркости и меньше контраста
         float cap = 1f - 0.45f * comfortK;
         float bright = Math.min(cap, (dayBright.getF() * (1 - nightK) + nightBright.getF() * nightK) / 100f);
 
+        int horizonRgb = -1;
         switch (source.getId()) {
             case "wallpaper" -> wallpaper(bright);
-            case "frames" -> frames(bright);
-            default -> procedural(bright, comfortK);
+            case "frames" -> {
+                frames(bright);
+                if (!frameTex.isEmpty()) horizonRgb = framesHorizon;
+            }
+            default -> {
+                procedural(bright, comfortK);
+                horizonRgb = Colors.lerp(SkyTextures.horizon(dayKey), SkyTextures.horizon(nightKey), nightK);
+            }
         }
+        int veil = Math.round(90 * comfortK);
         if (comfortK > 0.01f) {
             // мягкая «вуаль» среднего тона — снижает контраст неба
-            int veil = Math.round(90 * comfortK);
-            sphere(src.getBuffer(RenderTypes.textSeeThrough(SkyTextures.white())), veil << 24 | 0x5A6070, 0f, 1f);
+            sphere(src.getBuffer(RenderTypes.textSeeThrough(SkyTextures.white())), veil << 24 | VEIL, 0f, 1f);
         }
         src.endBatch();
+
+        // туман у края прорисовки — в цвет нашего горизонта (с той же яркостью и вуалью): без светлого/тёмного шва
+        if (horizonRgb != -1) {
+            int c = Colors.shade(horizonRgb, bright);
+            if (veil > 0) c = Colors.lerp(c, 0xFF000000 | VEIL, veil / 255f);
+            fogRgb = c;
+            fogK = 0.85f;
+        }
+    }
+
+    private static final int VEIL = 0x5A6070;
+    /** Цвет и сила подкраски тумана в этом кадре (0 — неба нет, туман ванильный). */
+    private int fogRgb;
+    private float fogK;
+    private volatile int framesHorizon = 0xFF808890;
+
+    /** Из миксина FogRenderer: ванильный туман → к цвету горизонта живого неба. Под водой, в лаве, при слепоте — не трогаем. */
+    public static org.joml.Vector4f fog(org.joml.Vector4f v) {
+        CustomSky s = instance;
+        if (s == null || !s.isEnabled() || v == null || s.fogK <= 0) return v;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gameRenderer.getMainCamera().getFluidInCamera() != net.minecraft.world.level.material.FogType.NONE) return v;
+        if (mc.player != null && (mc.player.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
+                || mc.player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS))) return v;
+        int c = s.fogRgb;
+        float k = s.fogK;
+        return v.set(v.x() + ((c >> 16 & 255) / 255f - v.x()) * k, v.y() + ((c >> 8 & 255) / 255f - v.y()) * k,
+                v.z() + ((c & 255) / 255f - v.z()) * k, v.w());
     }
 
     // ── процедурное ──────────────────────────────────────────
@@ -214,23 +251,36 @@ public final class CustomSky extends Module {
         if (p != null) { SkyTextures.release(cloudTex); cloudTex = SkyTextures.upload(p, SkyTextures.CW, SkyTextures.CH, "clouds"); }
     }
 
-    /** Мерцающие звёзды поверх текстуры: маленькие квадратики, яркость плавно «дышит». */
+    /**
+     * Мерцающие звёзды поверх текстуры: мягкие точки (яркий центр, прозрачный край — без «зубчатых» квадратов,
+     * которые рябят при повороте камеры), яркость плавно «дышит». Комфорт для глаз уменьшает мерцание.
+     */
     private void twinkle(VertexConsumer vc, float bright) {
+        float calm = 1f - 0.7f * comfort.getF() / 100f;
         for (int i = 0; i < 140; i++) {
             float h1 = frac(i * 0.6180339f), h2 = frac(i * 0.4142135f + 0.17f);
             double lon = h1 * Math.PI * 2, lat = 0.15 + h2 * 1.3;
-            float tw = 0.5f + 0.5f * (float) Math.sin(t * (1.2f + h2 * 2.5f) + i * 1.7f);
-            int a = Math.round(255 * nightK * tw * tw * bright);
+            float wave = 0.5f + 0.5f * (float) Math.sin(t * (0.8f + h2 * 1.6f) + i * 1.7f);
+            float tw = 1f - (1f - wave * wave) * calm;
+            int a = Math.round(255 * nightK * tw * bright);
             if (a < 6) continue;
             float x = (float) (Math.cos(lat) * Math.sin(lon)), y = (float) Math.sin(lat), z = (float) (-Math.cos(lat) * Math.cos(lon));
-            float s = 0.012f + 0.01f * h1;
-            // квадрат в касательной плоскости
+            float s = 0.014f + 0.012f * h1;
+            // касательные к сфере: «вправо» по долготе и «вверх» по широте
             float ex = (float) Math.cos(lon), ez = (float) Math.sin(lon);
-            int c = a << 24 | 0xFFF6E8;
-            v(vc, (x - ex * s) * R, (y - s) * R, (z - ez * s) * R, 0, 0, c);
-            v(vc, (x + ex * s) * R, (y - s) * R, (z + ez * s) * R, 1, 0, c);
-            v(vc, (x + ex * s) * R, (y + s) * R, (z + ez * s) * R, 1, 1, c);
-            v(vc, (x - ex * s) * R, (y + s) * R, (z - ez * s) * R, 0, 1, c);
+            float ux = (float) (-Math.sin(lat) * Math.sin(lon)), uy = (float) Math.cos(lat), uz = (float) (Math.sin(lat) * Math.cos(lon));
+            int c = a << 24 | 0xFFF6E8, e = 0xFFF6E8;
+            float cx = x * R, cy = y * R, cz = z * R;
+            for (int k = 0; k < 4; k++) {
+                // четыре треугольника «центр → край → край»: точка с мягким краем
+                float ax = k == 0 ? ex : k == 1 ? ux : k == 2 ? -ex : -ux, ay = k == 1 ? uy : k == 3 ? -uy : 0, az = k == 0 ? ez : k == 1 ? uz : k == 2 ? -ez : -uz;
+                int k2 = (k + 1) & 3;
+                float bx = k2 == 0 ? ex : k2 == 1 ? ux : k2 == 2 ? -ex : -ux, by = k2 == 1 ? uy : k2 == 3 ? -uy : 0, bz = k2 == 0 ? ez : k2 == 1 ? uz : k2 == 2 ? -ez : -uz;
+                v(vc, cx, cy, cz, 0.5f, 0.5f, c);
+                v(vc, cx + ax * s * R, cy + ay * s * R, cz + az * s * R, 1, 0, e);
+                v(vc, cx + bx * s * R, cy + by * s * R, cz + bz * s * R, 1, 1, e);
+                v(vc, cx, cy, cz, 0.5f, 0.5f, c);
+            }
         }
     }
 
@@ -337,6 +387,7 @@ public final class CustomSky extends Module {
                     }
                     int[] px = img.getRGB(0, 0, tw, thh, null, 0, tw);
                     for (int p = 0; p < px.length; p++) px[p] |= 0xFF000000;
+                    if (i == 0) framesHorizon = horizonAverage(px, tw, thh);
                     synchronized (framePixels) {
                         framePixels.add(px);
                         frameSize.add(new int[]{tw, thh});
@@ -351,6 +402,21 @@ public final class CustomSky extends Module {
         }, "Mraz1Visual sky frames");
         th.setDaemon(true);
         th.start();
+    }
+
+    /** Средний цвет полосы у горизонта (середина панорамы по высоте) — под него подстраивается туман. */
+    private static int horizonAverage(int[] px, int w, int h) {
+        long r = 0, g = 0, b = 0, n = 0;
+        int y0 = Math.round(h * 0.45f), y1 = Math.max(y0 + 1, Math.round(h * 0.55f));
+        for (int y = y0; y < y1 && y < h; y++) {
+            for (int x = 0; x < w; x += 2) {
+                int c = px[y * w + x];
+                r += c >> 16 & 255; g += c >> 8 & 255; b += c & 255;
+                n++;
+            }
+        }
+        if (n == 0) return 0xFF808890;
+        return 0xFF000000 | (int) (r / n) << 16 | (int) (g / n) << 8 | (int) (b / n);
     }
 
     // ── геометрия ────────────────────────────────────────────

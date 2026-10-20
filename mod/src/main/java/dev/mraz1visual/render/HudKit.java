@@ -50,10 +50,15 @@ public final class HudKit {
         D.end();
     }
 
-    /** Точка по углу экрана: corner 0 — слева сверху, 1 — справа сверху, 2 — слева снизу, 3 — справа снизу. */
+    private static final int[] ANCHOR = new int[2];
+
+    /**
+     * Точка по углу экрана: corner 0 — слева сверху, 1 — справа сверху, 2 — слева снизу, 3 — справа снизу.
+     * Возвращает общий массив (без мусора в кадре) — читать сразу, не хранить.
+     */
     public static int[] anchor(GuiGraphics g, int corner, int w, int h, int margin) {
-        int x = (corner & 1) == 0 ? margin : g.guiWidth() - w - margin;
-        int y = corner < 2 ? margin : g.guiHeight() - h - margin;
-        return new int[]{x, y};
+        ANCHOR[0] = (corner & 1) == 0 ? margin : g.guiWidth() - w - margin;
+        ANCHOR[1] = corner < 2 ? margin : g.guiHeight() - h - margin;
+        return ANCHOR;
     }
 }

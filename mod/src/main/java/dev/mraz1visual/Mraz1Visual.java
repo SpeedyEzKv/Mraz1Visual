@@ -41,6 +41,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(Mraz1Visual::tick);
         HudDraw.register();
         WorldDraw.register();
+        dev.mraz1visual.render.PlayerLayer.register();
         CombatHooks.register();
         ShulkerPreview.register();
         Crosshair.register();

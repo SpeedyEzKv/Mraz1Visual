@@ -44,6 +44,7 @@ public final class Pets extends Module implements WorldLayer {
 
     public Pets() {
         super("pets", "Pets", "Милые питомцы: дракончик, котик, лис, слизень, дрон, медуза.", Category.PETS);
+        instance = this;
     }
 
     @Override
@@ -104,7 +105,45 @@ public final class Pets extends Module implements WorldLayer {
         double dy = Math.atan2(Math.sin(want - yaw), Math.cos(want - yaw));
         yaw += dy * Math.min(1, dt * 6);
         cyaw = yaw;
+        drawPet(d);
+    }
 
+    // ── превью в меню: питомец рядом с моделью игрока ─────────
+
+    private static Pets instance;
+    private final WorldDraw.Painter previewPainter = this::paintPreview;
+
+    /** Из слоя модели игрока, только для модели в меню/инвентаре: питомец у правого плеча, лицом к зрителю. */
+    public static void submitPreview(com.mojang.blaze3d.vertex.PoseStack ps, net.minecraft.client.renderer.SubmitNodeCollector c) {
+        Pets p = instance;
+        if (p == null || !p.isEnabled()) return;
+        long now = System.nanoTime();
+        if (!p.placed) {
+            // в мире питомца ещё нет (меню без мира) — время анимации идёт само
+            float dt = p.last == 0 ? 0 : Math.min(0.05f, (now - p.last) / 1e9f);
+            p.last = now;
+            p.t += dt * p.speed.getF();
+        }
+        WorldDraw.submitLocal(ps, c, true, p.previewPainter);
+    }
+
+    private void paintPreview(WorldDraw d) {
+        // своё положение, мировое (пружина следования) не трогаем
+        double sx = x, sy = y, sz = z, sc = cyaw, ss = s;
+        float sm = moving;
+        try {
+            s = 0.9 * size.get();
+            // у правого плеча, чуть впереди: в узкой панели превью не обрезается краем
+            x = 0.46; y = 0.16 + Math.sin(t * 1.7) * 0.04; z = -0.12;
+            cyaw = Math.PI - 0.45;
+            moving = 0;
+            drawPet(d);
+        } finally {
+            x = sx; y = sy; z = sz; cyaw = sc; s = ss; moving = sm;
+        }
+    }
+
+    private void drawPet(WorldDraw d) {
         if (glow.get()) {
             d.glowBegin();
             d.billboardDot(x, y + 0.03 * s, z, 0.32 * s, Colors.withAlpha(main(glowPreset(), 0f), Math.round(30 * opacity.getF() / 100f)), 16);

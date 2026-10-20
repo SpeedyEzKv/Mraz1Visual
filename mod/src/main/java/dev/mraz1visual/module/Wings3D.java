@@ -2,7 +2,6 @@ package dev.mraz1visual.module;
 
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
-import dev.mraz1visual.core.WorldLayer;
 import dev.mraz1visual.render.BodyFrame;
 import dev.mraz1visual.render.ColorFx;
 import dev.mraz1visual.render.WorldDraw;
@@ -19,7 +18,8 @@ import net.minecraft.client.player.LocalPlayer;
  * механические из пластин. Взмахи зависят от движения: на месте — медленно, на бегу — чаще,
  * в прыжке — широко, на элитрах — раскрыты для планирования, крадучись — сложены.
  */
-public final class Wings3D extends Module implements WorldLayer {
+public final class Wings3D extends Module {
+    private static Wings3D instance;
     final EnumSetting style = add(new EnumSetting("style", "Стиль", 0,
             "angel", "Ангельские (перья)", "dragon", "Драконьи", "energy", "Энергетические", "mech", "Механические"));
     final EnumSetting colorMode = add(new EnumSetting("color_mode", "Цвет", 0, "preset", "Как у стиля", "solid", "Один", "gradient", "Градиент", "rainbow", "Радуга"));
@@ -43,14 +43,21 @@ public final class Wings3D extends Module implements WorldLayer {
 
     public Wings3D() {
         super("wings_3d", "Wings 3D", "Объёмные крылья: перья, дракон, энергия, механика. Машут от движения.", Category.WINGS);
+        instance = this;
     }
 
+    private static final int[] P_DRAGON = {0xFF3A1A2A, 0xFF8A2A3A, 0xFFE05A4A};
+    private static final int[] P_ENERGY = {0xFF7FD8FF, 0xFFB8B4F2, 0xFFFFFFFF};
+    private static final int[] P_MECH = {0xFF3A3F4A, 0xFF8A93A6, 0xFF4FD8FF};
+    private static final int[] P_ANGEL = {0xFFFFFFFF, 0xFFE6E2F6, 0xFFFFF4C8};
+
+    /** Палитры — константы: в кадре ничего не создаётся. */
     private int[] palette() {
         return switch (style.getId()) {
-            case "dragon" -> new int[]{0xFF3A1A2A, 0xFF8A2A3A, 0xFFE05A4A};
-            case "energy" -> new int[]{0xFF7FD8FF, 0xFFB8B4F2, 0xFFFFFFFF};
-            case "mech" -> new int[]{0xFF3A3F4A, 0xFF8A93A6, 0xFF4FD8FF};
-            default -> new int[]{0xFFFFFFFF, 0xFFE6E2F6, 0xFFFFF4C8};
+            case "dragon" -> P_DRAGON;
+            case "energy" -> P_ENERGY;
+            case "mech" -> P_MECH;
+            default -> P_ANGEL;
         };
     }
 
@@ -60,11 +67,30 @@ public final class Wings3D extends Module implements WorldLayer {
         return Colors.mulAlpha(c, opacity.getF() / 100f);
     }
 
-    @Override
-    public void renderWorld(WorldDraw d, float pt) {
+    /** Включён ли модуль — для слоя модели игрока. */
+    public static boolean active() {
+        Wings3D w = instance;
+        return w != null && w.isEnabled();
+    }
+
+    /**
+     * Из {@link dev.mraz1visual.render.PlayerLayer}: крылья рисуются у самой модели игрока —
+     * поэтому видны от 3-го лица, в инвентаре и в превью меню, а приседание и элитры учитывает поза тела.
+     * Обновление состояния — по реальному времени: второй вызов за кадр (инвентарь + мир) почти ничего не добавляет.
+     */
+    public static void submit(com.mojang.blaze3d.vertex.PoseStack ps, net.minecraft.client.renderer.SubmitNodeCollector c, boolean gui) {
+        Wings3D w = instance;
+        if (w == null || !w.isEnabled()) return;
+        w.update();
+        WorldDraw.submitLocal(ps, c, gui, w.painter);
+    }
+
+    private final WorldDraw.Painter painter = this::paint;
+
+    private void update() {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
-        if (p == null || mc.options.getCameraType().isFirstPerson() || p.isInvisible()) return;
+        if (p == null) return;
         long now = System.nanoTime();
         float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
         last = now;
@@ -84,9 +110,11 @@ public final class Wings3D extends Module implements WorldLayer {
         spread += (spreadT - spread) * k;
         fold += (foldT - fold) * k;
         phase += dt * freq * speed.getF() * (float) Math.PI * 2;
+    }
 
-        frame.body(p, pt);
-        float time = (now - start) / 1e9f;
+    private void paint(WorldDraw d) {
+        frame.localBody();
+        float time = (System.nanoTime() - start) / 1e9f;
         if (glow.get() && (style.getId().equals("energy") || style.getId().equals("mech"))) {
             // мягкий ореол за спиной — рисуется первым, под крыльями
             d.glowBegin();
