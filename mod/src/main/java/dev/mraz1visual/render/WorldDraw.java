@@ -175,11 +175,20 @@ public final class WorldDraw {
                      double x3, double y3, double z3, double x4, double y4, double z4, int c1, int c2, int c3, int c4) {
         v(x1, y1, z1, c1); v(x2, y2, z2, c2); v(x3, y3, z3, c3); v(x4, y4, z4, c4);
         // свечение у модели: тип с отсечением граней — рисуем обе стороны (зеркальное крыло иначе пропадает)
-        if (local && glowing && glowPass) { v(x4, y4, z4, c4); v(x3, y3, z3, c3); v(x2, y2, z2, c2); v(x1, y1, z1, c1); }
+        if (local && glowing && glowPass && !facing) { v(x4, y4, z4, c4); v(x3, y3, z3, c3); v(x2, y2, z2, c2); v(x1, y1, z1, c1); }
     }
+
+    /** Локальный режим: примитив не для текущего прохода (обычный / свечение) — не считать его вовсе. */
+    private boolean skip() {
+        return local && glowing != glowPass;
+    }
+
+    /** Сейчас рисуется примитив, развёрнутый к камере (точка, кольцо к камере): он и так лицом к камере — без второй стороны. */
+    private boolean facing;
 
     /** Горизонтальное кольцо. */
     public void ring(double x, double y, double z, double rIn, double rOut, int segments, int colorIn, int colorOut) {
+        if (skip()) return;
         int n = Math.min(SEG_MAX, Math.max(8, segments));
         for (int i = 0; i < n; i++) {
             float c0 = cos(i, n), s0 = sin(i, n), c1 = cos(i + 1, n), s1 = sin(i + 1, n);
@@ -190,6 +199,7 @@ public final class WorldDraw {
 
     /** Конус остриём вверх (основание горизонтально). */
     public void cone(double x, double y, double z, double radius, double height, int segments, int colorBase, int colorTip) {
+        if (skip()) return;
         int n = Math.min(SEG_MAX, Math.max(8, segments));
         double ty = y + height;
         for (int i = 0; i < n; i++) {
@@ -206,6 +216,7 @@ public final class WorldDraw {
 
     /** Залитый параллелепипед (6 граней). */
     public void box(double x1, double y1, double z1, double x2, double y2, double z2, int c) {
+        if (skip()) return;
         quad(x1, y1, z1, x2, y1, z1, x2, y1, z2, x1, y1, z2, c, c, c, c); // низ
         quad(x1, y2, z1, x1, y2, z2, x2, y2, z2, x2, y2, z1, c, c, c, c); // верх
         quad(x1, y1, z1, x1, y2, z1, x2, y2, z1, x2, y1, z1, c, c, c, c); // север
@@ -250,6 +261,7 @@ public final class WorldDraw {
 
     /** Отрезок толщиной w, развёрнутый к камере. */
     public void line(double x1, double y1, double z1, double x2, double y2, double z2, double w, int c) {
+        if (skip()) return;
         double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
         double vx, vy, vz;
         if (ortho) { vx = viewX; vy = viewY; vz = viewZ; }
@@ -285,6 +297,9 @@ public final class WorldDraw {
 
     /** Кольцо, всегда развёрнутое к камере (как частица). */
     public void billboardRing(double x, double y, double z, double r, double w, int segments, int color) {
+        if (skip()) return;
+        facing = true;
+        try {
         org.joml.Vector3f right = camRight;
         org.joml.Vector3f up = camUp;
         int n = Math.min(SEG_MAX, Math.max(8, segments));
@@ -296,6 +311,9 @@ public final class WorldDraw {
             quad(x + ax * ri, y + ay * ri, z + az * ri, x + ax * ro, y + ay * ro, z + az * ro,
                     x + bx * ro, y + by * ro, z + bz * ro, x + bx * ri, y + by * ri, z + bz * ri, color, color, color, color);
         }
+    } finally {
+            facing = false;
+        }
     }
 
     /** Круглая «частица» к камере: яркий центр, прозрачный край. */
@@ -305,6 +323,9 @@ public final class WorldDraw {
 
     /** То же с заданным числом сегментов: 6 — дёшево для тысяч частиц. */
     public void billboardDot(double x, double y, double z, double r, int color, int n) {
+        if (skip()) return;
+        facing = true;
+        try {
         org.joml.Vector3f right = camRight;
         org.joml.Vector3f up = camUp;
         int edge = color & 0x00FFFFFF;
@@ -314,10 +335,14 @@ public final class WorldDraw {
             double bx = (right.x() * c1 + up.x() * s1) * r, by = (right.y() * c1 + up.y() * s1) * r, bz = (right.z() * c1 + up.z() * s1) * r;
             quad(x, y, z, x + ax, y + ay, z + az, x + bx, y + by, z + bz, x, y, z, color, edge, edge, color);
         }
+    } finally {
+            facing = false;
+        }
     }
 
     /** Четыре уголка-скобки в плоскости экрана, повёрнутые на angle (рад). Маркер цели. */
     public void billboardCorners(double x, double y, double z, double size, double angle, double thick, int color) {
+        if (skip()) return;
         org.joml.Vector3f r0 = camRight;
         org.joml.Vector3f u0 = camUp;
         double ca = Math.cos(angle), sa = Math.sin(angle);
@@ -350,6 +375,7 @@ public final class WorldDraw {
 
     /** Кристалл-октаэдр, повёрнутый на yaw вокруг вертикали. */
     public void crystal(double x, double y, double z, double r, double h, double yaw, int cTop, int cMid) {
+        if (skip()) return;
         double[] px = tmpX, pz = tmpZ;
         for (int i = 0; i < 4; i++) {
             double a = yaw + i * Math.PI / 2;
@@ -365,6 +391,7 @@ public final class WorldDraw {
 
     /** Кубик с центром (x,y,z), повёрнутый на yaw и pitch: грани цветом fill, рёбра цветом edge (0 — без рёбер). */
     public void cube(double x, double y, double z, double half, double yaw, double pitch, int fill, int edge) {
+        if (skip()) return;
         double cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
         double[][] p = cubePts;
         for (int i = 0; i < 8; i++) {
@@ -398,6 +425,7 @@ public final class WorldDraw {
 
     /** Луч в плоскости экрана из точки под углом ang: от r0 до r1, ширина w у основания, к концу сходится в точку. */
     public void billboardRay(double x, double y, double z, double ang, double r0, double r1, double w, int color) {
+        if (skip()) return;
         org.joml.Vector3f right = camRight;
         org.joml.Vector3f up = camUp;
         double ca = Math.cos(ang), sa = Math.sin(ang);

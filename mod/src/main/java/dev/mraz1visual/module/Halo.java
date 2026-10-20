@@ -72,7 +72,7 @@ public final class Halo extends Module {
     /** Кольцо с наклоном tilt (рад) вокруг оси X: сегменты лентами, свечение — внутренней и внешней полосой. */
     private void ring(WorldDraw d, double y, float s, double tilt) {
         double r = 0.29 * s;
-        int n = 56;
+        int n = 40;
         float breathe = 0.85f + 0.15f * (float) Math.sin(time * 1.7);
         // твёрдая тонкая основа (чуть светлее к центру) — видна и днём
         d.ring(0, y, 0, r - 0.012 * s, r + 0.012 * s, n, col(0.1f, 0.95f), col(0.3f, 0.95f));
@@ -113,10 +113,10 @@ public final class Halo extends Module {
         d.ring(0, y, 0, r - 0.004 * s, r + 0.004 * s, 48, col(0.3f, 0.25f), col(0.3f, 0.25f));
         for (int i = 0; i < 3; i++) {
             double base = time * 1.9 + i * Math.PI * 2 / 3;
-            for (int k = 6; k >= 0; k--) {
-                double a = base - k * 0.12;
+            for (int k = 4; k >= 0; k--) {
+                double a = base - k * 0.17;
                 double x = Math.cos(a) * r, z = Math.sin(a) * r, yy = y + Math.sin(a) * r * 0.25 + tilt * r;
-                float f = 1f - k / 7f;
+                float f = 1f - k / 5f;
                 d.billboardDot(x, yy, z, (0.02 + 0.035 * f) * s, col(0.1f + (1 - f) * 0.6f, (k == 0 ? 0.95f : 0.35f * f)), 8);
             }
         }

@@ -97,7 +97,7 @@ public final class FireHand extends Module implements AttackListener {
         if (f.count == 0 && f.activeK < 0.02f) return;
         // оси экрана для «спрайтов» — в пространстве, куда поза переводит модель
         boolean camAxes = !first && !gui;
-        c.submitCustomGeometry(ps, dev.mraz1visual.render.FxVertex.glow(), (pose, vc) -> f.draw(vc, pose.pose(), camAxes));
+        c.submitCustomGeometry(ps, dev.mraz1visual.render.FxVertex.glow(), (pose, vc) -> f.draw(vc, pose.pose(), camAxes, gui));
     }
 
     private void useOutline(List<BakedQuad> quads) {
@@ -224,7 +224,7 @@ public final class FireHand extends Module implements AttackListener {
 
     // ── отрисовка (аддитивное свечение) ──────────────────────
 
-    private void draw(VertexConsumer vc, Matrix4f m, boolean camAxes) {
+    private void draw(VertexConsumer vc, Matrix4f m, boolean camAxes, boolean gui) {
         curPose = m;
         inv.set(m).invert();
         right.set(1, 0, 0);
@@ -234,6 +234,13 @@ public final class FireHand extends Module implements AttackListener {
             qr.transform(right);
             qr.transform(upv);
         }
+        // оси экрана — сразу в пространство модели (один раз на кадр): вершины спрайтов строятся там, одно умножение на вершину
+        inv.transformDirection(right);
+        inv.transformDirection(upv);
+        // какой стороной веер смотрит на камеру: у руки от 1-го лица поза бывает зеркальной — тогда меняем обход
+        if (gui) inv.transformDirection(toCam.set(0, 0, 1));
+        else inv.transformPosition(toCam.set(0, 0, 0)).sub(bx0 + bS * 0.5f, by0 + bS * 0.5f, bz);
+        flip = (right.y * upv.z - right.z * upv.y) * toCam.x + (right.z * upv.x - right.x * upv.z) * toCam.y + (right.x * upv.y - right.y * upv.x) * toCam.z < 0;
         float breathe = 0.88f + 0.12f * (float) Math.sin(time * 1.7f);
         float k = intensity.getF();
         // 1) сияние по контуру: мягкие пятна на точках силуэта — единая светящаяся «оболочка»
@@ -276,27 +283,31 @@ public final class FireHand extends Module implements AttackListener {
      * Мягкий спрайт к камере: центр яркий, край прозрачный; stretch > 1 — вытянут вверх (язык пламени).
      * Строится в пространстве вида (оси экрана) и возвращается обратной матрицей позы.
      */
-    private void sprite(VertexConsumer vc, Vector3f center, float r, float stretch, int c) {
-        if ((c >>> 24) == 0 || r <= 0) return;
-        curPose.transformPosition(center, tmp);
-        float ox = tmp.x, oy = tmp.y, oz = tmp.z;
-        int e = c & 0xFFFFFF;
-        int n = 8;
-        for (int i = 0; i < n; i++) {
-            float a0 = (float) (Math.PI * 2 * i / n), a1 = (float) (Math.PI * 2 * (i + 1) / n);
-            float c0 = (float) Math.cos(a0) * r, s0 = (float) Math.sin(a0) * r, c1 = (float) Math.cos(a1) * r, s1 = (float) Math.sin(a1) * r;
-            // верхняя половина вытягивается — форма капли
-            float u0 = s0 > 0 ? s0 * stretch : s0, u1 = s1 > 0 ? s1 * stretch : s1;
-            float ax = ox + right.x * c0 + upv.x * u0, ay = oy + right.y * c0 + upv.y * u0, az = oz + right.z * c0 + upv.z * u0;
-            float bx = ox + right.x * c1 + upv.x * u1, by = oy + right.y * c1 + upv.y * u1, bz = oz + right.z * c1 + upv.z * u1;
-            // двусторонне: у аддитивного типа рендера включено отсечение граней
-            corner(vc, ox, oy, oz, c); corner(vc, ax, ay, az, e); corner(vc, bx, by, bz, e); corner(vc, ox, oy, oz, c);
-            corner(vc, ox, oy, oz, c); corner(vc, bx, by, bz, e); corner(vc, ax, ay, az, e); corner(vc, ox, oy, oz, c);
+    private final Vector3f toCam = new Vector3f();
+    private boolean flip;
+    private static final int SEG = 6;
+    private static final float[] SC = new float[SEG + 1], SS = new float[SEG + 1];
+    static {
+        for (int i = 0; i <= SEG; i++) {
+            SC[i] = (float) Math.cos(Math.PI * 2 * i / SEG);
+            SS[i] = (float) Math.sin(Math.PI * 2 * i / SEG);
         }
     }
 
-    private void corner(VertexConsumer vc, float x, float y, float z, int col) {
-        inv.transformPosition(x, y, z, tmp);
-        dev.mraz1visual.render.FxVertex.putGlow(vc, curPose, tmp.x, tmp.y, tmp.z, col);
+    private void sprite(VertexConsumer vc, Vector3f center, float r, float stretch, int c) {
+        if ((c >>> 24) == 0 || r <= 0) return;
+        float ox = center.x, oy = center.y, oz = center.z;
+        int e = c & 0xFFFFFF;
+        // веер треугольников в плоскости экрана; обход против часовой стрелки — лицом к камере (одной стороной)
+        for (int i = 0; i < SEG; i++) {
+            float c0 = SC[i] * r, s0 = SS[i] * r, c1 = SC[i + 1] * r, s1 = SS[i + 1] * r;
+            // верхняя половина вытягивается — форма капли
+            float u0 = s0 > 0 ? s0 * stretch : s0, u1 = s1 > 0 ? s1 * stretch : s1;
+            dev.mraz1visual.render.FxVertex.putGlow(vc, curPose, ox, oy, oz, c);
+            if (flip) { float t0 = c0; c0 = c1; c1 = t0; t0 = u0; u0 = u1; u1 = t0; }
+            dev.mraz1visual.render.FxVertex.putGlow(vc, curPose, ox + right.x * c0 + upv.x * u0, oy + right.y * c0 + upv.y * u0, oz + right.z * c0 + upv.z * u0, e);
+            dev.mraz1visual.render.FxVertex.putGlow(vc, curPose, ox + right.x * c1 + upv.x * u1, oy + right.y * c1 + upv.y * u1, oz + right.z * c1 + upv.z * u1, e);
+            dev.mraz1visual.render.FxVertex.putGlow(vc, curPose, ox, oy, oz, c);
+        }
     }
 }

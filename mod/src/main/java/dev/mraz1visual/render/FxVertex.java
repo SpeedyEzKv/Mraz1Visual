@@ -40,8 +40,12 @@ public final class FxVertex {
     }
 
     public static void put(VertexConsumer vc, Matrix4f m, float x, float y, float z, int color, float nx, float ny, float nz) {
-        vc.addVertex(m, x, y, z).setColor(color).setUv(0.5f, 0.5f).setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT).setNormal(nx, ny, nz);
+        // позиция — вручную через матрицу, вершина — одним вызовом (у BufferBuilder для этого быстрый путь,
+        // вместо шести отдельных вызовов с проверками на каждый атрибут)
+        float tx = m.m00() * x + m.m10() * y + m.m20() * z + m.m30();
+        float ty = m.m01() * x + m.m11() * y + m.m21() * z + m.m31();
+        float tz = m.m02() * x + m.m12() * y + m.m22() * z + m.m32();
+        vc.addVertex(tx, ty, tz, color, 0.5f, 0.5f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, nx, ny, nz);
     }
 
     public static void put(VertexConsumer vc, Matrix4f m, float x, float y, float z, int color) {
