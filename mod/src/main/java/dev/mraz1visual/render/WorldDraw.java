@@ -85,7 +85,13 @@ public final class WorldDraw {
 
     private void v(double x, double y, double z, int argb) {
         // локальный режим: два прохода, в каждом — только своя половина (обычные квады или свечение)
-        if (local && glowing != glowPass) return;
+        if (local) {
+            if (glowing != glowPass) return;
+            // у модели игрока — типы сущностей (тот же проход, что и модель; дружит с Iris)
+            if (glowPass) FxVertex.putGlow(vc, pose, (float) x, (float) y, (float) z, argb);
+            else FxVertex.put(vc, pose, (float) x, (float) y, (float) z, argb);
+            return;
+        }
         vc.addVertex(pose, (float) (x - cx), (float) (y - cy), (float) (z - cz)).setColor(argb);
     }
 
@@ -123,8 +129,8 @@ public final class WorldDraw {
      * только без камеры: {@link #camX()} и т. п. здесь 0. gui — модель в инвентаре (ортографическая камера).
      */
     public static void submitLocal(PoseStack ps, net.minecraft.client.renderer.SubmitNodeCollector c, boolean gui, Painter painter) {
-        c.submitCustomGeometry(ps, RenderTypes.debugQuads(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, false, painter));
-        c.submitCustomGeometry(ps, RenderTypes.lightning(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, true, painter));
+        c.submitCustomGeometry(ps, FxVertex.solid(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, false, painter));
+        c.submitCustomGeometry(ps, FxVertex.glow(), (pose, vc) -> LOCAL.runLocal(pose.pose(), vc, gui, true, painter));
     }
 
     private void runLocal(Matrix4f m, VertexConsumer consumer, boolean gui, boolean glow, Painter painter) {
@@ -168,6 +174,8 @@ public final class WorldDraw {
     public void quad(double x1, double y1, double z1, double x2, double y2, double z2,
                      double x3, double y3, double z3, double x4, double y4, double z4, int c1, int c2, int c3, int c4) {
         v(x1, y1, z1, c1); v(x2, y2, z2, c2); v(x3, y3, z3, c3); v(x4, y4, z4, c4);
+        // свечение у модели: тип с отсечением граней — рисуем обе стороны (зеркальное крыло иначе пропадает)
+        if (local && glowing && glowPass) { v(x4, y4, z4, c4); v(x3, y3, z3, c3); v(x2, y2, z2, c2); v(x1, y1, z1, c1); }
     }
 
     /** Горизонтальное кольцо. */

@@ -47,9 +47,19 @@ public final class EnumSetting extends Setting<Integer> {
 
     @Override public JsonElement toJson() { return new JsonPrimitive(ids[index]); }
 
+    /** Старые id вариантов (после переименования): конфиг со старым значением не сбрасывается, а переходит на новый. */
+    private java.util.Map<String, String> aliases;
+
+    public EnumSetting alias(String oldId, String newId) {
+        if (aliases == null) aliases = new java.util.HashMap<>();
+        aliases.put(oldId, newId);
+        return this;
+    }
+
     @Override public boolean fromJson(JsonElement json) {
         if (json == null || !json.isJsonPrimitive()) return false;
         String s = json.getAsString();
+        if (aliases != null) s = aliases.getOrDefault(s, s);
         for (int i = 0; i < ids.length; i++) {
             if (ids[i].equals(s)) { index = i; return true; }
         }

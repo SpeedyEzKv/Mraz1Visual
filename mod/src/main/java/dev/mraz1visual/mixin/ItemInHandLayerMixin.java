@@ -1,30 +1,28 @@
 package dev.mraz1visual.mixin;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
-import com.mojang.blaze3d.vertex.PoseStack;
-import dev.mraz1visual.module.CustomSwords;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import dev.mraz1visual.render.ItemFx;
+import dev.mraz1visual.render.PlayerLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.world.entity.HumanoidArm;
-import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Custom Swords от 3-го лица: вместо модели меча в руке своего игрока — свой клинок (только картинка). */
+/**
+ * Свои мечи и аура от 3-го лица: предмет в руке модели рисуется в меню/инвентаре (ортографическая камера)
+ * или в мире — от этого зависит, как разворачивать к камере спрайты свечения. Сама подмена — в ItemFx.
+ */
 @Mixin(ItemInHandLayer.class)
 public abstract class ItemInHandLayerMixin {
-    @WrapOperation(method = "submitArmWithItem", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;III)V"),
-            require = 0)
-    private void mraz1visual$sword(ItemStackRenderState item, PoseStack ps, SubmitNodeCollector c, int light, int overlay, int outline,
-                                   Operation<Void> original, @Local(argsOnly = true) ArmedEntityRenderState state,
-                                   @Local(argsOnly = true) ItemStack stack, @Local(argsOnly = true) HumanoidArm arm) {
-        if (state instanceof AvatarRenderState a && CustomSwords.renderThird(a.id, stack, arm == HumanoidArm.LEFT, ps, c)) return;
-        original.call(item, ps, c, light, overlay, outline);
+    @Inject(method = "submitArmWithItem", at = @At("HEAD"), require = 0)
+    private void mraz1visual$begin(CallbackInfo ci, @Local(argsOnly = true) ArmedEntityRenderState state) {
+        ItemFx.guiPass = Boolean.TRUE.equals(state.getData(PlayerLayer.GUI));
+    }
+
+    @Inject(method = "submitArmWithItem", at = @At("RETURN"), require = 0)
+    private void mraz1visual$end(CallbackInfo ci) {
+        ItemFx.guiPass = false;
     }
 }

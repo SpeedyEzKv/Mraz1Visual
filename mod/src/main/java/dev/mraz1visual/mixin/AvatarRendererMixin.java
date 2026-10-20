@@ -53,10 +53,4 @@ public abstract class AvatarRendererMixin {
         original.call(collector, part, pose, RenderTypes.entityTranslucent(skin), light, overlay, sprite, sheeted, foil, tint, crumbling, outline);
     }
 
-    /** Fire Hand: огонь у кулака пустой руки от 1-го лица. */
-    @Inject(method = "renderHand", at = @At("HEAD"), require = 0)
-    private void mraz1visual$fireFist(PoseStack ps, SubmitNodeCollector collector, int light, Identifier skin, ModelPart arm,
-                                      boolean sleeve, CallbackInfo ci) {
-        dev.mraz1visual.module.FireHand.renderFist(ps, collector, arm);
-    }
 }

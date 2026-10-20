@@ -191,6 +191,9 @@ public final class Harness {
                 mc.getWindow().updateVsync(Boolean.parseBoolean(a[2]));
                 mc.options.renderDistance().set(Integer.parseInt(a[3]));
             }
+            case "alloff" -> {
+                for (Module m : Mraz1Visual.MODULES.all()) if (!m.alwaysOn()) m.setEnabled(false);
+            }
             case "inventory" -> mc.setScreen(new InventoryScreen(mc.player));
             case "close" -> mc.setScreen(null);
             case "swing" -> mc.player.swing(InteractionHand.MAIN_HAND);

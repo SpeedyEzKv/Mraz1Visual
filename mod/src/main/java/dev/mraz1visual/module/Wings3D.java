@@ -32,7 +32,7 @@ public final class Wings3D extends Module {
     final BoolSetting glow = add(new BoolSetting("glow", "Свечение", true));
 
     private final BodyFrame frame = new BodyFrame();
-    private float phase, amp = 0.3f, spread = 0.5f, fold;
+    private float phase, amp = 0.3f, spread = 0.5f, fold, lag, lastBodyYaw;
     private long last;
     private final long start = System.nanoTime();
 
@@ -100,11 +100,20 @@ public final class Wings3D extends Module {
         double horiz = Math.sqrt(vx * vx + vz * vz) * 20; // блоков в секунду
         boolean gliding = p.isFallFlying();
         boolean air = !p.onGround() && !gliding;
+        double vy = p.getY() - p.yo;
         float freq, ampT, spreadT, foldT = p.isCrouching() ? 1f : 0f;
-        if (gliding) { freq = 0.6f; ampT = 0.08f; spreadT = 1f; }
-        else if (air) { freq = 3.2f; ampT = 0.75f; spreadT = 0.8f; }
-        else if (horiz > 4) { freq = 2.0f; ampT = 0.35f; spreadT = 0.45f; }
-        else { freq = 0.7f; ampT = 0.18f; spreadT = 0.5f; }
+        if (gliding) { freq = 1.6f; ampT = 0.45f; spreadT = 1f; }                 // элитры: мощные взмахи
+        else if (air && vy > 0.02) { freq = 2.6f; ampT = 0.7f; spreadT = 0.85f; } // прыжок: раскрытие
+        else if (air) { freq = 7.5f; ampT = 0.16f; spreadT = 1f; }                // падение: широко и трепет
+        else if (horiz > 4) { freq = 1.4f; ampT = 0.1f; spreadT = 0.18f; }        // бег: прижаты к спине
+        else if (horiz > 0.5) { freq = 1.0f; ampT = 0.2f; spreadT = 0.4f; }       // ходьба
+        else { freq = 0.45f; ampT = 0.12f; spreadT = 0.5f; }                      // покой: лёгкое дыхание
+        // инерция: при повороте корпуса крылья отстают (плавно, по скорости поворота)
+        float bodyYaw = p.yBodyRot;
+        float dYaw = ((bodyYaw - lastBodyYaw) % 360f + 540f) % 360f - 180f;
+        lastBodyYaw = bodyYaw;
+        float yawRate = dt > 0 ? dYaw / dt : 0f;
+        lag += (Math.max(-1f, Math.min(1f, yawRate / 360f)) - lag) * Math.min(1f, dt * 6f);
         float k = Math.min(1f, dt * 4f);
         amp += (ampT - amp) * k;
         spread += (spreadT - spread) * k;
@@ -137,7 +146,8 @@ public final class Wings3D extends Module {
     /** Плоскость крыла: размах вбок-назад под углом взмаха, слегка наклонена вверх. */
     private void setupWing() {
         double flap = Math.sin(phase) * amp;
-        double open = Math.toRadians(15 + 55 * spread * (1 - fold * 0.8)) + flap * 0.9;
+        // крыло со стороны поворота прижимается, другое раскрывается — отставание по инерции
+        double open = Math.toRadians(15 + 55 * spread * (1 - fold * 0.8)) + flap * 0.9 + side * lag * 0.35;
         double lift = 0.25 + flap * 0.6;
         // направление размаха
         sR = side * Math.cos(open) * Math.cos(lift);
