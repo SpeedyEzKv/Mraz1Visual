@@ -273,7 +273,8 @@ public final class ModelGallery extends Screen {
             } else {
                 float[] pose = null;
                 if (!e.anims.isEmpty()) pose = idlePose(e);
-                if (e.kind == ModelEntry.Kind.PET) preview(g, e, pose, 200 + (hov ? spin : 0), -18, 0, 0.78f, cx + 6, cy + 6, CARD_W - 12, 74);
+                if (e.kind == ModelEntry.Kind.PET || e.kind == ModelEntry.Kind.HAT) preview(g, e, pose, 200 + (hov ? spin : 0), -18, 0, 0.78f, cx + 6, cy + 6, CARD_W - 12, 74);
+                else if (e.kind == ModelEntry.Kind.WING) preview(g, e, null, 90 + (hov ? spin : 0), -12, 0, 0.95f, cx + 4, cy + 4, CARD_W - 8, 78);
                 else preview(g, e, null, hov ? spin : 0, 0, -45, 1.05f, cx + 4, cy + 4, CARD_W - 8, 78);
             }
             d.text(Draw.ellipsize(e.name, CARD_W - 12), cx + 7, cy + 84, Theme.TEXT);

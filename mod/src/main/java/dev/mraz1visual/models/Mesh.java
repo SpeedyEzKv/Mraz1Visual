@@ -54,6 +54,33 @@ public final class Mesh {
 
     public Identifier glowTexture() { return atlas.glowTexture != null ? atlas.glowTexture : atlas.texture; }
 
+    /**
+     * Пересчитать границы в позе (обычно — первый кадр idle): части, сжатые анимацией в ноль
+     * (спрятанные эффекты взрыва и т. п.), не раздувают рамку. Вызывается при загрузке, до показа.
+     */
+    public void fitBounds(float[] pose) {
+        if (bones.length == 0 || pose == null) return;
+        ModelDraw.bones(this, pose);
+        org.joml.Vector3f v = new org.joml.Vector3f();
+        float x0 = Float.MAX_VALUE, y0 = x0, z0 = x0, x1 = -x0, y1 = x1, z1 = x1;
+        int n = 0;
+        for (int q = 0; q < quads; q++) {
+            int b = quadBone[q];
+            Matrix4f m = b >= 0 && b < scratch.length ? scratch[b] : null;
+            if (m != null && Math.abs(m.determinant3x3()) < 1e-6f) continue;
+            for (int i = 0; i < 4; i++) {
+                int o = (q * 4 + i) * STRIDE;
+                v.set(data[o], data[o + 1], data[o + 2]);
+                if (m != null) m.transformPosition(v);
+                x0 = Math.min(x0, v.x); y0 = Math.min(y0, v.y); z0 = Math.min(z0, v.z);
+                x1 = Math.max(x1, v.x); y1 = Math.max(y1, v.y); z1 = Math.max(z1, v.z);
+                n++;
+            }
+        }
+        if (n == 0) return;
+        bounds[0] = x0; bounds[1] = y0; bounds[2] = z0; bounds[3] = x1; bounds[4] = y1; bounds[5] = z1;
+    }
+
     public float sizeX() { return bounds[3] - bounds[0]; }
     public float sizeY() { return bounds[4] - bounds[1]; }
     public float sizeZ() { return bounds[5] - bounds[2]; }

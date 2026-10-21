@@ -246,10 +246,10 @@ public final class ModelPets extends Module implements WorldLayer {
         if (src == null) return;
         int light = LevelRenderer.getLightColor(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
         float pop = easeBack(appear);
-        drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, light);
+        drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, m.bounds[1], light);
         if (fx != null) {
             Mesh fm = fx.mesh();
-            drawWorld(d, src, fm, fxAnim.pose(fm), fxX, fxY, fxZ, fxYaw, scale, light);
+            drawWorld(d, src, fm, fxAnim.pose(fm), fxX, fxY, fxZ, fxYaw, scale, m.bounds[1], light);
         }
         d.restore();
         if (nameTag.get() && label != null) {
@@ -284,7 +284,7 @@ public final class ModelPets extends Module implements WorldLayer {
         return 1 + (c + 1) * u * u * u + c * u * u;
     }
 
-    private void drawWorld(WorldDraw d, MultiBufferSource src, Mesh m, float[] pose, double wx, double wy, double wz, double yaw, float s, int light) {
+    private void drawWorld(WorldDraw d, MultiBufferSource src, Mesh m, float[] pose, double wx, double wy, double wz, double yaw, float s, float base, int light) {
         if (m == null || m.texture() == null || s <= 0.001f) return;
         m.atlas.lastUsed = System.currentTimeMillis();
         ps.setIdentity();
@@ -293,6 +293,7 @@ public final class ModelPets extends Module implements WorldLayer {
         // модели Blockbench смотрят на север (−Z): разворот к направлению движения
         ps.mulPose(com.mojang.math.Axis.YP.rotation((float) (-yaw + Math.PI)));
         ps.scale(s, s, s);
+        ps.translate(0, -base, 0);
         if (m.bones.length > 0) ModelDraw.bones(m, pose);
         VertexConsumer vc = src.getBuffer(RenderTypes.entityCutoutNoCull(m.texture()));
         ModelDraw.draw(m, ps.last(), vc, -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.SOLID);
@@ -323,6 +324,7 @@ public final class ModelPets extends Module implements WorldLayer {
         // лицом к зрителю (модель смотрит на −Z, как и игрок), чуть вполоборота
         ps.mulPose(com.mojang.math.Axis.YP.rotation(0.45f));
         ps.scale(s, s, s);
+        ps.translate(0, -m.bounds[1], 0);
         ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, mp.glow.get());
         ps.popPose();
     }

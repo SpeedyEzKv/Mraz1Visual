@@ -332,6 +332,13 @@ public final class ModelRegistry {
                 e.states.put(ModelEntry.DEFAULT, r.mesh);
                 e.anims.addAll(r.anims);
                 e.flying = guessFlying(key, e);
+                // рамка — по позе idle: спрятанные анимацией части (эффекты) не в счёт
+                Anim idle = e.anim("idle") != null ? e.anim("idle") : e.anims.isEmpty() ? null : e.anims.get(0);
+                if (idle != null) {
+                    AnimPlayer ap = new AnimPlayer();
+                    ap.play(idle, 0, true);
+                    r.mesh.fitBounds(ap.pose(r.mesh));
+                }
             } catch (Throwable t) {
                 fail(e, t);
             }
