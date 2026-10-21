@@ -30,6 +30,7 @@ public final class WorldDraw {
     private VertexConsumer vc;
     /** Яркость эффектов (общая настройка) — множитель прозрачности на этот кадр. */
     private float alphaK = 1f;
+    private boolean worldGlow;
     private Matrix4f pose;
     private double cx, cy, cz;
     private MultiBufferSource src;
@@ -81,6 +82,7 @@ public final class WorldDraw {
             ModuleManager.LOG.error("Particles failed", t);
         }
         d.vc = null;
+        d.worldGlow = false;
         d.src = null;
     }
 
@@ -105,12 +107,13 @@ public final class WorldDraw {
      */
     public void glowBegin() {
         if (local) { glowing = true; return; }
-        if (src != null) vc = src.getBuffer(RenderTypes.lightning());
+        if (src != null) { vc = src.getBuffer(RenderTypes.lightning()); worldGlow = true; }
     }
 
     /** Вернуться к обычным полупрозрачным квадам. */
     public void glowEnd() {
         if (local) { glowing = false; return; }
+        worldGlow = false;
         if (src != null) vc = src.getBuffer(RenderTypes.debugQuads());
     }
 
@@ -179,7 +182,8 @@ public final class WorldDraw {
                      double x3, double y3, double z3, double x4, double y4, double z4, int c1, int c2, int c3, int c4) {
         v(x1, y1, z1, c1); v(x2, y2, z2, c2); v(x3, y3, z3, c3); v(x4, y4, z4, c4);
         // свечение у модели: тип с отсечением граней — рисуем обе стороны (зеркальное крыло иначе пропадает)
-        if (local && glowing && glowPass && !facing) { v(x4, y4, z4, c4); v(x3, y3, z3, c3); v(x2, y2, z2, c2); v(x1, y1, z1, c1); }
+        // в мире у типа свечения тоже отсечение граней: линии и ленты (обход зависит от направления) — с обеих сторон
+        if ((local && glowing && glowPass || worldGlow) && !facing) { v(x4, y4, z4, c4); v(x3, y3, z3, c3); v(x2, y2, z2, c2); v(x1, y1, z1, c1); }
     }
 
     /** Локальный режим: примитив не для текущего прохода (обычный / свечение) — не считать его вовсе. */
@@ -268,6 +272,7 @@ public final class WorldDraw {
     /** После своих буферов вернуть обычные квады (смена типа рендера закрывает прошлый буфер). */
     public void restore() {
         if (!local && src != null) vc = src.getBuffer(RenderTypes.debugQuads());
+        worldGlow = false;
     }
 
     public double camX() { return cx; }

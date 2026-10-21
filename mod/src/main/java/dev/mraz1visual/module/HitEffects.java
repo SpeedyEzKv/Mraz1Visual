@@ -31,7 +31,7 @@ public final class HitEffects extends Module implements AttackListener, dev.mraz
     private final RandomSource rnd = RandomSource.create();
 
     public HitEffects() {
-        super("hit_effects", "Hit Effects", "Частицы вокруг цели при каждом твоём ударе.", Category.VISUALS);
+        super("hit_effects", "Hit FX", "Волна, искры и пульс маркера при каждом твоём ударе.", Category.VISUALS);
     }
 
     @Override
@@ -64,19 +64,37 @@ public final class HitEffects extends Module implements AttackListener, dev.mraz
     private final long[] wt = new long[WAVES];
     private int wHead;
 
+    private final boolean[] wCrit = new boolean[WAVES];
+
     private void wave(Entity t) {
+        Minecraft mc = Minecraft.getInstance();
         wHead = (wHead + 1) % WAVES;
-        wx[wHead] = t.getX();
+        // точка удара — на стороне цели, обращённой к тебе (а не в её центре)
+        double tx = t.getX(), tz = t.getZ();
+        double dx = mc.player.getX() - tx, dz = mc.player.getZ() - tz, dl = Math.sqrt(dx * dx + dz * dz);
+        double off = dl > 1e-3 ? t.getBbWidth() * 0.55 / dl : 0;
+        wx[wHead] = tx + dx * off;
         wy[wHead] = t.getY() + t.getBbHeight() * 0.55;
-        wz[wHead] = t.getZ();
+        wz[wHead] = tz + dz * off;
         wt[wHead] = System.nanoTime();
-        int n = Math.min(10, Math.max(4, count.getI() / 2));
+        // крит, как у ванили: падаешь, не на земле, не в воде и не на лестнице
+        var p = mc.player;
+        boolean crit = p.fallDistance > 0 && !p.onGround() && !p.onClimbable() && !p.isInWater() && !p.isPassenger();
+        wCrit[wHead] = crit;
+        TargetEsp.pulse();
+        int n = dev.mraz1visual.render.Fx.count(Math.min(10, Math.max(4, count.getI() / 2)) + (crit ? 4 : 0));
         for (int i = 0; i < n; i++) {
             double a = rnd.nextDouble() * Math.PI * 2, b = (rnd.nextDouble() - 0.35) * Math.PI * 0.8;
-            double v = 2.2 + rnd.nextDouble() * 1.6;
-            int c = dev.mraz1visual.render.Palette.color(preset.getId(), 0.1f + rnd.nextFloat() * 0.4f, i, color.get(), color2.get());
-            dev.mraz1visual.render.FxParticles.spawn(wx[wHead], wy[wHead], wz[wHead], Math.cos(a) * Math.cos(b) * v, Math.sin(b) * v + 0.6, Math.sin(a) * Math.cos(b) * v,
-                    0.28f + rnd.nextFloat() * 0.18f, 0.035f, c, 3f, true);
+            double v = (2.4 + rnd.nextDouble() * 1.8) * (crit ? 1.25 : 1);
+            int c = dev.mraz1visual.render.Fx.color(preset.getId(), 0.05f + rnd.nextFloat() * 0.4f, i, color.get(), color2.get());
+            // искра — штрих по скорости в проходе свечения, быстро тормозит
+            dev.mraz1visual.render.FxParticles.spawn(wx[wHead], wy[wHead], wz[wHead], Math.cos(a) * Math.cos(b) * v, Math.sin(b) * v + 0.8, Math.sin(a) * Math.cos(b) * v,
+                    0.26f + rnd.nextFloat() * 0.2f, 0.035f, c, 4f, false, dev.mraz1visual.render.FxParticles.SPARK, true, 0.02f, 0f);
+        }
+        if (crit) {
+            int c = dev.mraz1visual.render.Fx.color(preset.getId(), 0.05f, 0, color.get(), color2.get());
+            dev.mraz1visual.render.FxParticles.spawn(wx[wHead], wy[wHead] + 0.15, wz[wHead], 0, 0.5, 0, 0.55f, 0.13f, c, 0f, true,
+                    dev.mraz1visual.render.FxParticles.STAR, true, 0.2f, 0f);
         }
     }
 
@@ -91,10 +109,14 @@ public final class HitEffects extends Module implements AttackListener, dev.mraz
             float e = 1f - (float) Math.pow(1f - t, 3);           // ease-out
             float a = (1f - t) * (1f - t);
             double r = 0.25 + e * 0.95;
-            int c = dev.mraz1visual.render.Palette.color(preset.getId(), 0.2f + t * 0.6f, 0, color.get(), color2.get());
-            d.billboardRing(wx[i], wy[i], wz[i], r, 0.05 + 0.12 * (1 - e), 48, Colors.mulAlpha(c, 0.9f * a));
-            d.billboardRing(wx[i], wy[i], wz[i], r, 0.22 * (1 - e) + 0.04, 48, Colors.mulAlpha(c, 0.22f * a));
-            if (t < 0.25f) d.billboardDot(wx[i], wy[i], wz[i], 0.35 * (1 - t * 4), Colors.mulAlpha(0xFFFFFFFF, 0.5f * (1 - t * 4)), 14);
+            int c = dev.mraz1visual.render.Fx.color(preset.getId(), 0.2f + t * 0.6f, 0, color.get(), color2.get());
+            int segs = dev.mraz1visual.render.Fx.segments(48);
+            float k = wCrit[i] ? 1.2f : 1f;
+            d.billboardRing(wx[i], wy[i], wz[i], r * k, 0.04 + 0.1 * (1 - e), segs, Colors.mulAlpha(c, 0.85f * a));
+            d.billboardRing(wx[i], wy[i], wz[i], r * k, 0.22 * (1 - e) + 0.04, segs, Colors.mulAlpha(c, 0.2f * a));
+            // короткая мягкая вспышка в центре («Без вспышек» — едва заметная)
+            float fl = dev.mraz1visual.render.Fx.flash(wCrit[i] ? 0.6f : 0.45f);
+            if (t < 0.25f) d.billboardDot(wx[i], wy[i], wz[i], 0.35 * (1 - t * 4), Colors.mulAlpha(0xFFFFFFFF, fl * (1 - t * 4)), 14);
         }
         d.glowEnd();
     }

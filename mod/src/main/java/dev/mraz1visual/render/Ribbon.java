@@ -5,11 +5,12 @@ import dev.mraz1visual.ui.Colors;
 /**
  * Лента-след: точки пишутся каждый кадр (не по тикам — без «ступенек» на высоком FPS), между ними —
  * сплайн Catmull-Rom. Тает по длине и по времени, ширина сужается к хвосту, цвет — градиент палитры.
- * Два вида: {@link #FACING} — плоская лента, всегда развёрнутая к камере; {@link #WALL} — вертикальная стенка высотой h.
+ * Виды: {@link #FACING} — лента, развёрнутая к камере; {@link #WALL} — вертикальная стенка высотой h;
+ * {@link #FLAT} — горизонтальная лента (хорошо видна сзади и сверху — для следа за игроком).
  * Один объект — один след, без аллокаций в кадре.
  */
 public final class Ribbon {
-    public static final int FACING = 0, WALL = 1;
+    public static final int FACING = 0, WALL = 1, FLAT = 2;
 
     private final int cap;
     private final double[] px, py, pz;
@@ -44,12 +45,17 @@ public final class Ribbon {
         if (size > 0) {
             int h = index(0);
             double dx = x - px[h], dy = y - py[h], dz = z - pz[h];
-            if (dx * dx + dy * dy + dz * dz < minStep * minStep) {
-                // стоим на месте — голова следует за точкой, хвост тает
-                px[h] = x; py[h] = y; pz[h] = z;
-                return;
-            }
             if (dx * dx + dy * dy + dz * dz > 64) size = 0; // телепорт — новая лента
+            else if (size >= 2) {
+                // шаг меньше minStep от последней закреплённой точки — голова просто следует за целью
+                int f = index(1);
+                double ex = x - px[f], ey = y - py[f], ez = z - pz[f];
+                if (ex * ex + ey * ey + ez * ez < minStep * minStep) {
+                    px[h] = x; py[h] = y; pz[h] = z;
+                    born[h] = clock;
+                    return;
+                }
+            } else if (dx * dx + dy * dy + dz * dz < minStep * minStep) return;
         }
         head = (head + 1) % cap;
         px[head] = x; py[head] = y; pz[head] = z;
@@ -101,7 +107,7 @@ public final class Ribbon {
                 if (mode == WALL) {
                     d.quad(lx, ly, lz, x, y, z, x, y + w, z, lx, ly + lw, lz, lc, c, Colors.mulAlpha(c, 0.15f), Colors.mulAlpha(lc, 0.15f));
                 } else {
-                    segment(d, lx, ly, lz, x, y, z, lw, w, lc, c);
+                    segment(d, lx, ly, lz, x, y, z, lw, w, lc, c, mode == FLAT);
                 }
                 lx = x; ly = y; lz = z; lw = w; lc = c;
             }
@@ -109,9 +115,10 @@ public final class Ribbon {
     }
 
     /** Плоский отрезок ленты к камере: середина ярче, края прозрачные (мягкая лента без «ступенек»). */
-    private void segment(WorldDraw d, double x0, double y0, double z0, double x1, double y1, double z1, double w0, double w1, int c0, int c1) {
+    private void segment(WorldDraw d, double x0, double y0, double z0, double x1, double y1, double z1, double w0, double w1, int c0, int c1, boolean flat) {
         double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
         double vx = (x0 + x1) / 2 - d.camX(), vy = (y0 + y1) / 2 - d.camY(), vz = (z0 + z1) / 2 - d.camZ();
+        if (flat) { vx = 0; vy = 1; vz = 0; } // поперёк — горизонтально
         double nx = dy * vz - dz * vy, ny = dz * vx - dx * vz, nz = dx * vy - dy * vx;
         double len = Math.sqrt(nx * nx + ny * ny + nz * nz);
         if (len < 1e-9) return;
