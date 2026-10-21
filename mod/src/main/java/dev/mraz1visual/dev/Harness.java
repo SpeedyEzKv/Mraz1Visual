@@ -190,6 +190,7 @@ public final class Harness {
                 else if (a[1].equals("cat") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessCategory(Category.valueOf(a[2]));
                 else if (a[1].equals("reveal") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessReveal(a[2]);
                 else if (a[1].equals("yaw") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessPreview(Float.parseFloat(a[2]));
+                else if (a[1].equals("section") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessSection(a[2]);
             }
             case "video" -> {
                 // video <предел FPS> <vsync true|false> <дальность>
@@ -264,6 +265,7 @@ public final class Harness {
             }
             case "jump" -> mc.player.jumpFromGround();
             case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
+            case "preset" -> dev.mraz1visual.module.VisualPresets.apply(a[1]);
             case "quit" -> {
                 log("done");
                 active = false;
