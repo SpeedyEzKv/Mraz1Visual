@@ -103,6 +103,9 @@ public final class Modules {
         m.register(new dev.mraz1visual.module.FrostBreath());
         m.register(new dev.mraz1visual.module.Cinematic());
         m.register(new dev.mraz1visual.module.EnchantGlint());
+        m.register(new dev.mraz1visual.module.SlotPulse());
+        m.register(new dev.mraz1visual.module.LandingDust());
+        m.register(new dev.mraz1visual.module.PickupSparkle());
         m.register(new dev.mraz1visual.module.ModelPets());
         m.register(new dev.mraz1visual.module.WeaponSkins());
         m.register(new dev.mraz1visual.module.ModelCosmetics());

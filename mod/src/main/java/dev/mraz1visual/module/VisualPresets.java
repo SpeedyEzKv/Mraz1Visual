@@ -30,7 +30,7 @@ public final class VisualPresets {
             Map.entry("dash_trail", "player"), Map.entry("speed_lines", "player"), Map.entry("frost_breath", "player"),
             Map.entry("free_look", "player"), Map.entry("third_person", "player"), Map.entry("zoom", "player"),
             Map.entry("motion_blur", "player"), Map.entry("aspect_ratio", "player"), Map.entry("sonar", "player"),
-            Map.entry("cinematic", "player"),
+            Map.entry("cinematic", "player"), Map.entry("landing_dust", "player"), Map.entry("pickup_sparkle", "player"),
             Map.entry("block_outline", "world"), Map.entry("item_physic", "world"), Map.entry("enchant_glint", "world"),
             Map.entry("full_bright", "world"), Map.entry("chunk_borders", "world"), Map.entry("tnt_timer", "world"),
             Map.entry("name_tags", "world"), Map.entry("no_render", "world"), Map.entry("better_minecraft", "world"),
@@ -48,7 +48,7 @@ public final class VisualPresets {
     private static final Set<String> MANAGED = Set.of("target_esp", "hit_effects", "attack_effects", "hit_bubbles", "kill_effect",
             "hit_marker", "crosshair", "crit_indicator", "jump_circle", "jump_particles", "trails", "dash_trail", "speed_lines",
             "frost_breath", "block_outline", "totem_fx", "hurt_vignette", "target_hud", "notifications", "enchant_glint",
-            "cinematic", "motion_blur");
+            "cinematic", "motion_blur", "slot_pulse", "landing_dust", "pickup_sparkle");
 
     public static void apply(String id) {
         // id → включённые модули и их настройки (setting=value)
@@ -60,7 +60,7 @@ public final class VisualPresets {
                     {"crosshair"}, {"hit_marker"}, {"target_esp", "style=orbit"}, {"hit_effects", "type=wave"},
                     {"kill_effect", "style=ascend"}, {"jump_circle", "style=waves"}, {"trails", "style=stardust"},
                     {"block_outline", "style=glass"}, {"totem_fx"}, {"target_hud"}, {"notifications", "style=island"},
-                    {"speed_lines"}, {"enchant_glint"}};
+                    {"speed_lines"}, {"enchant_glint"}, {"slot_pulse"}, {"pickup_sparkle"}};
             case "cinema" -> new String[][]{
                     {"crosshair"}, {"target_esp", "style=soul"}, {"hit_effects", "type=wave"}, {"kill_effect", "style=ascend"},
                     {"trails", "style=glass"}, {"block_outline", "style=edges"}, {"totem_fx"}, {"hurt_vignette"},
@@ -69,7 +69,7 @@ public final class VisualPresets {
                     {"crosshair"}, {"hit_marker"}, {"target_esp", "style=ring"}, {"hit_effects", "type=wave"},
                     {"kill_effect", "style=ascend"}, {"jump_circle", "style=ring"}, {"trails", "style=light"},
                     {"block_outline", "style=glass"}, {"totem_fx"}, {"target_hud"}, {"notifications", "style=island"},
-                    {"speed_lines"}, {"hurt_vignette"}, {"enchant_glint"}};
+                    {"speed_lines"}, {"hurt_vignette"}, {"enchant_glint"}, {"slot_pulse"}, {"landing_dust"}, {"pickup_sparkle"}};
         };
         Set<String> enable = new java.util.HashSet<>();
         for (String[] e : on) enable.add(e[0]);

@@ -19,7 +19,7 @@ public final class ItemGlow extends Module implements WorldLayer {
     final BoolSetting all = add(new BoolSetting("all", "Все предметы", false));
     final ColorSetting color = add(new ColorSetting("color", "Цвет ценных", 0xE0F2C94C));
     final ColorSetting other = add(new ColorSetting("other", "Цвет остальных", 0x80B8B4F2));
-    final BoolSetting blink = add(new BoolSetting("blink", "Мигать", true));
+    final BoolSetting blink = add(new BoolSetting("blink", "Мягкая пульсация", false));
 
     public ItemGlow() {
         super("item_glow", "Item Glow", "Подсветка ценных предметов на земле.", Category.SWORDS);
@@ -42,7 +42,7 @@ public final class ItemGlow extends Module implements WorldLayer {
             boolean v = valuable(ie.getItem());
             if (!v && !all.get()) continue;
             double x = e.xo + (e.getX() - e.xo) * pt, y = e.yo + (e.getY() - e.yo) * pt, z = e.zo + (e.getZ() - e.zo) * pt;
-            float a = blink.get() ? 0.6f + 0.4f * (float) Math.abs(Math.sin(t * 3 + e.getId())) : 1f;
+            float a = blink.get() ? 0.78f + 0.22f * (float) Math.sin(t * 2.2 + e.getId()) : 1f;
             int c = Colors.mulAlpha(v ? color.get() : other.get(), a);
             d.ring(x, y + 0.02, z, 0.2, 0.32, 32, Colors.mulAlpha(c, 0.2f), c);
             if (v) d.beam(x, y, z, 1.6, 0.12, Colors.mulAlpha(c, 0.7f));
