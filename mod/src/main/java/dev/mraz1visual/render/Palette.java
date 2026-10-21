@@ -12,7 +12,7 @@ public final class Palette {
 
     public static final String[] IDS = {"ether", "amethyst", "sunset", "emerald", "obsidian", "chrome"};
     public static final String[] OPTIONS = {"ether", "Эфир", "amethyst", "Аметист", "sunset", "Закат", "emerald", "Изумруд",
-            "obsidian", "Обсидиан", "chrome", "Хром", "custom", "Свой градиент"};
+            "obsidian", "Обсидиан", "chrome", "Хром", "accent", "Акцент клиента", "custom", "Свой градиент"};
 
     private static final int[] ETHER = {0xFFF2FAFF, 0xFF8FD8FF, 0xFF3D7BFF};
     private static final int[] AMETHYST = {0xFFF6EEFF, 0xFFB896FF, 0xFF6A3FE0};
@@ -37,6 +37,11 @@ public final class Palette {
     public static int color(String id, float t, float phase, int c1, int c2) {
         t = Math.max(0f, Math.min(1f, t));
         if (id.equals("custom")) return t < 0.15f ? Colors.lerp(0xFFFFFFFF, c1, t / 0.15f) : Colors.lerp(c1, c2, (t - 0.15f) / 0.85f);
+        if (id.equals("accent")) {
+            // акцент интерфейса: белая серединка → акцент → тот же тон темнее
+            int a = dev.mraz1visual.ui.Theme.accent();
+            return t < 0.3f ? Colors.lerp(0xFFFFFFFF, a, t / 0.3f) : Colors.lerp(a, Colors.shade(a, 0.55f), (t - 0.3f) / 0.7f);
+        }
         if (id.equals("chrome")) {
             // перелив: оттенок медленно плывёт, насыщенность невысокая — «плёнка», а не радуга
             float h = frac(0.55f + phase * 0.08f + t * 0.35f);

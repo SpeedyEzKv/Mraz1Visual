@@ -83,7 +83,14 @@ public final class Mraz1Visual implements ClientModInitializer {
 
     private static int modelTick;
 
+    private static Object lastLevel;
+
     private static void tick(Minecraft mc) {
+        // смена мира / измерения — частицы старого мира не «висят» на чужих координатах
+        if (mc.level != lastLevel) {
+            lastLevel = mc.level;
+            dev.mraz1visual.render.FxParticles.clear();
+        }
         dev.mraz1visual.models.ModelRegistry.tick(modelTick++);
         dev.mraz1visual.wallpaper.WallpaperPlayer.tick();
         int key = Modules.client.menuKey.get();

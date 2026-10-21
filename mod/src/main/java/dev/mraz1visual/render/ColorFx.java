@@ -9,13 +9,19 @@ public final class ColorFx {
     /** mode: "solid", "gradient", "rainbow". t — фаза 0..1 (например, позиция по кругу). */
     public static int pick(String mode, int c1, int c2, float t) {
         float time = (System.currentTimeMillis() % 100000) / 1000f;
+        dev.mraz1visual.module.VisualFx v = dev.mraz1visual.module.VisualFx.get();
+        if (v != null && v.sync.get()) {
+            int c = Fx.color(v.preset.getId(), 0.25f + 0.5f * (0.5f + 0.5f * (float) Math.sin((t + time * 0.2f) * Math.PI * 2)), time, c1, c2);
+            return Colors.withAlpha(c, c1 >>> 24);
+        }
         return switch (mode) {
             case "gradient" -> {
                 float k = 0.5f + 0.5f * (float) Math.sin((t + time * 0.25f) * Math.PI * 2);
                 int c = Colors.lerp(c1, c2, k);
                 yield c;
             }
-            case "rainbow" -> Colors.withAlpha(Colors.hsv(((t + time * 0.15f) % 1f + 1f) % 1f, 0.55f, 1f), c1 >>> 24);
+            // пастельный перелив: невысокая насыщенность и медленный ход — не «кислотная» радуга
+            case "rainbow" -> Colors.withAlpha(Colors.hsv(((t * 0.6f + time * 0.06f) % 1f + 1f) % 1f, 0.38f, 1f), c1 >>> 24);
             default -> c1;
         };
     }

@@ -28,6 +28,8 @@ public final class WorldDraw {
     private static final float[] COS = new float[SEG_MAX + 1], SIN = new float[SEG_MAX + 1];
 
     private VertexConsumer vc;
+    /** Яркость эффектов (общая настройка) — множитель прозрачности на этот кадр. */
+    private float alphaK = 1f;
     private Matrix4f pose;
     private double cx, cy, cz;
     private MultiBufferSource src;
@@ -64,6 +66,7 @@ public final class WorldDraw {
         d.camUp.set(0, 1, 0);
         d.rot.transform(d.camUp);
         d.vc = src.getBuffer(RenderTypes.debugQuads());
+        d.alphaK = Fx.brightness();
         float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         for (WorldLayer l : layers) {
             try {
@@ -92,6 +95,7 @@ public final class WorldDraw {
             else FxVertex.put(vc, pose, (float) x, (float) y, (float) z, argb);
             return;
         }
+        if (alphaK != 1f) argb = Math.min(255, Math.round((argb >>> 24) * alphaK)) << 24 | (argb & 0xFFFFFF);
         vc.addVertex(pose, (float) (x - cx), (float) (y - cy), (float) (z - cz)).setColor(argb);
     }
 
