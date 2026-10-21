@@ -266,6 +266,7 @@ public final class Harness {
             case "jump" -> mc.player.jumpFromGround();
             case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
             case "preset" -> dev.mraz1visual.module.VisualPresets.apply(a[1]);
+            case "slot" -> mc.player.getInventory().setSelectedSlot(Integer.parseInt(a[1]));
             case "quit" -> {
                 log("done");
                 active = false;

@@ -21,7 +21,6 @@ public abstract class LivingEntityMixin {
     private void mraz1visual$totem(byte id, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
         if (id == 35) {
             dev.mraz1visual.module.TotemPops.onPop((LivingEntity) (Object) this);
-            dev.mraz1visual.module.TotemFx.onPop((LivingEntity) (Object) this);
         }
         if (id == 3) dev.mraz1visual.module.KillEffect.onDeath((LivingEntity) (Object) this);
     }

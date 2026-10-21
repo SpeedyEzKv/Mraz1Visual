@@ -16,6 +16,9 @@ public abstract class ParticleEngineMixin {
     @Inject(method = "createTrackingEmitter(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/core/particles/ParticleOptions;I)V",
             at = @At("HEAD"), cancellable = true, require = 0)
     private void mraz1visual$totem(Entity e, ParticleOptions p, int lifetime, CallbackInfo ci) {
-        if (p == ParticleTypes.TOTEM_OF_UNDYING && TotemFx.replacesVanilla()) ci.cancel();
+        if (p != ParticleTypes.TOTEM_OF_UNDYING) return;
+        // тотем сработал (у своего игрока событие идёт мимо LivingEntity.handleEntityEvent — ловим здесь)
+        if (e instanceof net.minecraft.world.entity.LivingEntity le) TotemFx.onPop(le);
+        if (TotemFx.replacesVanilla()) ci.cancel();
     }
 }
