@@ -1,0 +1,490 @@
+{
+ "meta": {
+  "format_version": "4.10",
+  "model_format": "java_block",
+  "box_uv": false
+ },
+ "name": "mraz1_crystal_blade",
+ "resolution": {
+  "width": 32,
+  "height": 32
+ },
+ "elements": [
+  {
+   "name": "blade",
+   "from": [
+    7.5,
+    6,
+    7.75
+   ],
+   "to": [
+    8.5,
+    16.5,
+    8.25
+   ],
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": 0
+    }
+   },
+   "type": "cube",
+   "uuid": "00000000-0000-4000-8000-000000000001"
+  },
+  {
+   "name": "tip",
+   "from": [
+    7.75,
+    16.5,
+    7.8
+   ],
+   "to": [
+    8.25,
+    17.5,
+    8.2
+   ],
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    },
+    "down": {
+     "uv": [
+      0,
+      0,
+      8,
+      8
+     ],
+     "texture": 0
+    }
+   },
+   "type": "cube",
+   "uuid": "00000000-0000-4000-8000-000000000002"
+  },
+  {
+   "name": "guard",
+   "from": [
+    5.5,
+    5,
+    7.5
+   ],
+   "to": [
+    10.5,
+    6,
+    8.5
+   ],
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    },
+    "down": {
+     "uv": [
+      16,
+      0,
+      32,
+      8
+     ],
+     "texture": 0
+    }
+   },
+   "type": "cube",
+   "uuid": "00000000-0000-4000-8000-000000000003"
+  },
+  {
+   "name": "grip",
+   "from": [
+    7.6,
+    1.5,
+    7.6
+   ],
+   "to": [
+    8.4,
+    5,
+    8.4
+   ],
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    },
+    "down": {
+     "uv": [
+      16,
+      8,
+      32,
+      16
+     ],
+     "texture": 0
+    }
+   },
+   "type": "cube",
+   "uuid": "00000000-0000-4000-8000-000000000004"
+  },
+  {
+   "name": "pommel",
+   "from": [
+    7.25,
+    0.5,
+    7.25
+   ],
+   "to": [
+    8.75,
+    1.5,
+    8.75
+   ],
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    },
+    "east": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    },
+    "south": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    },
+    "west": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    },
+    "up": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    },
+    "down": {
+     "uv": [
+      0,
+      16,
+      16,
+      32
+     ],
+     "texture": 0
+    }
+   },
+   "type": "cube",
+   "uuid": "00000000-0000-4000-8000-000000000005",
+   "rotation": [
+    0,
+    45,
+    0
+   ]
+  }
+ ],
+ "outliner": [
+  {
+   "name": "sword",
+   "origin": [
+    8,
+    8,
+    8
+   ],
+   "uuid": "00000000-0000-4000-8000-000000000006",
+   "children": [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+    "00000000-0000-4000-8000-000000000003",
+    "00000000-0000-4000-8000-000000000004",
+    "00000000-0000-4000-8000-000000000005"
+   ]
+  }
+ ],
+ "textures": [
+  {
+   "name": "mraz1_crystal_blade.png",
+   "width": 32,
+   "height": 32,
+   "uv_width": 32,
+   "uv_height": 32,
+   "uuid": "00000000-0000-4000-8000-000000000007",
+   "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADHUlEQVR4nK3UO8vzdBwG4Oe7OLs4O78folAoBAKFYKEQCBQKhUC/wTMU6ZChSIYM5SVDhyBFggQJksEDnvB8whPq4nLp+5RgtqDpDy7S3Mv/pr8/efj1T3r9DLMx3zx/1duP//qv7w8//E6vn2E2ZsrhL94fvvqNXj/DbMyUw5/+gU9/odfPMBsz5fCnAh/8RK+fYTZm8h3ofqT3l5thNmbyHXjne3p/uBlmYybfgfpbej+7GWZjJt+BN7+m952bYTbm2csvee3ZK0/+z++Hy5f0vnAzzMZMOfzF8+H55/Q+djPMxkw5/KlA8Rm999wMszGTV/DGJ/TedTPMxkxeQfYRvcbNMBszeQWvf0jvLTfDbMzkFTy+T69yM8zGTF7B44zDjOOMbMZpRj6jmHGeUc64zKhmXGfUM5oZ7YxuxsPUeZxzmHOck805zcnnFHPOc8o5lznVnOucek4zp53Tze9RYMFhwXFBtuC0IF9QLDgvKBdcFlQLrgvqBc2CdkG3uEeBgEPAMSALOAXkAUXAOaAM/vniBVQB14A6oAloA7rgHgVCDiHHkCzkFJKHFCHnkDLkElKFXEPqkCakDenCexRYclhyXJItOS3JlxRLzkvKJZcl1ZLrknpJs6Rd0i3vUSDiEHGMyCJOEXlEEXGOKCMuEVXENaKOaCLaiC66R4EVhxXHFdmK04p8RbHivKJccVlRrbiuqFc0K9oV3eoeBdYc1hzXZGtOa/I1xZrzmnLNZU215rqmXtOsadd063sUiDnEHGOymFNMHlPEnGPKmEtMFXONqWOamDami+9RIOGQcEzIEk4JeUKRcE4oEy4JVcI1oU5oEtqELrlHgQ2HDccN2YbThnxDseG8odxw2VBtuG6oNzQb2g3d5h4Fthy2HLdkW05b8i3FlvOWcstlS7XluqXe0mxpt3TbexTYcdhx3JHtOO3IdxQ7zjvKHZcd1Y7rjnpHs6Pd0e3uUSDlkHJMyVJOKXlKkXJOKVMuKVXKNaVOaVLalC69R4E9hz3HPdme0558T7HnvKfcc9lT7bnuqfc0e9o93X56gb8BOEQKtn0d6x4AAAAASUVORK5CYII="
+  },
+  {
+   "name": "mraz1_crystal_blade_e.png",
+   "width": 32,
+   "height": 32,
+   "uv_width": 32,
+   "uv_height": 32,
+   "uuid": "00000000-0000-4000-8000-000000000008",
+   "source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAM0lEQVR4nO3OMREAIAwEwchGU6xFxOMBCgp2Z66/6kl6sg5L3TJgwIABAwYMPB8AAL63AUN1HQ7snmp4AAAAAElFTkSuQmCC"
+  }
+ ],
+ "display": {
+  "thirdperson_righthand": {
+   "rotation": [
+    0,
+    -90,
+    55
+   ],
+   "translation": [
+    0,
+    4,
+    0.5
+   ],
+   "scale": [
+    0.85,
+    0.85,
+    0.85
+   ]
+  },
+  "firstperson_righthand": {
+   "rotation": [
+    0,
+    -90,
+    25
+   ],
+   "translation": [
+    1.13,
+    3.2,
+    1.13
+   ],
+   "scale": [
+    0.68,
+    0.68,
+    0.68
+   ]
+  },
+  "gui": {
+   "rotation": [
+    0,
+    0,
+    -45
+   ],
+   "translation": [
+    0,
+    0,
+    0
+   ],
+   "scale": [
+    0.9,
+    0.9,
+    0.9
+   ]
+  }
+ }
+}

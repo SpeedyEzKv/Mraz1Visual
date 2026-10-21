@@ -255,6 +255,17 @@ public final class WorldDraw {
         quad(x - h, y, z + h, x - h, y, z - h, x - h, y2, z - h, x - h, y2, z + h, color, color, top, top);
     }
 
+    /** Мировой режим: источник буферов кадра (null в локальном режиме) — для своих типов рендера (текстуры моделей). */
+    public MultiBufferSource source() { return local ? null : src; }
+
+    /** Мировой режим: поза кадра (координаты относительно камеры). */
+    public Matrix4f framePose() { return pose; }
+
+    /** После своих буферов вернуть обычные квады (смена типа рендера закрывает прошлый буфер). */
+    public void restore() {
+        if (!local && src != null) vc = src.getBuffer(RenderTypes.debugQuads());
+    }
+
     public double camX() { return cx; }
     public double camY() { return cy; }
     public double camZ() { return cz; }

@@ -9,3 +9,8 @@ mod/out/
 launcher/node_modules/
 launcher/src-tauri/target/
 launcher/src-tauri/gen/
+# Импортированные модели (паки игрока — в репозиторий не попадают)
+mraz1visual/weapon_skins/
+mraz1visual/pets/
+**/mraz1visual/weapon_skins/
+**/mraz1visual/pets/

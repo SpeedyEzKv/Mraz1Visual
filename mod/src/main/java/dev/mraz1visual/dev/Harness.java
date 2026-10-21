@@ -135,6 +135,13 @@ public final class Harness {
         }
     }
 
+    /** Модель по части id (без учёта регистра). */
+    private static dev.mraz1visual.models.ModelEntry findModel(String q) {
+        q = q.toLowerCase(java.util.Locale.ROOT);
+        for (var e : dev.mraz1visual.models.ModelRegistry.all()) if (e.id.toLowerCase(java.util.Locale.ROOT).contains(q)) return e;
+        return null;
+    }
+
     /** @return true — шаг выполнен сразу, можно следующий; false — ждём (wait/measure). */
     private static boolean run(Minecraft mc, String[] a) throws Exception {
         switch (a[0]) {
@@ -206,6 +213,40 @@ public final class Harness {
                     default -> log("  no key " + a[1]);
                 }
             }
+            // ── импортированные модели ──
+            case "models" -> {
+                if (dev.mraz1visual.models.ModelRegistry.loading()) {
+                    waitUntil = System.nanoTime() + 500_000_000L;
+                    pc--; // повторить шаг, когда загрузка закончится
+                    return false;
+                }
+                java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+                for (var e : dev.mraz1visual.models.ModelRegistry.all()) {
+                    kinds.merge(e.kind + (e.broken() ? " broken" : ""), 1, Integer::sum);
+                    if (e.broken()) log("  BROKEN " + e.id + ": " + e.error);
+                    else if (a.length > 1 && a[1].equals("all")) log("  " + e.kind + " " + e.id + " states=" + e.states.keySet()
+                            + " anims=" + e.anims.size() + " fx=" + e.effects.size() + " quads=" + e.mesh().quads
+                            + " atlas=" + e.mesh().atlas.w + "x" + e.mesh().atlas.h + (e.warnings.isEmpty() ? "" : " warn=" + e.warnings));
+                }
+                log("  models: " + kinds + " — " + dev.mraz1visual.models.ModelRegistry.status());
+            }
+            case "skin" -> {
+                var e = findModel(a[2]);
+                if (e == null) log("  no model " + a[2]);
+                else dev.mraz1visual.models.ModelPrefs.weapons.put(a[1], e.id);
+            }
+            case "pet" -> {
+                var e = findModel(a[1]);
+                var mp = dev.mraz1visual.module.ModelPets.get();
+                if (e == null || mp == null) log("  no pet " + a[1]);
+                else mp.select(e);
+            }
+            case "petanim" -> {
+                var mp = dev.mraz1visual.module.ModelPets.get();
+                if (mp != null) mp.playNow(a[1]);
+            }
+            case "gallery" -> dev.mraz1visual.ui.ModelGallery.open(dev.mraz1visual.ui.ModelGallery.Tab.valueOf(a[1].toUpperCase(java.util.Locale.ROOT)));
+            case "use" -> mc.options.keyUse.setDown(a[1].equals("on"));
             case "quit" -> {
                 log("done");
                 active = false;
