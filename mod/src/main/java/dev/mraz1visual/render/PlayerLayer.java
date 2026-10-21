@@ -55,10 +55,16 @@ public final class PlayerLayer extends RenderLayer<AvatarRenderState, PlayerMode
             dev.mraz1visual.module.Halo.submit(ps, c, gui);
             ps.popPose();
         }
+        if (dev.mraz1visual.module.ModelCosmetics.active()) {
+            ps.pushPose();
+            dev.mraz1visual.module.ModelCosmetics.submit(getParentModel(), ps, c, light, gui);
+            ps.popPose();
+        }
         if (gui) {
             ps.pushPose();
             ps.scale(-K, -K, K);
             Pets.submitPreview(ps, c);
+            dev.mraz1visual.module.ModelPets.submitPreview(ps, c);
             ps.popPose();
         }
     }

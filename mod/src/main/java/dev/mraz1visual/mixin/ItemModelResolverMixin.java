@@ -17,6 +17,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemModelResolverMixin {
     @Inject(method = "updateForTopItem", at = @At("RETURN"), require = 0)
     private void mraz1visual$tag(ItemStackRenderState state, ItemStack stack, ItemDisplayContext ctx, Level level, ItemOwner owner, int seed, CallbackInfo ci) {
-        ItemFx.tag(state, stack, owner);
+        ItemFx.tag(state, stack, ctx, owner);
     }
 }

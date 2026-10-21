@@ -8,6 +8,8 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** Свои мечи и аура: какой предмет сейчас отправляет слои модели. */
 @Mixin(ItemStackRenderState.class)
@@ -23,5 +25,10 @@ public abstract class ItemStackRenderStateMixin {
         } finally {
             ItemFx.end();
         }
+    }
+
+    @Inject(method = "submit", at = @At("HEAD"), require = 0)
+    private void mraz1visual$start(PoseStack ps, SubmitNodeCollector c, int light, int overlay, int outline, CallbackInfo ci) {
+        ItemFx.itemStart();
     }
 }
