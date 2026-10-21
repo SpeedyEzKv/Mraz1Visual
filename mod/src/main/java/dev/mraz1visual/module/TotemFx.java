@@ -28,6 +28,14 @@ public final class TotemFx extends Module implements WorldLayer {
     final BoolSetting golden = add(new BoolSetting("golden", "Золото тотема", true).hint("Тёплые золотые тона поверх пресета — как у самого тотема."));
     final BoolSetting others = add(new BoolSetting("others", "У других игроков (в прямой видимости)", true));
     final SliderSetting size = add(new SliderSetting("size", "Размер", 1, 0.5, 2, 0.05, "×"));
+    final BoolSetting replace = add(new BoolSetting("replace", "Вместо ванильных частиц", true)
+            .hint("Убирает облако зелёно-жёлтых частиц тотема. Анимацию тотема на экране прячет No Render."));
+
+    /** Из миксина ParticleEngine: не создавать ванильные частицы тотема. */
+    public static boolean replacesVanilla() {
+        TotemFx t = instance;
+        return t != null && t.isEnabled() && t.replace.get();
+    }
 
     private static final int MAX = 6;
     private final LivingEntity[] who = new LivingEntity[MAX];

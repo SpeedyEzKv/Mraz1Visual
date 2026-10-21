@@ -3,11 +3,15 @@ package dev.mraz1visual.module;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.core.WorldLayer;
+import dev.mraz1visual.render.Ease;
+import dev.mraz1visual.render.Fx;
+import dev.mraz1visual.render.Palette;
 import dev.mraz1visual.render.WorldDraw;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.ColorSetting;
+import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.setting.SliderSetting;
-import dev.mraz1visual.ui.Anim;
+import dev.mraz1visual.ui.Colors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,53 +20,95 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-/** Своя подсветка блока под прицелом: заливка + рёбра, плавно переезжает между блоками. */
+/**
+ * Выделение блока под прицелом: тонкие рёбра с градиентом (верх ярче), едва заметная заливка, мягкий ореол;
+ * при смене блока рамка плавно «перетекает» с лёгким пульсом, прогресс ломания заполняет блок изнутри.
+ */
 public final class BlockOutline extends Module implements WorldLayer {
-    final ColorSetting fill = add(new ColorSetting("fill", "Заливка", 0x22B8B4F2));
-    final ColorSetting edge = add(new ColorSetting("edge", "Контур", 0xC0E6E4FF));
+    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "glass", "Стекло", "edges", "Только рёбра", "fill", "Заливка"));
+    final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 6, Palette.OPTIONS));
+    final ColorSetting fill = add(new ColorSetting("fill", "Свой: заливка", 0x22B8B4F2));
+    final ColorSetting edge = add(new ColorSetting("edge", "Свой: контур", 0xC0E6E4FF));
     final SliderSetting width = add(new SliderSetting("width", "Толщина", 2, 1, 6, 1, " px"));
+    final SliderSetting opacity = add(new SliderSetting("opacity", "Прозрачность", 85, 20, 100, 5, " %"));
     final BoolSetting smooth = add(new BoolSetting("smooth", "Плавное движение", true));
+    final BoolSetting progress = add(new BoolSetting("progress", "Прогресс ломания", true));
 
     private double ax1, ay1, az1, ax2, ay2, az2;
     private boolean has;
     private long last;
+    private BlockPos lastPos;
+    private float pulse, shownProgress, alpha;
 
     public BlockOutline() {
-        super("block_outline", "Block Outline", "Заливка и контур блока под прицелом.", Category.VISUALS);
+        super("block_outline", "Block Overlay", "Тонкая рамка блока с градиентом, плавным переходом и прогрессом ломания.", Category.VISUALS);
+    }
+
+    private int col(float t, float a) {
+        if (preset.getId().equals("custom")) return Colors.mulAlpha(t < 0.5f ? edge.get() : fill.get(), a * opacity.getF() / 100f);
+        return Fx.color(preset.getId(), t, Fx.time() * 0.2f, edge.get(), fill.get(), a * opacity.getF() / 100f);
     }
 
     @Override
     public void renderWorld(WorldDraw d, float pt) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || !(mc.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
-            has = false;
-            return;
-        }
-        BlockPos pos = hit.getBlockPos();
-        BlockState state = mc.level.getBlockState(pos);
-        if (state.isAir()) {
-            has = false;
-            return;
-        }
-        VoxelShape shape = state.getShape(mc.level, pos);
-        if (shape.isEmpty()) {
-            has = false;
-            return;
-        }
-        AABB b = shape.bounds().move(pos).inflate(0.002);
-
         long now = System.nanoTime();
-        float dt = last == 0 ? 1f : Math.min(0.1f, (now - last) / 1e9f);
+        float dt = last == 0 ? 0 : Math.min(0.1f, (now - last) / 1e9f);
         last = now;
-        if (!has || !smooth.get()) {
+        BlockPos pos = null;
+        AABB b = null;
+        if (mc.level != null && mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
+            pos = hit.getBlockPos();
+            BlockState state = mc.level.getBlockState(pos);
+            VoxelShape shape = state.isAir() ? null : state.getShape(mc.level, pos);
+            if (shape != null && !shape.isEmpty()) b = shape.bounds().move(pos).inflate(0.003);
+        }
+        alpha = Ease.approach(alpha, b != null ? 1 : 0, b != null ? 30 : 14, dt);
+        if (b == null) {
+            if (alpha < 0.02f) has = false;
+            if (!has) return;
+        } else if (!has || !smooth.get()) {
             ax1 = b.minX; ay1 = b.minY; az1 = b.minZ; ax2 = b.maxX; ay2 = b.maxY; az2 = b.maxZ;
             has = true;
         } else {
-            float k = Anim.to(0f, 1f, dt * 1.4f);
-            ax1 += (b.minX - ax1) * k; ay1 += (b.minY - ay1) * k; az1 += (b.minZ - az1) * k;
-            ax2 += (b.maxX - ax2) * k; ay2 += (b.maxY - ay2) * k; az2 += (b.maxZ - az2) * k;
+            ax1 = Ease.approach(ax1, b.minX, 26, dt); ay1 = Ease.approach(ay1, b.minY, 26, dt); az1 = Ease.approach(az1, b.minZ, 26, dt);
+            ax2 = Ease.approach(ax2, b.maxX, 26, dt); ay2 = Ease.approach(ay2, b.maxY, 26, dt); az2 = Ease.approach(az2, b.maxZ, 26, dt);
         }
-        if ((fill.get() >>> 24) != 0) d.box(ax1, ay1, az1, ax2, ay2, az2, fill.get());
-        if ((edge.get() >>> 24) != 0) d.edges(ax1, ay1, az1, ax2, ay2, az2, width.get() * 0.004, edge.get());
+        if (pos != null && !pos.equals(lastPos)) {
+            lastPos = pos.immutable();
+            pulse = 1f;
+        }
+        pulse = Ease.approach(pulse, 0, 7, dt);
+        float A = alpha;
+        // лёгкий «вдох» рамки при смене блока
+        double gx = (ax2 - ax1) * 0.03 * Ease.smooth(pulse), gy = (ay2 - ay1) * 0.03 * Ease.smooth(pulse), gz = (az2 - az1) * 0.03 * Ease.smooth(pulse);
+        double x1 = ax1 - gx, y1 = ay1 - gy, z1 = az1 - gz, x2 = ax2 + gx, y2 = ay2 + gy, z2 = az2 + gz;
+        String st = style.getId();
+        if (!st.equals("edges")) d.box(x1, y1, z1, x2, y2, z2, col(0.6f, A * (st.equals("fill") ? 0.28f : 0.1f)));
+        if (!st.equals("fill")) {
+            double t = width.get() * 0.0035;
+            int top = col(0.05f, A), mid = col(0.3f, A * 0.75f), bottom = col(0.55f, A * 0.45f);
+            // верх ярче, низ спокойнее — объём без «жёсткой» рамки
+            d.line(x1, y2, z1, x2, y2, z1, t, top); d.line(x2, y2, z1, x2, y2, z2, t, top);
+            d.line(x2, y2, z2, x1, y2, z2, t, top); d.line(x1, y2, z2, x1, y2, z1, t, top);
+            d.line(x1, y1, z1, x1, y2, z1, t, mid); d.line(x2, y1, z1, x2, y2, z1, t, mid);
+            d.line(x2, y1, z2, x2, y2, z2, t, mid); d.line(x1, y1, z2, x1, y2, z2, t, mid);
+            d.line(x1, y1, z1, x2, y1, z1, t, bottom); d.line(x2, y1, z1, x2, y1, z2, t, bottom);
+            d.line(x2, y1, z2, x1, y1, z2, t, bottom); d.line(x1, y1, z2, x1, y1, z1, t, bottom);
+            if (st.equals("glass")) {
+                d.glowBegin();
+                d.edges(x1, y1, z1, x2, y2, z2, t * 5, col(0.4f, A * (0.12f + 0.2f * pulse)));
+                d.glowEnd();
+            }
+        }
+        // прогресс ломания: блок заполняется изнутри от центра
+        int stage = progress.get() && mc.gameMode != null ? mc.gameMode.getDestroyStage() : -1;
+        shownProgress = Ease.approach(shownProgress, stage < 0 ? 0 : (stage + 1) / 10f, 16, dt);
+        if (shownProgress > 0.01f) {
+            double cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, cz = (z1 + z2) / 2;
+            double k = shownProgress / 2;
+            d.box(cx - (x2 - x1) * k, cy - (y2 - y1) * k, cz - (z2 - z1) * k, cx + (x2 - x1) * k, cy + (y2 - y1) * k, cz + (z2 - z1) * k,
+                    col(0.35f, A * 0.3f));
+        }
     }
 }

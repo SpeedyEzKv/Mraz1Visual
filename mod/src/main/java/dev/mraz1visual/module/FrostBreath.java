@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class FrostBreath extends Module {
     final BoolSetting always = add(new BoolSetting("always", "Всегда, не только в холоде", false));
-    final BoolSetting firstPerson = add(new BoolSetting("first_person", "Видно от 1-го лица", true));
+    final BoolSetting firstPerson = add(new BoolSetting("first_person", "Видно от 1-го лица", false));
     final SliderSetting density = add(new SliderSetting("density", "Плотность", 100, 30, 200, 10, " %"));
 
     private int tick, puff;
@@ -53,7 +53,7 @@ public final class FrostBreath extends Module {
                 double v = 0.5 + Math.random() * 0.3;
                 FxParticles.spawn(eye.x + look.x * 0.32, eye.y - 0.12 + look.y * 0.32, eye.z + look.z * 0.32,
                         look.x * v + (Math.random() - 0.5) * 0.12, look.y * v + 0.08, look.z * v + (Math.random() - 0.5) * 0.12,
-                        1.1f + (float) Math.random() * 0.5f, 0.07f + (float) Math.random() * 0.05f, 0x34F4F8FF, -0.08f, false,
+                        1.1f + (float) Math.random() * 0.5f, 0.07f + (float) Math.random() * 0.05f, 0x4CF4F8FF, -0.08f, false,
                         FxParticles.DOT, false, 0.25f, 0.45f);
             }
         } else if (tick >= nextBreath) {

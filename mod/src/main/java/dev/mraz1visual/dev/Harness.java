@@ -263,6 +263,7 @@ public final class Harness {
                 }
             }
             case "jump" -> mc.player.jumpFromGround();
+            case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
             case "quit" -> {
                 log("done");
                 active = false;
