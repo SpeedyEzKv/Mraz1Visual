@@ -8,7 +8,7 @@ import dev.mraz1visual.ui.Theme;
 public final class SliderWidget extends SettingWidget {
     private final SliderSetting s;
     private boolean dragging;
-    private float shown;
+    private float shown, grab;
 
     public SliderWidget(SliderSetting s, Host host) {
         super(s, host);
@@ -23,12 +23,9 @@ public final class SliderWidget extends SettingWidget {
         shown = dragging ? (float) s.fraction() : Anim.to(shown, (float) s.fraction(), dt);
         int tx = trackX();
         int cy = y + h / 2;
-        int fillW = Math.round(Theme.SLIDER_W * shown);
-        d.round(tx, cy - 1, Theme.SLIDER_W, 2, 1, Theme.TRACK);
-        d.round(tx, cy - 1, fillW, 2, 1, Theme.accent());
-        int knob = dragging || hover > 0.5f ? 8 : 7;
-        d.circle(tx + fillW, cy, knob, Theme.KNOB_ON);
-        d.textRight(s.display(), tx - Theme.GAP, Draw.textY(y, h), Theme.TEXT);
+        grab = Anim.to(grab, dragging ? 1 : hover > 0.5f ? 0.4f : 0, dt);
+        d.slider(tx, cy, Theme.SLIDER_W, shown, grab);
+        d.textRight(s.display(), tx - Theme.GAP - 4, Draw.textY(y, h), Theme.TEXT_DIM);
     }
 
     @Override

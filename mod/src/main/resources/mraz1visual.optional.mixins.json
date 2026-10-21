@@ -11,7 +11,9 @@
     "RenderSystemMixin",
     "ItemInHandLayerMixin",
     "InventoryScreenMixin",
-    "ItemInHandFxMixin"
+    "ItemModelResolverMixin",
+    "ItemStackRenderStateMixin",
+    "ItemLayerRenderStateMixin"
   ],
   "injectors": {
     "defaultRequire": 0

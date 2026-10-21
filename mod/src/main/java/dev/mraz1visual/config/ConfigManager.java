@@ -155,6 +155,14 @@ public final class ConfigManager {
     }
 
     private void readSettings(Module m, JsonObject sj) {
+        // миграция: раньше акцент задавался только цветом. Был свой (не белый по умолчанию) — оставляем его как «Свой»
+        if (m == dev.mraz1visual.core.Modules.client && sj != null && !sj.has("accent_preset") && sj.has("accent")) {
+            dev.mraz1visual.module.ClientSettings cs = dev.mraz1visual.core.Modules.client;
+            if (cs.accent.fromJson(sj.get("accent")) && (cs.accent.get() & 0xFFFFFF) != (dev.mraz1visual.ui.Theme.DEFAULT_ACCENT & 0xFFFFFF)) {
+                sj = sj.deepCopy();
+                sj.addProperty("accent_preset", "custom");
+            }
+        }
         for (Setting<?> s : m.settings()) {
             JsonElement v = sj == null ? null : sj.get(s.id);
             if (v == null) {

@@ -33,7 +33,7 @@ import java.util.Map;
  */
 final class GlyphAtlas {
     private static final int PAGE = 1024;
-    private static final int MAX_ATLASES = 16;
+    private static final int MAX_ATLASES = 24;
     private static final Map<String, GlyphAtlas> ATLASES = new LinkedHashMap<>(16, 0.75f, true);
     private static final Map<String, Font> FONTS = new HashMap<>();
     private static Font fallback;
@@ -88,21 +88,43 @@ final class GlyphAtlas {
 
     /** Ширина строки в единицах при размере em (точно, дробно — для раскладки). */
     static float advance(String file, int cp, float em) {
-        Font f = font(file);
-        Font use = f.canDisplay(cp) ? f : fallback();
+        // быстрый путь: латиница и кириллица — из массива, без HashMap, упаковки и canDisplay на каждую букву
+        float[] fast = cp < FAST ? ADV_FAST.computeIfAbsent(file, k -> newNaN()) : null;
+        if (fast != null && !Float.isNaN(fast[cp])) return fast[cp] * em;
         Map<Integer, Float> cache = ADV.computeIfAbsent(file, k -> new HashMap<>());
         Float a = cache.get(cp);
         if (a == null) {
+            Font f = font(file);
+            Font use = f.canDisplay(cp) ? f : fallback();
             GlyphVector gv = use.deriveFont(64f).createGlyphVector(FRC, new String(Character.toChars(cp)));
             a = (float) gv.getGlyphMetrics(0).getAdvanceX() / 64f;
             cache.put(cp, a);
         }
+        if (fast != null) fast[cp] = a;
         return a * em;
     }
 
+    private static final int FAST = 0x500;
     private static final Map<String, Map<Integer, Float>> ADV = new HashMap<>();
+    private static final Map<String, float[]> ADV_FAST = new HashMap<>();
+    private final Glyph[] glyphFast = new Glyph[FAST];
+
+    private static float[] newNaN() {
+        float[] a = new float[FAST];
+        java.util.Arrays.fill(a, Float.NaN);
+        return a;
+    }
 
     Glyph glyph(int cp) {
+        if (cp < FAST) {
+            Glyph g = glyphFast[cp];
+            if (g != null) return g;
+            return glyphFast[cp] = glyphSlow(cp);
+        }
+        return glyphSlow(cp);
+    }
+
+    private Glyph glyphSlow(int cp) {
         Glyph g = glyphs.get(cp);
         if (g != null) return g;
         Font use = font.canDisplay(cp) ? font : fallbackFont;
@@ -197,7 +219,159 @@ final class GlyphAtlas {
                 gl.u0(), gl.u1(), gl.v0(), gl.v1(), color, g.scissorStack.peek()));
     }
 
+    // ── строка целиком: один элемент GUI на страницу атласа, а не на каждую букву ──
+    // (ванильный GUI ищет пересечения каждого нового элемента со всеми прежними — O(n²) от числа элементов)
+
+    private static final int RUN_MAX = 256;
+    private final float[] run = new float[RUN_MAX * 8];
+    private final int[] runPage = new int[RUN_MAX];
+    private int runCount;
+
+    /** Поставить букву в очередь строки. */
+    void queue(Glyph gl, int px, int py) {
+        if (gl.page() < 0 || runCount >= RUN_MAX) return;
+        int o = runCount * 8;
+        run[o] = px + gl.bx(); run[o + 1] = py + gl.by(); run[o + 2] = px + gl.bx() + gl.w(); run[o + 3] = py + gl.by() + gl.h();
+        run[o + 4] = gl.u0(); run[o + 5] = gl.v0(); run[o + 6] = gl.u1(); run[o + 7] = gl.v1();
+        runPage[runCount++] = gl.page();
+    }
+
+    /** Отправить очередь строки: по элементу на каждую задействованную страницу атласа. */
+    void flush(GuiGraphics g, Matrix3x2f physical, int color) {
+        int n = runCount;
+        runCount = 0;
+        if (n == 0) return;
+        var scissor = g.scissorStack.peek();
+        for (int page = 0; page < pages.size(); page++) {
+            int count = 0;
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            for (int i = 0; i < n; i++) {
+                if (runPage[i] != page) continue;
+                count++;
+                minX = Math.min(minX, run[i * 8]); minY = Math.min(minY, run[i * 8 + 1]);
+                maxX = Math.max(maxX, run[i * 8 + 2]); maxY = Math.max(maxY, run[i * 8 + 3]);
+            }
+            if (count == 0) continue;
+            if (dirty[page]) {
+                textures.get(page).upload();
+                dirty[page] = false;
+            }
+            var view = textures.get(page).getTextureView();
+            if (view == null) continue;
+            float[] q = new float[count * 8];
+            int k = 0;
+            for (int i = 0; i < n; i++) {
+                if (runPage[i] != page) continue;
+                System.arraycopy(run, i * 8, q, k * 8, 8);
+                k++;
+            }
+            var b = new net.minecraft.client.gui.navigation.ScreenRectangle((int) Math.floor(minX), (int) Math.floor(minY),
+                    (int) Math.ceil(maxX - minX) + 1, (int) Math.ceil(maxY - minY) + 1).transformMaxBounds(physical);
+            if (scissor != null) b = scissor.intersection(b);
+            if (b == null) continue;
+            g.guiRenderState.submitGuiElement(new Run(TextureSetup.singleTexture(view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)),
+                    physical, q, color, scissor, b));
+        }
+    }
+
+    // ── готовая раскладка строки: считается один раз, в кадре только сдвиг матрицей ──
+
+    /** Квады строки относительно её начала (целый пиксель) по страницам атласа и их границы. */
+    record Layout(float frac, float em, int[] pages, float[][] quads, float[][] box) {}
+
+    private final Map<String, Layout> layouts = new HashMap<>();
+
+    /**
+     * Раскладка строки s при размере em (единицы) и ps (пикселей на единицу), frac — дробная часть начала по X.
+     * Позиции букв округляются к пикселю так же, как при рисовании по одной.
+     */
+    Layout layout(String s, String file, float em, float ps, float frac) {
+        Layout l = layouts.get(s);
+        if (l != null && l.frac() == frac && l.em() == em) return l;
+        if (layouts.size() > 2048) layouts.clear();
+        runCount = 0;
+        float cx = frac;
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            i += Character.charCount(cp);
+            queue(glyph(cp), Math.round(cx), 0);
+            cx += advance(file, cp, em) * ps;
+        }
+        int n = runCount;
+        runCount = 0;
+        int pageCount = 0;
+        int[] used = new int[Math.max(1, pages.size())];
+        for (int p = 0; p < pages.size(); p++) {
+            for (int i = 0; i < n; i++) if (runPage[i] == p) { used[pageCount++] = p; break; }
+        }
+        int[] pg = java.util.Arrays.copyOf(used, pageCount);
+        float[][] q = new float[pageCount][], box = new float[pageCount][];
+        for (int pi = 0; pi < pageCount; pi++) {
+            int page = pg[pi], count = 0;
+            for (int i = 0; i < n; i++) if (runPage[i] == page) count++;
+            float[] arr = new float[count * 8];
+            float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+            int k = 0;
+            for (int i = 0; i < n; i++) {
+                if (runPage[i] != page) continue;
+                System.arraycopy(run, i * 8, arr, k * 8, 8);
+                minX = Math.min(minX, arr[k * 8]); minY = Math.min(minY, arr[k * 8 + 1]);
+                maxX = Math.max(maxX, arr[k * 8 + 2]); maxY = Math.max(maxY, arr[k * 8 + 3]);
+                k++;
+            }
+            q[pi] = arr;
+            box[pi] = new float[]{minX, minY, maxX, maxY};
+        }
+        l = new Layout(frac, em, pg, q, box);
+        layouts.put(s, l);
+        return l;
+    }
+
+    /** Отправить готовую раскладку: phys уже сдвинута в начало строки. */
+    void submit(GuiGraphics g, Matrix3x2f phys, Layout l, int color) {
+        var scissor = g.scissorStack.peek();
+        for (int pi = 0; pi < l.pages().length; pi++) {
+            int page = l.pages()[pi];
+            if (page >= textures.size()) continue;
+            if (dirty[page]) {
+                textures.get(page).upload();
+                dirty[page] = false;
+            }
+            var view = textures.get(page).getTextureView();
+            if (view == null) continue;
+            float[] b = l.box()[pi];
+            var r = new net.minecraft.client.gui.navigation.ScreenRectangle((int) Math.floor(b[0]), (int) Math.floor(b[1]),
+                    (int) Math.ceil(b[2] - b[0]) + 1, (int) Math.ceil(b[3] - b[1]) + 1).transformMaxBounds(phys);
+            if (scissor != null) r = scissor.intersection(r);
+            if (r == null) continue;
+            g.guiRenderState.submitGuiElement(new Run(TextureSetup.singleTexture(view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)),
+                    phys, l.quads()[pi], color, scissor, r));
+        }
+    }
+
+    private record Run(TextureSetup textureSetup, org.joml.Matrix3x2fc pose, float[] q, int color,
+                       net.minecraft.client.gui.navigation.ScreenRectangle scissorArea,
+                       net.minecraft.client.gui.navigation.ScreenRectangle bounds) implements net.minecraft.client.gui.render.state.GuiElementRenderState {
+        @Override
+        public void buildVertices(com.mojang.blaze3d.vertex.VertexConsumer vc) {
+            for (int o = 0; o < q.length; o += 8) {
+                vc.addVertexWith2DPose(pose, q[o], q[o + 1]).setUv(q[o + 4], q[o + 5]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o], q[o + 3]).setUv(q[o + 4], q[o + 7]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o + 2], q[o + 3]).setUv(q[o + 6], q[o + 7]).setColor(color);
+                vc.addVertexWith2DPose(pose, q[o + 2], q[o + 1]).setUv(q[o + 6], q[o + 5]).setColor(color);
+            }
+        }
+
+        @Override
+        public com.mojang.blaze3d.pipeline.RenderPipeline pipeline() { return RenderPipelines.GUI_TEXTURED; }
+    }
+
+    private boolean released;
+
+    boolean released() { return released; }
+
     private void release() {
+        released = true;
         for (Identifier id : pageIds) Minecraft.getInstance().getTextureManager().release(id);
     }
 }

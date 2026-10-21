@@ -75,6 +75,8 @@ public final class Modules {
         m.register(new DamageNumbers());
         m.register(new TotemPops());
         m.register(new Halo());
+        m.register(new PlayerAura());
+        m.register(new LightSteps());
         m.register(new Sonar());
         m.register(new TntTimer());
         m.register(new ArmorHud());

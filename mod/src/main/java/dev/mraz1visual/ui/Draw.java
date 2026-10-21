@@ -47,6 +47,10 @@ public final class Draw {
 
     public void round(int x, int y, int w, int h, int r, int color) {
         if (w <= 0 || h <= 0 || (color >>> 24) == 0) return;
+        if (!Sdf.broken) {
+            Sdf.fill(g, x, y, w, h, r, color);
+            return;
+        }
         r = Math.min(r, Math.min(w, h) / 2);
         if (r > 32) r = 32;
         if (r <= 0) {
@@ -64,6 +68,11 @@ public final class Draw {
 
     /** Скруглённый прямоугольник с обводкой в 1 единицу. */
     public void card(int x, int y, int w, int h, int r, int fill, int edge) {
+        if (!Sdf.broken) {
+            Sdf.fill(g, x, y, w, h, r, fill);
+            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, edge, edge);
+            return;
+        }
         round(x, y, w, h, r, edge);
         round(x + 1, y + 1, w - 2, h - 2, Math.max(0, r - 1), fill);
     }
@@ -98,6 +107,10 @@ public final class Draw {
 
     /** Окружность-кольцо. */
     public void ring(float cx, float cy, float r, float t, int color) {
+        if (!Sdf.broken) {
+            Sdf.shape(g, cx - r - t / 2, cy - r - t / 2, 2 * r + t, 2 * r + t, r + t / 2, Sdf.RING, t, color, color);
+            return;
+        }
         int seg = Math.max(12, Math.min(64, Math.round(r * 2.2f)));
         float px = cx + r, py = cy;
         for (int i = 1; i <= seg; i++) {
@@ -125,6 +138,10 @@ public final class Draw {
     /** Закрашенный круг с точностью 1/4 единицы. */
     public void disc(float cx, float cy, float r, int color) {
         if (r <= 0) return;
+        if (!Sdf.broken) {
+            Sdf.fill(g, cx - r, cy - r, 2 * r, 2 * r, r, color);
+            return;
+        }
         float step = 0.25f;
         for (float y = -r; y < r; y += step) {
             float yy = y + step / 2;
@@ -182,11 +199,29 @@ public final class Draw {
 
     /** Тумблер: t = 0 выкл, 1 вкл (анимированное значение). */
     public void toggle(int x, int y, float t) {
-        int track = Colors.lerp(Theme.TRACK, Theme.accent(), t);
-        round(x, y, Theme.SWITCH_W, Theme.SWITCH_H, Theme.SWITCH_H / 2, track);
-        int knob = Theme.SWITCH_H - 4;
-        int kx = x + 2 + Math.round((Theme.SWITCH_W - 4 - knob) * t);
-        round(kx, y + 2, knob, knob, knob / 2, Colors.lerp(Theme.KNOB_OFF, Theme.KNOB_ON, t));
+        float tc = Math.max(0f, Math.min(1f, t));
+        int w = Theme.SWITCH_W, h = Theme.SWITCH_H;
+        int track = Colors.lerp(Theme.TRACK, Theme.accent(), tc);
+        Sdf.fill(g, x, y, w, h, h / 2f, track);
+        // кнопка-«капля»: белая, с мягкой тенью; на середине хода чуть вытягивается, как в iOS
+        float knob = h - 3f;
+        float stretch = (float) Math.sin(Math.PI * tc) * knob * 0.35f;
+        float kw = knob + stretch;
+        float kx = x + 1.5f + (w - 3f - kw) * tc;
+        Sdf.shape(g, kx, y + 2f, kw, knob, knob / 2f, Sdf.SHADOW, 2.5f, 0x40000000, 0x40000000);
+        Sdf.fill(g, kx, y + 1.5f, kw, knob, knob / 2f, 0xFFFFFFFF);
+    }
+
+    /** Слайдер: тонкая дорожка-капсула, заливка акцентом, ручка-«капля» (при перетаскивании крупнее). */
+    public void slider(int x, int cy, int w, float f, float grab) {
+        f = Math.max(0f, Math.min(1f, f));
+        Sdf.fill(g, x, cy - 2f, w, 4f, 2f, Theme.TRACK);
+        int a = Theme.accent();
+        if (f > 0.001f) Sdf.shape(g, x, cy - 2f, Math.max(4f, w * f), 4f, 2f, Sdf.FILL, 0, a, Colors.shade(a, 0.85f));
+        float kw = 14f + 4f * grab, kh = 10f + 2f * grab;
+        float kx = x + w * f - kw / 2f;
+        Sdf.shape(g, kx, cy - kh / 2f + 1f, kw, kh, kh / 2f, Sdf.SHADOW, 3f, 0x48000000, 0x48000000);
+        Sdf.fill(g, kx, cy - kh / 2f, kw, kh, kh / 2f, 0xFFFFFFFF);
     }
 
     // ── жидкое стекло ────────────────────────────────────────
@@ -196,8 +231,14 @@ public final class Draw {
      * (ярче сверху — как свет на стекле). Размытый фон под ней рисуется отдельно (см. WallpaperPlayer.glass).
      */
     public void glass(int x, int y, int w, int h, int r, int tint, float strength) {
-        round(x, y, w, h, r, tint);
         boolean light = Theme.isLight();
+        if (!Sdf.broken) {
+            // заливка, блик сверху и кромка с градиентом — один элемент (режим «стекло» шейдера)
+            // сила ×8: параметр в шейдер идёт с шагом 1/4 — так шаг силы 1/32
+            Sdf.shape(g, x, y, w, h, r, Sdf.GLASS, strength * (light ? 2.2f : 1f) * 8f, tint, tint);
+            return;
+        }
+        round(x, y, w, h, r, tint);
         int sheenH = Math.max(4, Math.min(h - 2, Math.round(h * 0.45f)));
         int sheen = Colors.withAlpha(0xFFFFFF, Math.round((light ? 70 : 20) * strength));
         int rr = Math.min(r, Math.min(w, h) / 2);
@@ -210,6 +251,10 @@ public final class Draw {
     /** Кант по скруглённому контуру: сверху цвет top, снизу bottom, по бокам — переход. */
     public void rim(int x, int y, int w, int h, int r, int top, int bottom) {
         if (w <= 2 || h <= 2) return;
+        if (!Sdf.broken) {
+            Sdf.shape(g, x, y, w, h, r, Sdf.RING, 1f, top, bottom);
+            return;
+        }
         r = Math.min(r, Math.min(w, h) / 2);
         if (r > 32) r = 32;
         if (r <= 0) {
@@ -232,6 +277,12 @@ public final class Draw {
         }
         gradientV(x, y + r, 1, h - 2 * r, top, bottom);
         gradientV(x + w - 1, y + r, 1, h - 2 * r, top, bottom);
+    }
+
+    /** Мягкая тень под фигурой: расползается наружу на soft единиц. */
+    public void shadow(int x, int y, int w, int h, int r, float soft, int color) {
+        if (!Sdf.broken) Sdf.shape(g, x, y, w, h, r, Sdf.SHADOW, soft, color, color);
+        else round(x - 2, y, w + 4, h + 4, r + 2, Colors.mulAlpha(color, 0.5f));
     }
 
     /** Шахматка под полупрозрачными цветами. */

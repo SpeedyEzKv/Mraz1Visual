@@ -30,6 +30,8 @@ public final class Fonts {
         public final int height;
         final Map<String, Component> cache = new HashMap<>();
         final Map<String, Float> widths = new HashMap<>();
+        GlyphAtlas lastAtlas;
+        float lastPx;
 
         Kind(String id, String file, int height) {
             this.style = Style.EMPTY.withFont(new FontDescription.Resource(Identifier.fromNamespaceAndPath("mraz1visual", id)));
@@ -132,20 +134,24 @@ public final class Fonts {
         float sx = (float) Math.hypot(pose.m00(), pose.m01());
         float ps = (float) (sx * gs);                // физических пикселей в одной единице
         float em = k.height * scale;
-        float px = Math.round(em * ps * 2f) / 2f;      // размер шрифта в пикселях (шаг 0,5 — меньше атласов)
+        // размер шрифта в целых пикселях: при анимации масштаба окна не плодим новые атласы на каждый кадр
+        float px = Math.round(em * ps);
         if (px < 3f) return;
-        GlyphAtlas atlas = GlyphAtlas.get(k.file, Math.min(px, 160f));
+        px = Math.min(px, 160f);
+        // атлас последнего размера — без склейки строки-ключа на каждую надпись
+        GlyphAtlas atlas = k.lastAtlas != null && k.lastPx == px && !k.lastAtlas.released() ? k.lastAtlas : GlyphAtlas.get(k.file, px);
+        k.lastAtlas = atlas;
+        k.lastPx = px;
         float ox = (float) (pose.m20() * gs), oy = (float) (pose.m21() * gs);
         float fx = ox - (float) Math.floor(ox), fy = oy - (float) Math.floor(oy);
-        org.joml.Matrix3x2f phys = new org.joml.Matrix3x2f(pose).scale(1f / ps).translate(-fx, -fy);
+        // матрица уходит в элемент GUI (рисуется позже) — поэтому своя копия на строку
         int base = Math.round((y + em * 0.95f) * ps + fy);
         float cx = x * ps + fx;
-        for (int i = 0; i < s.length(); ) {
-            int cp = s.codePointAt(i);
-            i += Character.charCount(cp);
-            GlyphAtlas.Glyph gl = atlas.glyph(cp);
-            atlas.draw(g, phys, gl, Math.round(cx), base, color);
-            cx += GlyphAtlas.advance(k.file, cp, em) * ps; // шаг — как в раскладке (widthF)
-        }
+        int ix = (int) Math.floor(cx);
+        // раскладка строки кэшируется (позиции букв, UV) — в кадре её только сдвигают матрицей в начало строки
+        float frac = Math.round((cx - ix) * 8f) / 8f;
+        GlyphAtlas.Layout lay = atlas.layout(s, k.file, em, ps, frac);
+        org.joml.Matrix3x2f phys = new org.joml.Matrix3x2f(pose).scale(1f / ps).translate(-fx + ix, -fy + base);
+        atlas.submit(g, phys, lay, color);
     }
 }

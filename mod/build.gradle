@@ -39,6 +39,17 @@ dependencies {
     }
 }
 
+// dev-клиент: окно побольше — для скриншотов и замеров стенда (dev.mraz1visual.dev.Harness)
+loom {
+    runs {
+        client {
+            programArgs '--width', '1600', '--height', '900'
+            // профилирование: ./gradlew runClient -Pjfr=путь.jfr
+            if (project.findProperty('jfr')) vmArg "-XX:StartFlightRecording=filename=${project.findProperty('jfr')},settings=profile"
+        }
+    }
+}
+
 processResources {
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') {

@@ -49,8 +49,8 @@ import java.util.Map;
 public final class Mraz1VisualScreen extends Screen implements Host {
     private static final String BRAND = "MRAZ1VISUAL";
     private static final int SEARCH_MAX = 32;
-    private static final Category[] MODULE_TABS = {Category.PLAYER, Category.VISUALS, Category.COSMETICS, Category.SWORDS, Category.WINGS, Category.PETS, Category.SKY, Category.PERFORMANCE, Category.MISC};
-    private static final int NAV_H = 19, HINT_H = 20, CARD_HEAD = 38, CARD_R = 7, COL_GAP = 8, CARD_GAP = 8;
+    private static final Category[] MODULE_TABS = {Category.VISUALS, Category.SWORDS, Category.WINGS, Category.COSMETICS, Category.PETS, Category.SKY, Category.PERFORMANCE, Category.PLAYER, Category.MISC};
+    private static final int NAV_H = 26, NAV_STEP = 28, HINT_H = 0, CARD_HEAD = 40, CARD_R = Theme.RADIUS_CARD, COL_GAP = 10, CARD_GAP = 10;
     private static final int TILE = 20, ICON = 9;
     private static final Path FAV_FILE = dev.mraz1visual.util.TextFiles.DIR.resolve("favorites.txt");
 
@@ -75,6 +75,8 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         float hover;
         /** Масштаб подписи: 1 — влезает, меньше — сжать (считается в relayout, не в кадре). */
         float labelScale = 1f;
+        String count;
+        long countAt;
 
         Nav(NavKind kind, Category category, String label, int icon) {
             this.kind = kind;
@@ -271,38 +273,27 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         wx = (vw - ww) / 2;
         wy = (vh - wh) / 2;
 
+        // рельс категорий: узкая стеклянная капсула слева, только иконки (подпись — во всплывающей «пилюле»)
         nav.clear();
-        int y = wy + 50;
+        int y = wy + 58;
         sectionModulesY = y;
-        y += 16;
         for (Category c : MODULE_TABS) {
             Nav n = new Nav(NavKind.CATEGORY, c, c.title, Icons.forCategory(c));
             n.y = y;
             nav.add(n);
-            y += NAV_H + 2;
+            y += NAV_STEP;
         }
-        Nav fav = new Nav(NavKind.FAVORITES, null, "Избранное", Icons.STAR);
-        fav.y = y;
-        nav.add(fav);
-        y += NAV_H + 12;
+        y += 8;
         sectionClientY = y;
-        y += 16;
         Object[][] client = {
-                {NavKind.CATEGORY, Category.CONFIGS, "Конфиги", Icons.SLIDERS},
-                {NavKind.FRIENDS, null, "Друзья", Icons.FRIENDS},
-                {NavKind.WALLPAPER, null, "Обои", Icons.LAYERS},
+                {NavKind.FAVORITES, null, "Избранное", Icons.STAR},
+                {NavKind.CATEGORY, Category.CONFIGS, "Профили", Icons.SLIDERS},
                 {NavKind.CATEGORY, Category.CLIENT, "Настройки", Icons.GEAR}};
         for (Object[] o : client) {
             Nav n = new Nav((NavKind) o[0], (Category) o[1], (String) o[2], (Integer) o[3]);
             n.y = y;
             nav.add(n);
-            y += NAV_H + 2;
-        }
-        // место под подпись: от текста до счётчика «10/12» справа
-        int avail = Theme.SIDEBAR_W - 16 - 28 - 11 - d.width("10/12") - 6;
-        for (Nav n : nav) {
-            int lw = d.width(n.label);
-            n.labelScale = lw > avail ? Math.max(0.7f, avail / (float) lw) : 1f;
+            y += NAV_STEP;
         }
         for (Card c : cardState.values()) c.descW = -1;
         rebuildList();
@@ -315,13 +306,13 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private int areaW() { return cW() - 24 - previewSpace(); }
 
     // ── живое превью: модель игрока с крыльями, мечом и питомцем ──
-    private static final int PREVIEW_W = 168;
+    private static final int PREVIEW_W = 196;
     private final PlayerPreview preview = new PlayerPreview();
     private boolean previewDrag;
 
     /** Превью — на вкладках косметики, где его видно: мечи, крылья, питомцы. */
     private boolean previewMode() {
-        return search.isEmpty() && !favorites && (category == Category.SWORDS || category == Category.WINGS || category == Category.PETS)
+        return search.isEmpty() && !favorites && (category == Category.SWORDS || category == Category.WINGS || category == Category.PETS || category == Category.COSMETICS)
                 && cW() - 24 - PREVIEW_W - COL_GAP >= 240;
     }
 
@@ -329,12 +320,14 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private int previewX() { return cX() + cW() - 12 - PREVIEW_W; }
     private int previewY() { return areaY() + 4; }
     private int previewH() { return areaH() - 8; }
-    private int areaH() { return wh - Theme.TOPBAR_H - 4 - HINT_H; }
-    private int searchX() { return wx + ww - 14 - Theme.SEARCH_W; }
-    private int searchY() { return wy + (Theme.TOPBAR_H - 22) / 2; }
-    private int profileY() { return wy + wh - 52; }
-    private int themeX() { return wx + Theme.SIDEBAR_W - 14 - 18; }
-    private int themeY() { return profileY() + 12; }
+    private int areaH() { return wh - Theme.TOPBAR_H - 14 - HINT_H; }
+    private int searchX() { return wx + ww - 18 - Theme.SEARCH_W; }
+    private int searchY() { return wy + (Theme.TOPBAR_H - 24) / 2 + 2; }
+    private int railX() { return wx + 12; }
+    private int railCx() { return railX() + Theme.RAIL_W / 2; }
+    private int profileY() { return wy + wh - 12 - 40; }
+    private int themeX() { return railCx() - 9; }
+    private int themeY() { return profileY() - 24; }
 
     private Card card(Module m) {
         return cardState.computeIfAbsent(m, Card::new);
@@ -345,7 +338,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         if (!search.isEmpty()) {
             String q = searchView.toLowerCase(Locale.ROOT);
             for (Module m : mm.all()) {
-                if (m.name.toLowerCase(Locale.ROOT).contains(q) || m.description.toLowerCase(Locale.ROOT).contains(q)) list.add(m);
+                boolean hit = m.name.toLowerCase(Locale.ROOT).contains(q) || m.description.toLowerCase(Locale.ROOT).contains(q);
+                // и по настройкам: «прозрачность», «радуга» найдут модули, где это есть
+                if (!hit) for (Setting<?> s : m.settings()) if (s.name.toLowerCase(Locale.ROOT).contains(q)) { hit = true; break; }
+                if (hit) list.add(m);
             }
         } else if (favorites) {
             for (Module m : mm.all()) if (favs.contains(m.id)) list.add(m);
@@ -375,6 +371,11 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         contentT = cs.animations.get() ? 0f : 1f;
         rebuildList();
         if (c == Category.CONFIGS) profiles.refresh();
+    }
+
+    /** Dev-стенд: открыть вкладку из сценария. */
+    public void harnessCategory(Category c) {
+        selectCategory(c);
     }
 
     private void showFavorites() {
@@ -434,7 +435,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             c.y = colY[col];
             if (c.w != colW || c.descW < 0) {
                 c.w = colW;
-                c.descW = colW - 36 - 70;
+                c.descW = colW - 42 - 76;
                 c.desc = Draw.ellipsize(c.m.description, Math.max(20, c.descW));
             }
             if (c.openT > 0.001f && c.rows.isEmpty()) buildRows(c);
@@ -490,7 +491,11 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         String mode = cs.background.getId();
         if (mode.equals("none")) return;
-        if (mode.equals("blur")) super.renderBackground(g, mouseX, mouseY, partialTick);
+        if (mode.equals("blur")) {
+            // своё размытие пирамидой (доли мс) вместо ванильного полноэкранного (~1 мс)
+            if (minecraft.level != null && GlassBlur.update(4)) GlassBlur.draw(g, 0, 0, width, height, 0xFFFFFFFF);
+            else super.renderBackground(g, mouseX, mouseY, partialTick);
+        }
         int a = (int) Math.round(cs.dim.get() * 2.55);
         if (a > 0) g.fill(0, 0, width, height, a << 24);
     }
@@ -512,6 +517,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         float animDt = lastNanos == 0 ? 0f : dt;
         lastNanos = now;
         Anim.enabled = cs.animations.get();
+        Anim.reduceMotion = cs.reduceMotion.get();
         if (width != layoutW || height != layoutH || cs.size.get() != layoutSize) relayout();
 
         double rmx = mouseX / k, rmy = mouseY / k;
@@ -532,7 +538,8 @@ public final class Mraz1VisualScreen extends Screen implements Host {
 
         float e = ease(openT);
         // появление: окно «выплывает» из 92% с лёгким перелётом, при закрытии — сжимается
-        float s = closing ? 0.94f + 0.06f * e : 0.92f + 0.08f * easeBack(openT);
+        // открытие: окно «проявляется» с лёгким масштабом 0.96 → 1 и пружинкой; «Уменьшить движение» — только проявление
+        float s = Anim.reduceMotion ? 1f : closing ? 0.96f + 0.04f * e : 0.96f + 0.04f * easeBack(openT);
         boolean scaled = s < 0.999f || s > 1.001f;
         if (scaled) {
             float cx = (wx + ww / 2f) * k, cy = (wy + wh / 2f) * k;
@@ -548,6 +555,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         drawTopBar(mx, my, now);
         drawContent(mx, my, dt);
         drawHints();
+        drawNavTip();
         if (e < 1f) d.round(wx, wy, ww, wh, Theme.RADIUS, Colors.withAlpha(Theme.isLight() ? 0xF4F4F5 : 0x0A0A0C, Math.round(255 * (1 - e))));
         d.unclip();
         if (popup != null) {
@@ -579,14 +587,13 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private boolean wallpaperOn;
 
     private void drawWindow() {
-        d.round(wx - 10, wy - 6, ww + 20, wh + 22, Theme.RADIUS + 10, 0x14000000);
-        d.round(wx - 4, wy - 2, ww + 8, wh + 9, Theme.RADIUS + 4, Theme.SHADOW);
         int r = Theme.RADIUS;
-        // обои — внутри окна вместо его фона; фон за окном не трогаем
+        // большая мягкая тень без жёстких краёв (одна SDF-фигура)
+        d.shadow(wx, wy + 8, ww, wh, r, 34f, Theme.SHADOW);
+        // обои — внутри окна вместо его фона; иначе — стекло поверх размытого мира
         wallpaperOn = cs.wallGui.get() && dev.mraz1visual.wallpaper.WallpaperPlayer.render(d.g, wx, wy, ww, wh, r, Math.max(20, cs.wallDim.get() - 10));
-        if (!wallpaperOn) d.round(wx, wy, ww, wh, r, Theme.GLASS_WINDOW);
-        else if (Theme.isLight()) d.round(wx, wy, ww, wh, r, 0x80FFFFFF);
-        d.glass(wx, wy, ww, wh, r, 0, 1f);
+        if (wallpaperOn && Theme.isLight()) d.round(wx, wy, ww, wh, r, 0x80FFFFFF);
+        d.glass(wx, wy, ww, wh, r, wallpaperOn ? 0x330C0C10 : Theme.GLASS_WINDOW, 1.1f);
     }
 
     /** Стеклянная панель: размытые обои под ней (если есть), тонировка, блик и кант. */
@@ -606,76 +613,98 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         };
     }
 
+    /** Пункт под мышью — подпись к нему рисуется «пилюлей» поверх всего в конце кадра. */
+    private Nav tipNav;
+    private final Spring selSpring = Spring.ui(-1);
+
     private void drawSidebar(double mx, double my, float dt) {
-        int sw = Theme.SIDEBAR_W;
-        glassPanel(wx + 6, wy + 6, sw - 6, wh - 12, Theme.RADIUS - 2, Theme.GLASS_PANEL, 1f, 0);
+        int rx = railX(), rw = Theme.RAIL_W, ry = wy + 12, rh = wh - 24;
+        d.glass(rx, ry, rw, rh, rw / 2, Theme.GLASS_RAIL, 0.9f);
 
-        // логотип
-        d.glass(wx + 16, wy + 16, 18, 18, 6, Theme.isLight() ? 0xFF0A0A0A : 0x26FFFFFF, 1f);
-        d.textCenter("M", wx + 25, wy + 21, 0xFFFAFAFA);
-        d.text(BRAND, Fonts.Kind.HEAD, wx + 40, wy + 16, Theme.TEXT);
-        d.text("liquid glass", wx + 40, wy + 26, Theme.TEXT_MUTED);
+        // логотип: стеклянная монетка с буквой
+        int cx = railCx();
+        d.glass(cx - 13, ry + 10, 26, 26, 13, Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0xD0 : 0x40), 1.2f);
+        d.textCenter("M", cx, ry + 19, Theme.isLight() ? 0xFFFFFFFF : Theme.TEXT);
 
-        d.textScaled("МОДУЛИ", Fonts.Kind.HEAD, wx + 19, sectionModulesY, 0.72f, Theme.TEXT_MUTED);
-        d.textScaled("КЛИЕНТ", Fonts.Kind.HEAD, wx + 19, sectionClientY, 0.72f, Theme.TEXT_MUTED);
-        int nx = wx + 8, nw = sw - 16;
+        // разделитель между модулями и разделами клиента
+        d.round(cx - 10, sectionClientY - 6, 20, 1, 0, Theme.DIVIDER);
+
         Nav activeNav = null;
         for (Nav n : nav) if (navActive(n)) activeNav = n;
         if (activeNav != null) {
-            if (selY < 0) selY = activeNav.y;
-            selY = Anim.to(selY, activeNav.y, dt * 0.8f);
-            d.glass(nx + 3, Math.round(selY), nw - 6, NAV_H, 6, Theme.GLASS_ACTIVE, 0.9f);
-            // акцентная полоска слева у активного пункта
-            d.round(nx + 3, Math.round(selY) + 5, 2, NAV_H - 10, 1, Theme.accent());
-        } else selY = -1;
+            // «капля» стекла: пружиной перетекает к активному пункту и вытягивается по ходу движения
+            if (selSpring.value < 0) selSpring.snap(activeNav.y);
+            selSpring.target = activeNav.y;
+            float sy = selSpring.update(dt);
+            float stretch = Math.min(14f, Math.abs(selSpring.velocity) * 0.018f);
+            int dw = rw - 10;
+            d.glass(cx - dw / 2, Math.round(sy - stretch / 2), dw, Math.round(NAV_H + stretch), dw / 2,
+                    Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0x55 : 0x3A), 1.3f);
+        } else selSpring.snap(-1);
+
+        tipNav = null;
         for (Nav n : nav) {
             boolean on = navActive(n);
-            boolean hov = Widget.hit(mx, my, nx, n.y, nw, NAV_H);
+            boolean hov = Widget.hit(mx, my, rx, n.y, rw, NAV_H);
+            if (hov) tipNav = n;
             n.hover = Anim.to(n.hover, hov ? 1 : 0, dt);
-            if (!on && n.hover > 0.01f) d.round(nx + 3, n.y, nw - 6, NAV_H, 6, Colors.mulAlpha(Theme.HOVER, n.hover * 1.4f));
-            int c = on ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, n.hover);
-            d.icon(n.icon, nx + 12, n.y + (NAV_H - ICON) / 2, ICON, c);
-            if (n.labelScale < 1f) {
-                // длинное название («Производительность») чуть уменьшаем, чтобы не наезжало на счётчик
-                d.textScaled(n.label, Fonts.Kind.TEXT, nx + 28, Draw.textY(n.y, NAV_H) + Math.round(Theme.FONT_H * (1f - n.labelScale) / 2f), n.labelScale, c);
-            } else d.text(n.label, nx + 28, Draw.textY(n.y, NAV_H), c);
-            String count = navCount(n);
-            if (!count.isEmpty()) d.textRight(count, nx + nw - 11, Draw.textY(n.y, NAV_H), Theme.TEXT_MUTED);
+            if (!on && n.hover > 0.01f) d.round(cx - (rw - 10) / 2, n.y, rw - 10, NAV_H, (rw - 10) / 2, Colors.mulAlpha(Theme.HOVER, n.hover * 1.6f));
+            int c = on ? (Theme.isLight() ? Theme.TEXT : 0xFFFFFFFF) : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, n.hover);
+            int is = 11;
+            d.icon(n.icon, cx - is / 2, n.y + (NAV_H - is) / 2, is, c);
         }
         drawProfile(mx, my, dt);
     }
 
+    /** Подпись пункта рельса: стеклянная «пилюля» справа от капсулы, плавно проявляется. */
+    private void drawNavTip() {
+        Nav n = tipNav;
+        if (n == null || n.hover < 0.02f) return;
+        String label = n.label;
+        String count = navCount(n);
+        if (!count.isEmpty()) label += "  " + count;
+        int tw = d.width(label) + 20, th = 20;
+        int tx = railX() + Theme.RAIL_W + 8 - Math.round(6 * (1 - n.hover)), ty = n.y + (NAV_H - th) / 2;
+        d.g.nextStratum();
+        d.shadow(tx, ty + 3, tw, th, th / 2, 10f, Colors.mulAlpha(Theme.SHADOW, n.hover));
+        d.glass(tx, ty, tw, th, th / 2, Colors.mulAlpha(Theme.isLight() ? 0xF0FFFFFF : 0xE81A1A20, n.hover), n.hover);
+        d.text(label, tx + 10, Draw.textY(ty, th), Colors.mulAlpha(Theme.TEXT, n.hover));
+    }
+
     private String navCount(Nav n) {
-        if (n.kind == NavKind.FAVORITES) return favs.isEmpty() ? "" : Integer.toString(favs.size());
-        if (n.kind != NavKind.CATEGORY || n.category == Category.CONFIGS || n.category == Category.CLIENT) return "";
+        // строка счётчика пересобирается не чаще 4 раз в секунду, а не каждый кадр
+        long now = System.nanoTime();
+        if (n.count != null && now - n.countAt < 250_000_000L) return n.count;
+        n.countAt = now;
+        if (n.kind == NavKind.FAVORITES) return n.count = favs.isEmpty() ? "" : Integer.toString(favs.size());
+        if (n.kind != NavKind.CATEGORY || n.category == Category.CONFIGS || n.category == Category.CLIENT) return n.count = "";
         int on = 0, all = 0;
         for (Module m : mm.in(n.category)) {
             all++;
             if (m.isEnabled() && !m.alwaysOn()) on++;
         }
-        return on + "/" + all;
+        String s = on + "/" + all;
+        return n.count = s.equals(n.count) ? n.count : s;
     }
 
     private void drawProfile(double mx, double my, float dt) {
-        int px = wx + 12, py = profileY(), pw = Theme.SIDEBAR_W - 18, ph = 40;
-        d.glass(px, py, pw, ph, 8, Theme.GLASS_ACTIVE & 0x80FFFFFF, 0.9f);
-        drawAvatar(px + 9, py + 9, 22);
-        String name = minecraft.getUser().getName();
-        d.text(Draw.ellipsize(name, pw - 70), Fonts.Kind.BOLD, px + 37, py + 10, Theme.TEXT);
-        String server = minecraft.getCurrentServer() != null ? minecraft.getCurrentServer().ip
-                : minecraft.level != null ? "Одиночная игра" : "В меню";
-        d.text(Draw.ellipsize(server, pw - 70), px + 37, py + 22, Theme.TEXT_MUTED);
+        // аватар внизу капсулы: круглый, со стеклянным ободком
+        int cx = railCx(), py = profileY();
+        int as = 28;
+        d.shadow(cx - as / 2, py + 2, as, as, 9, 8f, Theme.SHADOW);
+        drawAvatar(cx - as / 2 + 3, py + 3, as - 6);
+        d.rim(cx - as / 2, py, as, as, 9, 0x66FFFFFF, 0x1AFFFFFF);
         // переключатель темы: солнце / луна
         int tx = themeX(), ty = themeY();
         boolean hov = Widget.hit(mx, my, tx, ty, 18, 18);
         themeHover = Anim.to(themeHover, hov ? 1 : 0, dt);
-        d.glass(tx, ty, 18, 18, 6, Colors.withAlpha(Theme.isLight() ? 0xFFFFFF : 0xFFFFFF, Math.round((Theme.isLight() ? 160 : 18) + 30 * themeHover)), 0.8f);
-        int ic = Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, themeHover);
+        if (themeHover > 0.01f) d.round(tx - 2, ty - 2, 22, 22, 11, Colors.mulAlpha(Theme.HOVER, themeHover * 1.6f));
+        int ic = Colors.lerp(Theme.TEXT_MUTED, Theme.TEXT, themeHover);
         if (Theme.isLight()) {
             d.icon(Icons.SUN, tx + 4, ty + 4, 10, ic);
         } else {
             d.disc(tx + 9f, ty + 9f, 4.5f, ic);
-            d.disc(tx + 11f, ty + 7.2f, 3.8f, 0xFF1A1A1C);
+            d.disc(tx + 11f, ty + 7.2f, 3.8f, 0xFF15151A);
         }
     }
 
@@ -687,23 +716,27 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         return category == Category.CLIENT ? "Настройки клиента" : category == Category.CONFIGS ? "Конфиги" : category.title;
     }
 
-    private void drawTopBar(double mx, double my, long now) {
-        int x = cX() + 16;
-        d.textScaled(title(), Fonts.Kind.HEAD, x, wy + 11, 1.25f, Theme.TEXT);
-        String sub = configsMode() ? "Профили настроек: сохранить, поделиться, загрузить" : !search.isEmpty() && list.isEmpty() ? "Ничего не найдено" : subtitle;
-        d.text(sub, x, wy + 26, Theme.TEXT_MUTED);
+    private float searchGlow;
 
-        int sx = searchX(), sy = searchY(), sw = Theme.SEARCH_W, sh = 22;
+    private void drawTopBar(double mx, double my, long now) {
+        int x = cX() + 14;
+        d.textScaled(title(), Fonts.Kind.HEAD, x, wy + 15, 1.5f, Theme.TEXT);
+        String sub = configsMode() ? "Профили настроек: сохранить, поделиться, загрузить" : !search.isEmpty() && list.isEmpty() ? "Ничего не найдено" : subtitle;
+        d.text(sub, x, wy + 33, Theme.TEXT_DIM);
+
+        // поиск — стеклянная капсула; в фокусе кромка подсвечивается акцентом
+        int sx = searchX(), sy = searchY(), sw = Theme.SEARCH_W, sh = 24;
         boolean hov = Widget.hit(mx, my, sx, sy, sw, sh);
-        glassPanel(sx, sy, sw, sh, 8, searchFocused || hov ? Theme.GLASS_CARD + 0x10000000 : Theme.GLASS_CARD, searchFocused ? 1.4f : 1f, 0);
-        d.icon(Icons.SEARCH, sx + 8, sy + (sh - 8) / 2, 8, Theme.TEXT_MUTED);
+        searchGlow = Anim.to(searchGlow, searchFocused ? 1 : hov ? 0.4f : 0, 1f / 60f);
+        d.glass(sx, sy, sw, sh, sh / 2, Colors.lerp(Theme.GLASS_CARD, Theme.GLASS_ACTIVE, searchGlow * 0.6f), 1f + 0.4f * searchGlow);
+        if (searchGlow > 0.01f) d.rim(sx, sy, sw, sh, sh / 2, Colors.withAlpha(Theme.accent(), Math.round(150 * searchGlow)), Colors.withAlpha(Theme.accent(), Math.round(60 * searchGlow)));
+        d.icon(Icons.SEARCH, sx + 10, sy + (sh - 8) / 2, 8, Theme.TEXT_MUTED);
         int ty = Draw.textY(sy, sh);
-        if (!search.isEmpty()) d.text(searchView, sx + 21, ty, Theme.TEXT);
-        else d.text("Поиск модулей…", sx + 21, ty, Theme.TEXT_MUTED);
+        if (!search.isEmpty()) d.text(searchView, sx + 24, ty, Theme.TEXT);
+        else d.text("Поиск по функциям", sx + 24, ty, Theme.TEXT_MUTED);
         if (searchFocused && (now / 500_000_000L & 1) == 0) {
-            d.rect(sx + 21 + (search.isEmpty() ? 0 : d.width(searchView)) + 1, sy + 7, 1, 8, Theme.TEXT);
+            d.rect(sx + 24 + (search.isEmpty() ? 0 : d.width(searchView)) + 1, sy + 8, 1, 8, Theme.accent());
         }
-        d.hLine(cX() + 12, wy + Theme.TOPBAR_H, cW() - 24, Colors.withAlpha(Theme.isLight() ? 0x000000 : 0xFFFFFF, 0x14));
     }
 
     // ── карточки модулей ─────────────────────────────────────
@@ -738,6 +771,9 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         for (int i = 0; i < cards.size(); i++) {
             Card c = cards.get(i);
             if (c.y > bottom || c.y + c.h < top) continue;
+            // каждая карточка — свой слой GUI: ванильный поиск пересечений (O(n²) от числа элементов)
+            // перебирает только элементы этой карточки, а не всего окна
+            d.g.nextStratum();
             // карточки въезжают снизу по очереди при смене вкладки
             float ci = Math.max(0f, Math.min(1f, contentT * 1.8f - Math.min(i, 12) * 0.07f));
             float off = (1f - ease(ci)) * 18f;
@@ -761,21 +797,46 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     }
 
     /** Панель превью: стекло, подпись, модель (крутится мышкой). Во время анимации окна модель не рисуем — она вне масштаба окна. */
+    private float resetHover;
+
+    private int resetW() { return d.width("Сбросить ракурс") + 20; }
+    private int resetX() { return previewX() + (PREVIEW_W - resetW()) / 2; }
+    private int resetY() { return previewY() + previewH() - 28; }
+
     private void drawPreview(double mx, double my, float dt) {
         int x = previewX(), y = previewY(), w = PREVIEW_W, h = previewH();
+        // мягкое пятно света за моделью — «подиум»
         glassPanel(x, y, w, h, CARD_R + 2, Theme.GLASS_CARD, 1.1f, 0);
-        d.textScaled("ПРЕВЬЮ", Fonts.Kind.HEAD, x + 10, y + 9, 0.72f, Theme.TEXT_MUTED);
+        d.shadow(x + w / 2 - 34, y + h - 62, 68, 10, 5, 10f, 0x40000000);
+        d.textScaled("ПРЕВЬЮ", Fonts.Kind.HEAD, x + 12, y + 11, 0.72f, Theme.TEXT_MUTED);
         boolean steady = openT >= 1f && !closing;
-        if (!preview.render(d.g, k, x + 4, y + 18, w - 8, h - 36, steady, dt)) {
+        if (!preview.render(d.g, k, x + 4, y + 20, w - 8, h - 54, steady, dt)) {
             d.textCenter("Зайдите в мир —", x + w / 2, y + h / 2 - 10, Theme.TEXT_MUTED);
             d.textCenter("здесь будет ваша модель", x + w / 2, y + h / 2 + 2, Theme.TEXT_MUTED);
         }
-        boolean hov = Widget.hit(mx, my, x, y, w, h);
-        d.textCenter(previewDrag ? "Отпустите" : hov ? "Тяните, чтобы повернуть" : "Мечи, крылья, питомец",
-                x + w / 2, y + h - 14, Theme.TEXT_MUTED);
+        if (preview.turned()) {
+            int bx = resetX(), by = resetY(), bw = resetW(), bh = 18;
+            boolean hb = Widget.hit(mx, my, bx, by, bw, bh);
+            resetHover = Anim.to(resetHover, hb ? 1 : 0, dt);
+            d.glass(bx, by, bw, bh, bh / 2, Colors.lerp(Theme.GLASS_CARD, Theme.GLASS_ACTIVE, resetHover), 1f);
+            d.textCenter("Сбросить ракурс", bx + bw / 2, Draw.textY(by, bh), Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, resetHover));
+        } else {
+            boolean hov = Widget.hit(mx, my, x, y, w, h);
+            d.textCenter(hov ? "Тяните, чтобы повернуть" : "Оружие, крылья, питомец", x + w / 2, y + h - 22, Theme.TEXT_MUTED);
+        }
     }
 
-    private int toggleX(Card c) { return c.x + c.w - 12 - Theme.SWITCH_W - 4; }
+    /** Dev-стенд: раскрыть карточку модуля из сценария. */
+    public void harnessReveal(String id) {
+        reveal(mm.find(id));
+    }
+
+    /** Dev-стенд: ракурс превью из сценария. */
+    public void harnessPreview(float yaw) {
+        preview.setYaw(yaw);
+    }
+
+    private int toggleX(Card c) { return c.x + c.w - 14 - Theme.SWITCH_W; }
     private int starX(Card c) { return toggleX(c) - 18; }
 
     private void drawCard(Card c, double mx, double my, float dt) {
@@ -787,19 +848,23 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         c.star = Anim.to(c.star, fav ? 1 : hovHead ? 0.6f : 0, dt);
 
         int tint = Theme.GLASS_CARD;
-        if (c.hover > 0.01f) tint = Colors.lerp(tint, Theme.isLight() ? 0xCCFFFFFF : 0x8C1C1C20, c.hover * 0.8f);
-        glassPanel(c.x, c.y, c.w, c.h, CARD_R + 2, tint, c.open ? 1.5f : 0.9f + 0.4f * c.hover, -Math.round(contentScroll));
-
-        // иконка
-        int tile = TILE, tx = c.x + 9, ty = c.y + (CARD_HEAD - tile) / 2;
+        if (c.hover > 0.01f) tint = Colors.lerp(tint, Theme.GLASS_ACTIVE, c.hover * 0.55f);
         boolean on = m.isEnabled() && !m.alwaysOn();
-        if (on) d.glass(tx, ty, tile, tile, 7, Theme.TEXT, 0.6f);
-        else d.glass(tx, ty, tile, tile, 7, Theme.isLight() ? 0x14000000 : 0x14FFFFFF, 0.8f);
-        int iconColor = on ? (Theme.isLight() ? 0xFFFAFAFA : 0xFF0A0A0A) : Theme.TEXT_DIM;
-        d.icon(Icons.forModule(m.id, Icons.forCategory(m.category)), tx + 5, ty + 5, 10, iconColor);
+        // наведение: карточка чуть «приподнимается» — мягкая тень и сильнее блик
+        if (c.hover > 0.01f) d.shadow(c.x + 2, c.y + 4, c.w - 4, c.h, CARD_R, 12f, Colors.mulAlpha(Theme.SHADOW, 0.6f * c.hover));
+        glassPanel(c.x, c.y, c.w, c.h, CARD_R, tint, c.open ? 1.4f : 0.9f + 0.5f * c.hover, -Math.round(contentScroll));
+        // включённый модуль: тонкое свечение акцентом по кромке
+        if (c.tog > 0.01f && !m.alwaysOn()) d.rim(c.x, c.y, c.w, c.h, CARD_R, Colors.withAlpha(Theme.accent(), Math.round(110 * c.tog)), Colors.withAlpha(Theme.accent(), Math.round(25 * c.tog)));
 
-        d.text(m.name, Fonts.Kind.BOLD, c.x + 37, c.y + 9, Theme.TEXT);
-        d.text(c.desc, c.x + 37, c.y + 21, Theme.TEXT_MUTED);
+        // иконка: стеклянная плитка, у включённого — тонированная акцентом
+        int tile = TILE + 4, tx = c.x + 10, ty = c.y + (CARD_HEAD - tile) / 2;
+        int tileTint = Colors.lerp(Theme.isLight() ? 0x10000000 : 0x12FFFFFF, Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0xD8 : 0x55), c.tog);
+        d.glass(tx, ty, tile, tile, 8, tileTint, 0.9f);
+        int iconColor = Colors.lerp(Theme.TEXT_DIM, Theme.isLight() ? 0xFFFFFFFF : 0xFFFFFFFF, c.tog);
+        d.icon(Icons.forModule(m.id, Icons.forCategory(m.category)), tx + 7, ty + 7, 10, iconColor);
+
+        d.text(m.name, Fonts.Kind.BOLD, c.x + 42, c.y + 10, Theme.TEXT);
+        d.text(c.desc, c.x + 42, c.y + 22, Theme.TEXT_DIM);
 
         // справа: клавиша, звезда, тумблер
         if (!m.alwaysOn()) d.toggle(toggleX(c), c.y + (CARD_HEAD - Theme.SWITCH_H) / 2, c.tog);
@@ -836,6 +901,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     // ── подсказки снизу ──────────────────────────────────────
 
     private void drawHints() {
+        if (HINT_H <= 0) return; // минимализм: подсказки убраны, всё понятно по интерфейсу
         int y = wy + wh - HINT_H;
         glassPanel(cX() + 6, y - 2, cW() - 12, HINT_H - 4, 7, Theme.GLASS_PANEL, 0.7f, 0);
         int ty = Draw.textY(y - 2, HINT_H - 4);
@@ -900,12 +966,12 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         // боковая панель
         if (mx < wx + Theme.SIDEBAR_W) {
             searchFocused = false;
-            if (Widget.hit(mx, my, themeX(), themeY(), 18, 18)) {
+            if (Widget.hit(mx, my, themeX() - 2, themeY() - 2, 22, 22)) {
                 cs.theme.set(cs.theme.getId().equals("light") ? 0 : 1);
                 return true;
             }
             for (Nav n : nav) {
-                if (!Widget.hit(mx, my, wx + 8, n.y, Theme.SIDEBAR_W - 16, NAV_H)) continue;
+                if (!Widget.hit(mx, my, railX(), n.y, Theme.RAIL_W, NAV_H)) continue;
                 switch (n.kind) {
                     case CATEGORY -> selectCategory(n.category);
                     case FAVORITES -> showFavorites();
@@ -933,6 +999,10 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             return true;
         }
         if (previewMode() && Widget.hit(mx, my, previewX(), previewY(), PREVIEW_W, previewH())) {
+            if (b == 0 && preview.turned() && Widget.hit(mx, my, resetX(), resetY(), resetW(), 18)) {
+                preview.reset();
+                return true;
+            }
             if (b == 0) {
                 previewDrag = true;
                 preview.dragStart(mx);

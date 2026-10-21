@@ -21,8 +21,8 @@ import net.minecraft.client.player.LocalPlayer;
  */
 public final class Pets extends Module implements WorldLayer {
     final EnumSetting kind = add(new EnumSetting("kind", "Питомец", 0,
-            "dragon", "Дракончик", "cat", "Призрачный котик", "fox", "Огненный лис", "slime", "Летающий слизень",
-            "drone", "Робот-дрон", "jelly", "Звёздная медуза"));
+            "dragon", "Мини-дракончик", "cat", "Котик-призрак", "fox", "Стеклянный лис", "owl", "Совёнок",
+            "drone", "Дрон-светлячок", "jelly", "Парящая медуза").alias("slime", "owl"));
     final EnumSetting colorMode = add(new EnumSetting("color_mode", "Цвет", 0, "preset", "Как у питомца", "solid", "Один", "gradient", "Градиент", "rainbow", "Радуга"));
     final ColorSetting color = add(new ColorSetting("color", "Цвет 1", 0xFFB8B4F2));
     final ColorSetting color2 = add(new ColorSetting("color2", "Цвет 2", 0xFF7FD8FF));
@@ -41,9 +41,11 @@ public final class Pets extends Module implements WorldLayer {
     private float moving;     // 0..1 — насколько питомец сейчас движется
     private double s;         // масштаб
     private double cyaw;      // для перевода локальных координат
+    private float special = -1, nextSpecial; // особая анимация: −1 — нет, 0..1 — идёт
+    private final net.minecraft.core.BlockPos.MutableBlockPos bp = new net.minecraft.core.BlockPos.MutableBlockPos();
 
     public Pets() {
-        super("pets", "Pets", "Милые питомцы: дракончик, котик, лис, слизень, дрон, медуза.", Category.PETS);
+        super("pets", "Pets", "Свои питомцы: дракончик, котик-призрак, стеклянный лис, совёнок, дрон, медуза.", Category.PETS);
         instance = this;
     }
 
@@ -74,7 +76,17 @@ public final class Pets extends Module implements WorldLayer {
         float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
         last = now;
         t += dt * speed.getF();
-        s = 0.9 * size.get();
+        s = 1.2 * size.get();
+        // редкие «особые» анимации раз в 15–40 секунд (дракончик выдыхает искры, котик тает, совёнок крутит головой…)
+        if (nextSpecial == 0) nextSpecial = t + 15 + (float) Math.random() * 25;
+        if (special < 0 && t > nextSpecial) special = 0;
+        if (special >= 0) {
+            special += dt / 1.8f;
+            if (special >= 1f) {
+                special = -1;
+                nextSpecial = t + 15 + (float) Math.random() * 25;
+            }
+        }
 
         double ex = p.xo + (p.getX() - p.xo) * pt, ey = p.yo + (p.getY() - p.yo) * pt, ez = p.zo + (p.getZ() - p.zo) * pt;
         double pyaw = Math.toRadians(p.getYRot());
@@ -84,6 +96,14 @@ public final class Pets extends Module implements WorldLayer {
         boolean walker = kind.getId().equals("fox");
         double tx = ex + rx * off * 0.95 - fx * back, tz = ez + rz * off * 0.95 - fz * back;
         double ty = walker && p.onGround() ? ey + 0.11 * s : ey + 1.35 + Math.sin(t * 1.7) * 0.08;
+        // не застревать в стенах: если точка в блоке — поднимаемся над ним
+        if (!walker && mc.level != null) {
+            for (int k = 0; k < 3; k++) {
+                bp.set(Math.floor(tx), Math.floor(ty), Math.floor(tz));
+                if (!mc.level.getBlockState(bp).isSolidRender()) break;
+                ty += 1;
+            }
+        }
         if (!placed) {
             x = tx; y = ty; z = tz; yaw = -pyaw;
             vx = vy = vz = 0;
@@ -96,7 +116,15 @@ public final class Pets extends Module implements WorldLayer {
         vz += ((tz - z) * stiff - vz * damp) * dt;
         x += vx * dt; y += vy * dt; z += vz * dt;
         // если отстал (телепорт) — сразу рядом
-        if ((tx - x) * (tx - x) + (tz - z) * (tz - z) > 64) { x = tx; y = ty; z = tz; vx = vy = vz = 0; }
+        if ((tx - x) * (tx - x) + (tz - z) * (tz - z) > 64) {
+            // далеко отстал (телепорт) — мягко «появляется» рядом: вспышка искр
+            x = tx; y = ty; z = tz; vx = vy = vz = 0;
+            for (int i = 0; i < 14; i++) {
+                double a = i * 0.45, r = 0.6 + Math.random() * 0.8;
+                dev.mraz1visual.render.FxParticles.spawn(x, y, z, Math.cos(a) * r, (Math.random() - 0.3) * 0.8, Math.sin(a) * r,
+                        0.5f + (float) Math.random() * 0.3f, 0.04f, main(glowPreset(), i / 14f) | 0xFF000000, 0f, true);
+            }
+        }
 
         double hv = Math.sqrt(vx * vx + vz * vz);
         moving += ((hv > 0.4 ? 1f : 0f) - moving) * Math.min(1f, dt * 5f);
@@ -132,9 +160,9 @@ public final class Pets extends Module implements WorldLayer {
         double sx = x, sy = y, sz = z, sc = cyaw, ss = s;
         float sm = moving;
         try {
-            s = 0.9 * size.get();
+            s = 1.2 * size.get();
             // у правого плеча, чуть впереди: в узкой панели превью не обрезается краем
-            x = 0.46; y = 0.16 + Math.sin(t * 1.7) * 0.04; z = -0.12;
+            x = 0.40; y = 0.10 + Math.sin(t * 1.7) * 0.04; z = -0.20;
             cyaw = Math.PI - 0.45;
             moving = 0;
             drawPet(d);
@@ -152,7 +180,7 @@ public final class Pets extends Module implements WorldLayer {
         switch (kind.getId()) {
             case "cat" -> cat(d);
             case "fox" -> fox(d);
-            case "slime" -> slime(d);
+            case "owl" -> owl(d);
             case "drone" -> drone(d);
             case "jelly" -> jelly(d);
             default -> dragon(d);
@@ -162,8 +190,8 @@ public final class Pets extends Module implements WorldLayer {
     private int glowPreset() {
         return switch (kind.getId()) {
             case "cat" -> 0xFFB8D8FF;
-            case "fox" -> 0xFFFF8A3A;
-            case "slime" -> 0xFF7BE07A;
+            case "fox" -> 0xFF9FE6FF;
+            case "owl" -> 0xFFF6D9A8;
             case "drone" -> 0xFF4FD8FF;
             case "jelly" -> 0xFFFF8AD8;
             default -> 0xFF5FD49A;
@@ -230,12 +258,24 @@ public final class Pets extends Module implements WorldLayer {
             part(d, sway, bob - 0.01 - i * 0.03, -0.18 - i * 0.085, w, w * 0.85, 0.05, i == 3 ? horn : body, 0.25, 0, sway * 2);
         }
         for (int i = 0; i < 4; i++) part(d, (i % 2 == 0 ? -1 : 1) * 0.07, bob - 0.1, (i < 2 ? 1 : -1) * 0.08, 0.025, 0.025, 0.03, body);
+        if (special >= 0 && special < 0.6f) {
+            // выдыхает облачко искр из пасти
+            d.glowBegin();
+            for (int i = 0; i < 9; i++) {
+                float f = (special / 0.6f + i / 9f) % 1f;
+                double jx = Math.sin(look) * 0.12 + Math.sin(i * 2.1) * 0.04 * f, jy = hy - 0.03 + Math.cos(i * 1.3) * 0.04 * f, jz = hz + 0.16 + f * 0.25;
+                d.billboardDot(wx(jx, jy, jz), wy(jx, jy, jz), wz(jx, jy, jz), 0.03 * s * (1 - f * 0.5),
+                        Colors.withAlpha(Colors.lerp(0xFFFFF4C8, 0xFFFFB067, f), Math.round(200 * (1 - f))), 8);
+            }
+            d.glowEnd();
+        }
     }
 
     // ── призрачный котик ─────────────────────────────────────
 
     private void cat(WorldDraw d) {
-        int body = Colors.mulAlpha(main(0xFFE6E2FF, 0f), 0.62f), ear = Colors.mulAlpha(main(0xFFC8C0FF, 0.3f), 0.7f);
+        float fade = special >= 0 ? 1f - 0.85f * (float) Math.sin(Math.PI * special) : 1f;
+        int body = Colors.mulAlpha(main(0xFFE6E2FF, 0f), 0.62f * fade), ear = Colors.mulAlpha(main(0xFFC8C0FF, 0.3f), 0.7f * fade);
         double bob = Math.sin(t * 2.2) * 0.03;
         part(d, 0, bob, 0, 0.1, 0.075, 0.14, body);
         double look = Math.sin(t * 0.6) * 0.4 * (1 - moving);
@@ -258,65 +298,76 @@ public final class Pets extends Module implements WorldLayer {
         d.glowEnd();
     }
 
-    // ── огненный лис ─────────────────────────────────────────
+    // ── стеклянный лис: полупрозрачное тело, внутренний свет, хвост — шлейф света ──
 
     private void fox(WorldDraw d) {
-        int fur = main(0xFFFF8A3A, 0f), white = fin(0xFFFFF4E6), dark = fin(0xFF2A1A14);
+        int glass = Colors.mulAlpha(main(0xFFCFEFFF, 0f), 0.42f), rim = Colors.mulAlpha(main(0xFFEAF8FF, 0.2f), 0.55f), dark = fin(0xFF1A2A3A);
         double step = Math.sin(t * 10) * moving;
         double bob = Math.abs(step) * 0.02;
-        part(d, 0, bob, 0, 0.1, 0.075, 0.15, fur);
-        part(d, 0, bob - 0.01, 0.13, 0.07, 0.06, 0.03, white);
-        double look = Math.sin(t * 0.8) * 0.35 * (1 - moving);
-        part(d, 0, bob + 0.08, 0.17, 0.085, 0.07, 0.07, fur, 0, 0, look);
-        part(d, Math.sin(look) * 0.08, bob + 0.055, 0.25, 0.04, 0.03, 0.045, white, 0, 0, look);
+        // особая анимация: кружится на месте
+        float spin = special >= 0 ? (float) (smooth(special) * Math.PI * 2) : 0f;
+        double look = Math.sin(t * 0.8) * 0.35 * (1 - moving) + spin;
+        part(d, 0, bob, 0, 0.1, 0.075, 0.15, glass, 0, 0, spin);
+        part(d, 0, bob + 0.08, 0.17, 0.085, 0.07, 0.07, glass, 0, 0, look);
+        part(d, Math.sin(look) * 0.08, bob + 0.055, 0.25, 0.04, 0.03, 0.045, rim, 0, 0, look);
         part(d, Math.sin(look) * 0.12, bob + 0.065, 0.296, 0.012, 0.01, 0.006, dark, 0, 0, look);
-        for (int sd = -1; sd <= 1; sd += 2) {
-            part(d, sd * 0.05, bob + 0.16, 0.16, 0.026, 0.04, 0.012, fur, 0, sd * -0.15, look);
-            part(d, sd * 0.05, bob + 0.2, 0.16, 0.012, 0.012, 0.013, dark, 0, sd * -0.15, look);
-        }
-        eyes(d, 0.042, bob + 0.095, 0.241, 0.014, false, 0);
-        // лапы шагают
+        for (int sd = -1; sd <= 1; sd += 2) part(d, sd * 0.05, bob + 0.16, 0.16, 0.026, 0.04, 0.012, rim, 0, sd * -0.15, look);
+        eyes(d, 0.042, bob + 0.095, 0.241, 0.014, true, main(0xFF9FE6FF, 0.4f));
         for (int i = 0; i < 4; i++) {
             double sw = (i == 0 || i == 3 ? step : -step) * 0.03;
-            part(d, (i % 2 == 0 ? -1 : 1) * 0.06, bob - 0.1, (i < 2 ? 1 : -1) * 0.09 + sw, 0.022, 0.035, 0.022, dark);
-        }
-        // пышный хвост с огненным кончиком
-        double tipX = 0, tipY = 0, tipZ = 0;
-        for (int i = 0; i < 4; i++) {
-            double sway = Math.sin(t * 2.4 - i * 0.6) * 0.03 * (i + 1);
-            double w = 0.05 + (i == 2 ? 0.02 : 0.01);
-            double ly = bob + 0.02 + i * 0.03, lz = -0.17 - i * 0.075;
-            part(d, sway, ly, lz, w, w, 0.05, i == 3 ? white : fur, -0.35, 0, sway * 2);
-            tipX = sway; tipY = ly + 0.04; tipZ = lz - 0.04;
+            part(d, (i % 2 == 0 ? -1 : 1) * 0.06, bob - 0.1, (i < 2 ? 1 : -1) * 0.09 + sw, 0.022, 0.035, 0.022, glass);
         }
         d.glowBegin();
-        for (int i = 0; i < 7; i++) {
-            float f = (t * 1.4f + i / 7f) % 1f;
-            double jx = tipX + Math.sin(i * 2.3 + t * 3) * 0.02, jy = tipY + f * 0.16, jz = tipZ + Math.cos(i * 1.9) * 0.02;
-            int c = Colors.lerp(0xFFFFF0B0, main(0xFFFF5A1A, f), f);
-            d.billboardDot(wx(jx, jy, jz), wy(jx, jy, jz), wz(jx, jy, jz), 0.045 * s * (1 - f * 0.7),
-                    Colors.withAlpha(c, Math.round(170 * (1 - f) * opacity.getF() / 100f)), 8);
+        // внутренний свет: мягкое ядро в груди «дышит»
+        float br = 0.7f + 0.3f * (float) Math.sin(t * 2.2);
+        d.billboardDot(wx(0, bob + 0.02, 0.05), wy(0, bob + 0.02, 0.05), wz(0, bob + 0.02, 0.05), 0.12 * s,
+                Colors.withAlpha(main(0xFF9FE6FF, 0.3f), Math.round(110 * br)), 12);
+        // хвост — шлейф света: цепочка огоньков, тает к концу
+        for (int i = 0; i < 10; i++) {
+            float f = i / 9f;
+            double sway = Math.sin(t * 2.4 - i * 0.5) * 0.05 * (0.4 + f);
+            double ly = bob + 0.03 + f * 0.1 + Math.sin(t * 1.8 + i) * 0.01, lz = -0.17 - f * 0.32;
+            d.billboardDot(wx(sway, ly, lz), wy(sway, ly, lz), wz(sway, ly, lz), (0.06 - 0.03 * f) * s,
+                    Colors.withAlpha(main(Colors.lerp(0xFFF2FBFF, 0xFF7FD3FF, f), f), Math.round(200 * (1 - f * 0.75f) * opacity.getF() / 100f)), 10);
         }
         d.glowEnd();
     }
 
-    // ── летающий слизень ─────────────────────────────────────
+    // ── совёнок: пушистый, большая голова поворачивается к камере, моргает ──
 
-    private void slime(WorldDraw d) {
-        double sq = Math.sin(t * 4) * 0.12;
-        double hy = 0.12 * (1 + sq), hx = 0.12 * (1 - sq * 0.5);
-        int shell = Colors.mulAlpha(main(0xFF7BE07A, 0f), 0.55f), core = main(0xFF3FA84A, 0.4f);
-        part(d, 0, 0, 0, hx * 0.55, hy * 0.55, hx * 0.55, core);
-        eyes(d, 0.045, 0.03 * (1 + sq), hx + 0.002, 0.02, false, 0);
-        part(d, 0, -0.03 * (1 + sq), hx + 0.002, 0.03, 0.008, 0.004, fin(0xFF14141A));
-        part(d, 0, 0, 0, hx, hy, hx, shell);
-        double flap = Math.sin(t * 14) * 0.6;
+    private void owl(WorldDraw d) {
+        int fluff = main(0xFFC8A27A, 0f), belly = fin(0xFFF3E2C6), face = fin(0xFFFFF4E2), dark = fin(0xFF2A2018), beak = fin(0xFFF2B54A);
+        double bob = Math.sin(t * 2.0) * 0.02;
+        // голова — к камере (как будто смотрит на тебя); особая анимация — полный оборот головы
+        var cam = Minecraft.getInstance().gameRenderer.getMainCamera().position();
+        double toCam = Math.atan2(cam.x - x, cam.z - z);
+        double look = Math.atan2(Math.sin(toCam - cyaw), Math.cos(toCam - cyaw));
+        look = Math.max(-1.2, Math.min(1.2, look)) + (special >= 0 ? Math.PI * 2 * smooth(special) : 0);
+        part(d, 0, bob, 0, 0.1, 0.11, 0.09, fluff);
+        part(d, 0, bob - 0.01, 0.06, 0.075, 0.085, 0.04, belly);
+        double hy = bob + 0.16;
+        part(d, 0, hy, 0.01, 0.105, 0.085, 0.095, fluff, 0, 0, look);
+        part(d, Math.sin(look) * 0.09, hy - 0.005, Math.cos(look) * 0.09, 0.085, 0.065, 0.012, face, 0, 0, look);
+        for (int sd = -1; sd <= 1; sd += 2) part(d, sd * 0.07, hy + 0.09, 0.0, 0.02, 0.035, 0.015, fluff, 0, sd * -0.35, look);
+        // большие глаза — под поворот головы
+        double ex = 0.038, ez = 0.106;
+        double cx = Math.sin(look) * ez, cz = Math.cos(look) * ez;
+        float blink = (t % 3.7f) < 0.14f ? 0.12f : 1f;
         for (int sd = -1; sd <= 1; sd += 2) {
-            sh.orient(cyaw, 0, sd * (0.3 + flap));
-            double px = wx(sd * hx, 0.05, -0.02), py = wy(sd * hx, 0.05, -0.02), pz = wz(sd * hx, 0.05, -0.02);
-            sh.plate(d, px + sh.ox(sd * 0.07 * s, 0, 0), py + sh.oy(sd * 0.07 * s, 0, 0), pz + sh.oz(sd * 0.07 * s, 0, 0),
-                    0.07 * s, 0.05 * s, fin(0xD0FFFFFF));
+            double lx = cx + Math.cos(look) * sd * ex, lz = cz - Math.sin(look) * sd * ex;
+            part(d, lx, hy, lz, 0.026, 0.026 * blink, 0.006, fin(0xFFFFE9A8), 0, 0, look);
+            part(d, lx, hy, lz + 0.002, 0.014, 0.014 * blink, 0.006, dark, 0, 0, look);
         }
+        part(d, cx, hy - 0.035, cz + 0.004, 0.012, 0.018, 0.01, beak, 0, 0, look);
+        // крылышки слегка шевелятся, на ходу — машут
+        double flap = Math.sin(t * (3 + moving * 9)) * (0.15 + moving * 0.5);
+        for (int sd = -1; sd <= 1; sd += 2) part(d, sd * 0.11, bob, -0.01, 0.02, 0.085, 0.07, Colors.shade(fluff, 0.85f), 0, sd * (0.15 + flap), 0);
+        part(d, -0.035, bob - 0.12, 0.03, 0.02, 0.01, 0.025, beak);
+        part(d, 0.035, bob - 0.12, 0.03, 0.02, 0.01, 0.025, beak);
+    }
+
+    private static double smooth(float x) {
+        return x * x * (3 - 2 * x);
     }
 
     // ── робот-дрон ───────────────────────────────────────────

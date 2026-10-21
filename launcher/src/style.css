@@ -206,3 +206,60 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px;
 header, .view, #status, #disc { z-index: 4; }
 #app.entering .view.active { transition-delay: .55s; }
 #app.entering #status { transition: opacity .6s .75s; }
+
+/* ── Liquid Glass: тот же стиль, что у GUI клиента (тёмное стекло, один акцент, скругления, мягкие тени) ── */
+:root {
+  --accent: #5ac8fa;
+  --lav: #e9f6ff;
+  --lav-dim: #a9b8c6;
+  --cream: #e9f6ff;
+  --glass: rgba(16,18,26,.46);
+  --glass-hi: rgba(255,255,255,.07);
+  --edge-top: rgba(255,255,255,.22);
+  --edge-bottom: rgba(255,255,255,.05);
+  --radius: 16px;
+  --ease: cubic-bezier(.22,.9,.24,1);
+}
+.play { background: linear-gradient(180deg, #ffffff 0%, #cfeeff 100%); -webkit-background-clip: text; color: transparent; transition: transform .35s var(--ease), filter .35s var(--ease); }
+.play:hover { transform: translateX(4px) scale(1.01); filter: drop-shadow(0 0 22px rgba(90,200,250,.28)); }
+.nav { color: var(--lav-dim); transition: color .25s var(--ease), transform .25s var(--ease); }
+.nav:hover { color: #fff; transform: translateX(3px); }
+
+/* лента «Что нового» — стеклянная карточка */
+.news { margin-top: 44px; padding: 14px 16px 10px; border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--glass-hi), rgba(255,255,255,0) 55%), var(--glass);
+  -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: inset 0 1px 0 var(--edge-top), inset 0 -1px 0 var(--edge-bottom), 0 18px 40px rgba(0,0,0,.28); }
+.news-title { color: #fff; }
+#changelog { max-height: 196px; }
+#changelog .release { border-radius: 12px; transition: background .25s var(--ease); }
+#changelog .release:hover { background: rgba(255,255,255,.04); }
+#changelog .release.latest { background: rgba(90,200,250,.08); box-shadow: inset 0 0 0 1px rgba(90,200,250,.18); }
+#changelog .badge { background: var(--accent); color: #04121a; }
+#changelog .chev { transition: transform .3s var(--ease); }
+/* плавное раскрытие вместо скачка display */
+#changelog .release-items { display: block; max-height: 0; overflow: hidden; opacity: 0; transition: max-height .35s var(--ease), opacity .25s var(--ease); }
+#changelog .release.open .release-items { max-height: 600px; opacity: 1; }
+
+/* настройки — строки в стекле */
+#settings h1 { color: #fff; }
+#settings .row { padding: 12px 14px; margin-bottom: 8px; border-radius: var(--radius); background: var(--glass);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 1px 0 var(--edge-top), inset 0 -1px 0 var(--edge-bottom); }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.06); }
+.seg button { margin-left: 0; padding: 4px 12px; border-radius: 999px; transition: background .25s var(--ease), color .25s var(--ease); }
+.seg button.on { background: rgba(255,255,255,.14); color: #fff; }
+input[type=range] { height: 4px; background: rgba(255,255,255,.14); border-radius: 999px; }
+input[type=range]::-webkit-slider-thumb { width: 22px; height: 15px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+
+/* маркет — то же стекло */
+#market { border-radius: 22px; border: 0; background: linear-gradient(180deg, var(--glass-hi), rgba(255,255,255,0) 40%), rgba(12,13,20,.82);
+  box-shadow: inset 0 1px 0 var(--edge-top), inset 0 -1px 0 var(--edge-bottom), 0 30px 70px rgba(0,0,0,.45);
+  transition: opacity .35s var(--ease), transform .35s var(--ease); }
+.m-tabs, .m-src, .m-sort { border-radius: 999px; }
+.m-tabs button, .m-src button, .m-sort button { border-radius: 999px; }
+#mQuery { border-radius: 999px; padding: 8px 16px; }
+#mQuery:focus { border-color: rgba(90,200,250,.5); box-shadow: 0 0 0 3px rgba(90,200,250,.12); }
+.card { border-radius: 14px; transition: background .25s var(--ease), transform .25s var(--ease); }
+.card:hover { transform: translateY(-1px); }
+.btn { border-radius: 999px; }
+.links button.update { color: var(--accent); }
