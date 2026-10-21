@@ -97,6 +97,10 @@ public final class Modules {
         m.register(new CustomSwords());
         m.register(new Pets());
         m.register(new dev.mraz1visual.module.VisualFx());
+        m.register(new dev.mraz1visual.module.TotemFx());
+        m.register(new dev.mraz1visual.module.SpeedLines());
+        m.register(new dev.mraz1visual.module.HurtVignette());
+        m.register(new dev.mraz1visual.module.FrostBreath());
         m.register(new dev.mraz1visual.module.ModelPets());
         m.register(new dev.mraz1visual.module.WeaponSkins());
         m.register(new dev.mraz1visual.module.ModelCosmetics());
