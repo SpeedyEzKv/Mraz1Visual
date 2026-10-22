@@ -124,8 +124,13 @@ public final class Harness {
             if (mc.getLevelSource().levelExists(WORLD)) {
                 mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(new TitleScreen()));
             } else {
+                //? if >=26.1 {
+                /*LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE,
+                        new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT);
+                *///?} else {
                 GameRules rules = new GameRules(FeatureFlags.DEFAULT_FLAGS);
                 LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
+                //?}
                 mc.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(1234L, false, false),
                         WorldPresets::createFlatWorldDimensions, new TitleScreen());
             }

@@ -24,7 +24,11 @@ public abstract class ChatComponentMixin {
         if (ChatTweaks.keep()) ci.cancel();
     }
 
+    //? if >=26.1 {
+    /*@ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
+    *///?} else {
     @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
+    //?}
         at = @At("HEAD"), argsOnly = true, ordinal = 0, require = 0)
     private Component mraz1visual$decorate(Component message) {
         return ChatTweaks.decorate(message, (ChatComponent) (Object) this);

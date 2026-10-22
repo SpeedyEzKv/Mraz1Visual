@@ -2,6 +2,7 @@ package dev.mraz1visual.ui;
 
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+//? if <26.1
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -40,9 +41,15 @@ public final class Sdf {
             .withLocation(Identifier.fromNamespaceAndPath("mraz1visual", "pipeline/sdf_rect"))
             .withVertexShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
+            //? if >=26.1 {
+            /*.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(java.util.Optional.empty())
+            .withVertexFormat(FORMAT, VertexFormat.Mode.QUADS)
+            *///?} else {
             .withBlend(BlendFunction.TRANSLUCENT)
             .withVertexFormat(FORMAT, VertexFormat.Mode.QUADS)
             .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            //?}
             .build();
 
     /** Шейдер не собрался — дальше рисуем по-старому (полосками), чтобы GUI не пропал. */

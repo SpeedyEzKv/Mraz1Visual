@@ -15,6 +15,7 @@
     "ItemStackRenderStateMixin",
     "ItemLayerRenderStateMixin",
     "GuiMixin",
+    "FovMixin",
     "ParticleEngineMixin"
   ],
   "injectors": {

@@ -1,0 +1,97 @@
+// checkMixins: для каждой версии Minecraft проверяет по байткоду, что цели миксинов существуют —
+// классы из @Mixin, методы из method = "...", поля/методы @Accessor/@Invoker и INVOKE-цели "Lowner;name(desc)".
+// Миксины с require = 0 в игре молча отключаются, поэтому без такой проверки поломка при обновлении версии незаметна.
+// Запуск: ./gradlew checkMixins (входит в build). Отчёт — build/mixincheck.txt; обязательные миксины валят сборку.
+buildscript {
+    repositories { mavenCentral() }
+    dependencies { classpath 'org.ow2.asm:asm-tree:9.9' }
+}
+
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.tree.ClassNode
+
+tasks.register('checkMixins') {
+    group = 'verification'
+    dependsOn 'compileJava'
+    def report = layout.buildDirectory.file('mixincheck.txt')
+    outputs.file report
+    outputs.upToDateWhen { false }
+    doLast {
+        def jars = sourceSets.main.compileClasspath.files.findAll { it.name.endsWith('.jar') }
+        def zips = jars.collect { new java.util.zip.ZipFile(it) }
+        def cache = [:]
+        def node = { String internal ->
+            if (cache.containsKey(internal)) return cache[internal]
+            ClassNode cn = null
+            for (z in zips) {
+                def e = z.getEntry(internal + '.class')
+                if (e != null) { cn = new ClassNode(); new ClassReader(z.getInputStream(e).bytes).accept(cn, ClassReader.SKIP_CODE); break }
+            }
+            cache[internal] = cn
+            cn
+        }
+        // метод/поле есть в классе или его предках
+        def hasMethod
+        hasMethod = { String internal, String name, String desc ->
+            def cn = node(internal)
+            if (cn == null) return false
+            if (cn.methods.any { it.name == name && (desc == null || it.desc == desc) }) return true
+            ([cn.superName] + (cn.interfaces ?: [])).findAll { it }.any { hasMethod(it, name, desc) }
+        }
+        def hasField = { String internal, String name -> node(internal)?.fields?.any { it.name == name } }
+
+        def srcDirs = sourceSets.main.java.srcDirs.findAll { it.exists() }
+        def files = srcDirs.collectMany { d -> fileTree(d).matching { include 'dev/mraz1visual/mixin/**/*.java' }.files as List }
+        def required = [] as Set
+        ['mraz1visual.mixins.json'].each { n ->
+            def f = rootProject.file("src/main/resources/$n")
+            if (f.exists()) required.addAll(new groovy.json.JsonSlurper().parse(f).client)
+        }
+        def problems = [], fatal = []
+        files.each { f ->
+            def text = f.getText('UTF-8')
+            // закомментированный Stonecutter'ом код не проверяем
+            text = text.replaceAll(/(?s)\/\*.*?\*\//, '')
+            def imports = [:]
+            (text =~ /import\s+([\w.]+)\.(\w+);/).each { m -> imports[m[2]] = m[1] + '.' + m[2] }
+            def tm = text =~ /@Mixin\(\s*(?:value\s*=\s*)?\{?\s*([\w.]+)\.class/
+            if (!tm.find()) return
+            def simple = tm.group(1)
+            def outer = simple.contains('.') && !Character.isLowerCase(simple.charAt(0)) ? simple.substring(0, simple.indexOf('.')) : simple
+            def fqn = imports[outer] ? imports[outer] + simple.substring(outer.length()) : (simple.contains('.') ? simple : null)
+            if (fqn == null) { problems << "${f.name}: не найден импорт для $simple"; return }
+            // вложенные классы: последний сегмент с заглавной после другого с заглавной → $
+            def parts = fqn.split('\\.')
+            def sb = new StringBuilder()
+            parts.eachWithIndex { p, i -> if (i > 0) sb.append(Character.isUpperCase(parts[i - 1].charAt(0)) ? '$' : '/'); sb.append(p) }
+            def owner = sb.toString()
+            def mixinName = f.name - '.java'
+            def isRequired = required.contains(mixinName)
+            def fail = { String msg ->
+                def strict = isRequired && !(text =~ /require\s*=\s*0/).find()
+                (strict ? fatal : problems) << "$mixinName → $msg"
+            }
+            if (node(owner) == null) { fail("нет класса $owner"); return }
+            (text =~ /method\s*=\s*\{?\s*"([^"]+)"(?:\s*,\s*"([^"]+)")*/).each { m ->
+                (m[0] =~ /"([^"]+)"/).each { q ->
+                    def s = q[1]
+                    def name = s.contains('(') ? s.substring(0, s.indexOf('(')) : s
+                    def desc = s.contains('(') ? s.substring(s.indexOf('(')) : null
+                    if (!hasMethod(owner, name, desc)) fail("нет метода ${owner.replace('/', '.')}.$s")
+                }
+            }
+            (text =~ /@Accessor\("(\w+)"\)/).each { m -> if (!hasField(owner, m[1])) fail("нет поля ${owner.replace('/', '.')}.${m[1]}") }
+            (text =~ /@Invoker\("(\w+)"\)/).each { m -> if (!hasMethod(owner, m[1], null)) fail("нет метода ${owner.replace('/', '.')}.${m[1]}") }
+            (text =~ /target\s*=\s*"L([\w\/$]+);(\w+)(\([^"]*)"/).each { m ->
+                if (!hasMethod(m[1], m[2], m[3])) fail("нет цели ${m[1].replace('/', '.')}.${m[2]}${m[3]}")
+            }
+        }
+        zips.each { it.close() }
+        def out = report.get().asFile
+        out.parentFile.mkdirs()
+        out.setText((["Minecraft ${stonecutter.current.version}: обязательных ошибок ${fatal.size()}, отключится необязательных ${problems.size()}"] + fatal + problems).join('\n'), 'UTF-8')
+        problems.each { logger.warn("checkMixins: $it") }
+        if (fatal) throw new GradleException("checkMixins (${stonecutter.current.version}):\n" + fatal.join('\n'))
+    }
+}
+tasks.named('check') { dependsOn 'checkMixins' }

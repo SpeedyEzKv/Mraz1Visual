@@ -40,7 +40,7 @@ public final class FriendsModule extends Module {
         if (down && !was && mc.player != null && mc.hitResult instanceof EntityHitResult hit && hit.getEntity() instanceof Player p) {
             String name = p.getName().getString();
             boolean now = Friends.toggle(name);
-            mc.player.displayClientMessage(Component.literal(now ? "§7Mraz1Visual: §a" + name + "§7 теперь в друзьях" : "§7Mraz1Visual: §f" + name + "§7 убран из друзей"), true);
+            dev.mraz1visual.compat.Mc.message(mc.player, Component.literal(now ? "§7Mraz1Visual: §a" + name + "§7 теперь в друзьях" : "§7Mraz1Visual: §f" + name + "§7 убран из друзей"), true);
         }
         was = down;
     }

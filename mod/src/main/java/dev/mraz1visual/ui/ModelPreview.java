@@ -24,7 +24,7 @@ public final class ModelPreview {
     private ModelPreview() {}
 
     public static void register() {
-        SpecialGuiElementRegistry.register(ctx -> new Renderer(ctx.vertexConsumers()));
+        SpecialGuiElementRegistry.register(pip -> new Renderer(pip.vertexConsumers()));
     }
 
     /** Нарисовать модель в прямоугольнике (координаты GUI). pose — поза костей (копируется) или null. */
@@ -75,7 +75,7 @@ public final class ModelPreview {
             ps.mulPose(Axis.YP.rotationDegrees(s.yaw()));
             ps.translate(-(b[0] + b[3]) / 2f, -(b[1] + b[4]) / 2f, -(b[2] + b[5]) / 2f);
             if (m.bones.length > 0) ModelDraw.bones(m, s.bonePose());
-            int light = LightTexture.FULL_BRIGHT, ov = OverlayTexture.NO_OVERLAY;
+            int light = dev.mraz1visual.compat.Mc.FULL_BRIGHT, ov = OverlayTexture.NO_OVERLAY;
             ModelDraw.viewFromCamera(false);
             ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.solidType(m)), -1, ov, light, ModelDraw.SOLID);
             if (ModelDraw.rimStrength > 0.01f) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.rimType()), -1, ov, light, ModelDraw.RIM);

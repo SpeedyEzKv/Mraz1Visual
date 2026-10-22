@@ -329,7 +329,7 @@ public final class ModelPets extends Module implements WorldLayer {
         ps.mulPose(com.mojang.math.Axis.YP.rotation(0.45f));
         ps.scale(s, s, s);
         ps.translate(0, -m.bounds[1], 0);
-        ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, mp.glow.get());
+        ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, dev.mraz1visual.compat.Mc.FULL_BRIGHT, mp.glow.get());
         ps.popPose();
     }
 }

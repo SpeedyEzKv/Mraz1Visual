@@ -38,7 +38,7 @@ public final class LockSlot extends Module implements HudLayer {
             int s = mc.player.getInventory().getSelectedSlot();
             mask ^= 1 << s;
             boolean on = (mask >> s & 1) != 0;
-            mc.player.displayClientMessage(Component.literal(on ? "§7Mraz1Visual: слот §f" + (s + 1) + "§7 закреплён" : "§7Mraz1Visual: слот §f" + (s + 1) + "§7 откреплён"), true);
+            dev.mraz1visual.compat.Mc.message(mc.player, Component.literal(on ? "§7Mraz1Visual: слот §f" + (s + 1) + "§7 закреплён" : "§7Mraz1Visual: слот §f" + (s + 1) + "§7 откреплён"), true);
         }
         was = down;
     }

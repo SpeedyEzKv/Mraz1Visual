@@ -554,7 +554,7 @@ public final class Mraz1VisualOptionsScreen extends MenuBase implements Host {
     public void onClose() {
         if (section == Section.PACKS) packs.apply();
         minecraft.options.save();
-        if (o != null && o.guiScale().get() != initialGuiScale) minecraft.resizeDisplay();
+        if (o != null && o.guiScale().get() != initialGuiScale) dev.mraz1visual.compat.Mc.resizeGui(minecraft);
         minecraft.setScreen(parent);
     }
 

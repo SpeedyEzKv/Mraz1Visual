@@ -73,7 +73,7 @@ public final class ModelDraw {
         Matrix3f pn = pose.normal();
         float[] d = m.data;
         byte want = pass == GLOW_SELF ? Mesh.GLOW : Mesh.SOLID;
-        if (pass != SOLID) light = LightTexture.FULL_BRIGHT;
+        if (pass != SOLID) light = dev.mraz1visual.compat.Mc.FULL_BRIGHT;
         int baseColor = color;
         int lastBone = Integer.MIN_VALUE;
         Matrix4f mm = pm;

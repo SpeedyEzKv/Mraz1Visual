@@ -91,3 +91,57 @@ tasks.register('collectJar', Copy) {
 tasks.named('build') { finalizedBy 'collectJar' }
 
 apply from: rootProject.file('cosmetics.gradle')
+
+// ── Мультиверсия: переименования API 1.21.11 → 26.x (обратимые строковые замены Stonecutter, VERSIONS.md) ──
+stonecutter {
+    replacements.string(eval(mc, '>=26.1')) {
+        replace 'net.minecraft.client.gui.render.state.', 'net.minecraft.client.renderer.state.gui.'
+        replace 'net.minecraft.client.GuiMessage', 'net.minecraft.client.multiplayer.chat.GuiMessage'
+        replace 'net.minecraft.client.renderer.block.model.BakedQuad', 'net.minecraft.client.resources.model.geometry.BakedQuad'
+        replace 'net.minecraft.client.renderer.block.model.ItemTransform', 'net.minecraft.client.resources.model.cuboid.ItemTransform'
+
+        // GUI: GuiGraphics → GuiGraphicsExtractor, render* → extract*
+        replace 'public void render(GuiGraphics g, int mouseX', 'public void extractRenderState(GuiGraphicsExtractor g, int mouseX'
+        replace 'public void renderBackground(GuiGraphics g, int mouseX', 'public void extractBackground(GuiGraphicsExtractor g, int mouseX'
+        replace 'super.renderBackground(g,', 'super.extractBackground(g,'
+        replace 'super.render(g, mouseX', 'super.extractRenderState(g, mouseX'
+        replace 'original.render(g, delta)', 'original.extractRenderState(g, delta)'
+        replace 'ScreenEvents.afterRender(', 'ScreenEvents.afterExtract('
+        replace 'Screens.getButtons(', 'Screens.getWidgets('
+        replace 'g.drawString(', 'g.text('
+        replace 'g.drawCenteredString(', 'g.centeredText('
+        replace 'g.renderItem(', 'g.item('
+        replace 'g.renderItemDecorations(', 'g.itemDecorations('
+        // Fabric API
+        replace 'SpecialGuiElementRegistry', 'PictureInPictureRendererRegistry'
+        replace 'pip.vertexConsumers()', 'pip.bufferSource()'
+        replace 'LivingEntityFeatureRendererRegistrationCallback', 'LivingEntityRenderLayerRegistrationCallback'
+        replace 'rendering.v1.world.WorldRenderContext', 'rendering.v1.level.LevelRenderContext'
+        replace 'rendering.v1.world.WorldRenderEvents', 'rendering.v1.level.LevelRenderEvents'
+        replace 'WorldRenderContext', 'LevelRenderContext'
+        replace 'WorldRenderEvents', 'LevelRenderEvents'
+        replace 'ctx.worldState()', 'ctx.levelState()'
+        replace 'ctx.matrices()', 'ctx.poseStack()'
+        replace 'ctx.consumers()', 'ctx.bufferSource()'
+        replace 'BEFORE_TRANSLUCENT.register(', 'BEFORE_TRANSLUCENT_TERRAIN.register('
+        replace '.submitGuiElement(', '.addGuiElement('
+        replace '.submitPicturesInPictureState(', '.addPicturesInPictureState('
+        replace 'handleInventoryMouseClick(', 'handleContainerInput('
+        replace 'RenderTypes.entityCutoutNoCull(', 'RenderTypes.entityCutout('
+        replace 'LevelRenderer.getLightColor(', 'LevelRenderer.getLightCoords('
+        replace 'renderEntityInInventoryFollowsMouse', 'extractEntityInInventoryFollowsMouse'
+        replace 'PlayerFaceRenderer.draw(', 'PlayerFaceExtractor.extractRenderState('
+        replace 'getChat().addMessage(', 'getChat().addClientSystemMessage('
+        replace 'list.render(g, -1, -1, 0f)', 'list.extractRenderState(g, -1, -1, 0f)'
+        // миксины: имена методов и пути классов в дескрипторах
+        replace 'method = "setup"', 'method = "alignWithEntity"'
+        replace 'method = "render"', 'method = "extractRenderState"'
+        replace '"renderBlurredBackground"', '"extractBlurredBackground"'
+        replace ';submitEntityRenderState(', ';entity('
+        replace 'net/minecraft/client/renderer/block/model/ItemTransform', 'net/minecraft/client/resources/model/cuboid/ItemTransform'
+        replace 'GuiGraphics', 'GuiGraphicsExtractor'
+        replace 'LightTexture', 'Lightmap'
+        replace 'ClickType', 'ContainerInput'
+    }
+}
+apply from: rootProject.file('mixincheck.gradle')

@@ -79,7 +79,7 @@ public final class Waypoints extends Module implements WorldLayer {
             pt.z = Math.floor(p.getZ()) + 0.5;
             points(mc).add(pt);
             save();
-            p.displayClientMessage(Component.literal("§7Mraz1Visual: точка §f" + pt.name + "§7 — " + (int) pt.x + " " + (int) pt.y + " " + (int) pt.z), true);
+            dev.mraz1visual.compat.Mc.message(p, Component.literal("§7Mraz1Visual: точка §f" + pt.name + "§7 — " + (int) pt.x + " " + (int) pt.y + " " + (int) pt.z), true);
         }
         addWas = add;
 
@@ -95,7 +95,7 @@ public final class Waypoints extends Module implements WorldLayer {
             if (near != null) {
                 points(mc).remove(near);
                 save();
-                p.displayClientMessage(Component.literal("§7Mraz1Visual: убрана §f" + near.name), true);
+                dev.mraz1visual.compat.Mc.message(p, Component.literal("§7Mraz1Visual: убрана §f" + near.name), true);
             }
         }
         removeWas = rem;
