@@ -73,7 +73,7 @@ public final class AttackEffects extends Module implements AttackListener, World
             boolean all = m.equals("all");
             // ядро
             d.billboardDot(h.x, h.y, h.z, r * 0.5 * (1 - t * 0.5), Colors.mulAlpha(c1, a * 0.45f), 10);
-            d.billboardDot(h.x, h.y, h.z, r * 0.15 * (1 - t), Colors.mulAlpha(0xFFFFFFFF, a), 8);
+            d.billboardDot(h.x, h.y, h.z, r * 0.15 * (1 - t), Colors.mulAlpha(0xFFFFFFFF, dev.mraz1visual.render.Fx.flash(a)), 8);
             if (m.equals("flash") || all) {
                 for (int i = 0; i < h.rays.length; i++) {
                     double ang = i * Math.PI * 2 / h.rays.length + h.rays[i];

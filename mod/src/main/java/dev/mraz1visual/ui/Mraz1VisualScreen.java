@@ -302,7 +302,19 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private int cX() { return wx + Theme.SIDEBAR_W; }
     private int cW() { return ww - Theme.SIDEBAR_W; }
     private int areaX() { return cX() + 12; }
-    private int areaY() { return wy + Theme.TOPBAR_H + 2; }
+    private int areaY() { return wy + Theme.TOPBAR_H + 2 + barH(); }
+
+    // ── секции и пресеты вкладки «Визуалы» ──
+    private static final int BAR_H = 28;
+    private String section = "all";
+    private String presetFlash = "";
+    private long presetAt;
+
+    private boolean visualsBar() {
+        return !configsMode() && !favorites && search.isEmpty() && category == Category.VISUALS;
+    }
+
+    private int barH() { return visualsBar() ? BAR_H : 0; }
     private int areaW() { return cW() - 24 - previewSpace(); }
 
     // ── живое превью: модель игрока с крыльями, мечом и питомцем ──
@@ -320,7 +332,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
     private int previewX() { return cX() + cW() - 12 - PREVIEW_W; }
     private int previewY() { return areaY() + 4; }
     private int previewH() { return areaH() - 8; }
-    private int areaH() { return wh - Theme.TOPBAR_H - 14 - HINT_H; }
+    private int areaH() { return wh - Theme.TOPBAR_H - 14 - HINT_H - barH(); }
     private int searchX() { return wx + ww - 18 - Theme.SEARCH_W; }
     private int searchY() { return wy + (Theme.TOPBAR_H - 24) / 2 + 2; }
     private int railX() { return wx + 12; }
@@ -346,7 +358,13 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         } else if (favorites) {
             for (Module m : mm.all()) if (favs.contains(m.id)) list.add(m);
         } else {
-            list.addAll(mm.in(category));
+            for (Module m : mm.in(category)) {
+                if (category == Category.VISUALS && !section.equals("all")) {
+                    String s = dev.mraz1visual.module.VisualPresets.section(m);
+                    if (!s.equals(section) && !s.equals("all")) continue;
+                }
+                list.add(m);
+            }
         }
         cards.clear();
         for (Module m : list) cards.add(card(m));
@@ -371,6 +389,12 @@ public final class Mraz1VisualScreen extends Screen implements Host {
         contentT = cs.animations.get() ? 0f : 1f;
         rebuildList();
         if (c == Category.CONFIGS) profiles.refresh();
+    }
+
+    /** Dev-стенд: секция вкладки «Визуалы». */
+    public void harnessSection(String s) {
+        section = s;
+        rebuildList();
     }
 
     /** Dev-стенд: открыть вкладку из сценария. */
@@ -754,6 +778,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             aw -= previewSpace();
             drawPreview(mx, my, dt);
         }
+        if (visualsBar()) drawSectionBar(mx, my);
         if (cards.isEmpty()) {
             String t = favorites ? "Нажмите звезду на модуле — он появится здесь." : search.isEmpty() ? category.emptyText : "Ничего не найдено";
             d.textCenter(t, ax + aw / 2, ay + ah / 2 - 4, Theme.TEXT_MUTED);
@@ -794,6 +819,68 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             d.round(cX() + cW() - 6 - previewSpace(), thumbY, 3, thumbH, 1, Theme.ELEVATED);
         }
 
+    }
+
+    /** Чипы секций слева (Все · Бой · Игрок · Мир · HUD) и пресеты справа. Координаты кнопок — для кликов. */
+    private final int[] secX = new int[8], secW = new int[8], preX = new int[8], preW = new int[8];
+
+    private void drawSectionBar(double mx, double my) {
+        int y = areaY() - BAR_H + 4, h = 20;
+        int x = areaX();
+        String[][] secs = dev.mraz1visual.module.VisualPresets.SECTIONS;
+        for (int i = 0; i < secs.length; i++) {
+            int w = d.width(secs[i][1]) + 20;
+            secX[i] = x;
+            secW[i] = w;
+            boolean on = secs[i][0].equals(section), hov = Widget.hit(mx, my, x, y, w, h);
+            d.round(x, y, w, h, h / 2, on ? Theme.GLASS_ACTIVE : hov ? Theme.HOVER : Theme.GLASS_CARD);
+            d.textCenter(secs[i][1], x + w / 2, Draw.textY(y, h), on ? Theme.TEXT : Theme.TEXT_DIM);
+            x += w + 4;
+        }
+        String[][] pr = dev.mraz1visual.module.VisualPresets.PRESETS;
+        int right = areaX() + areaW();
+        for (int i = pr.length - 1; i >= 0; i--) {
+            int w = d.width(pr[i][1]) + 18;
+            right -= w;
+            preX[i] = right;
+            preW[i] = w;
+            boolean flash = pr[i][0].equals(presetFlash) && System.currentTimeMillis() - presetAt < 1200;
+            boolean hov = Widget.hit(mx, my, right, y, w, h);
+            d.round(right, y, w, h, h / 2, flash ? Colors.withAlpha(Theme.accent(), 0x70) : hov ? Theme.GLASS_ACTIVE : Theme.GLASS_CARD);
+            d.textCenter(pr[i][1], right + w / 2, Draw.textY(y, h), flash || hov ? Theme.TEXT : Theme.TEXT_DIM);
+            right -= 4;
+        }
+        String label = "Пресет";
+        d.text(label, right - 4 - d.width(label), Draw.textY(y, h), Theme.TEXT_MUTED);
+    }
+
+    /** Клик по полосе секций/пресетов. @return true — обработан. */
+    private boolean clickSectionBar(double mx, double my) {
+        if (!visualsBar()) return false;
+        int y = areaY() - BAR_H + 4, h = 20;
+        if (my < y || my > y + h) return false;
+        String[][] secs = dev.mraz1visual.module.VisualPresets.SECTIONS;
+        for (int i = 0; i < secs.length; i++) {
+            if (Widget.hit(mx, my, secX[i], y, secW[i], h)) {
+                section = secs[i][0];
+                contentScroll = contentTarget = 0;
+                contentT = cs.animations.get() ? 0f : 1f;
+                rebuildList();
+                return true;
+            }
+        }
+        String[][] pr = dev.mraz1visual.module.VisualPresets.PRESETS;
+        for (int i = 0; i < pr.length; i++) {
+            if (Widget.hit(mx, my, preX[i], y, preW[i], h)) {
+                dev.mraz1visual.module.VisualPresets.apply(pr[i][0]);
+                presetFlash = pr[i][0];
+                presetAt = System.currentTimeMillis();
+                cardState.clear();
+                rebuildList();
+                return true;
+            }
+        }
+        return true;
     }
 
     /** Панель превью: стекло, подпись, модель (крутится мышкой). Во время анимации окна модель не рисуем — она вне масштаба окна. */
@@ -1009,6 +1096,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             }
             return true;
         }
+        if (b == 0 && clickSectionBar(mx, my)) return true;
         if (!Widget.hit(mx, my, cX(), ay, cW(), ah)) return true;
         double cmy = my + contentScroll;
         for (Card c : cards) {

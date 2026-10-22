@@ -13,7 +13,9 @@
     "InventoryScreenMixin",
     "ItemModelResolverMixin",
     "ItemStackRenderStateMixin",
-    "ItemLayerRenderStateMixin"
+    "ItemLayerRenderStateMixin",
+    "GuiMixin",
+    "ParticleEngineMixin"
   ],
   "injectors": {
     "defaultRequire": 0

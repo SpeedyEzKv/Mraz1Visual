@@ -23,8 +23,9 @@ import net.minecraft.core.BlockPos;
 
 /** Эффект на месте цели, которую ты добил: молния, души или ударная волна. Только у тебя. */
 public final class KillEffect extends Module implements AttackListener, WorldLayer {
-    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Осколки", "all", "Всё сразу"));
-    final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFB8B4F2));
+    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "ascend", "Растворение и душа", "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Осколки", "all", "Всё сразу"));
+    final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 0, dev.mraz1visual.render.Palette.OPTIONS));
+    final ColorSetting color = add(new ColorSetting("color", "Свой цвет", 0xFFB8B4F2));
     final BoolSetting sound = add(new BoolSetting("sound", "Звук", true));
     final BoolSetting playersOnly = add(new BoolSetting("players_only", "Только игроки", false));
     final BoolSetting allDeaths = add(new BoolSetting("all_deaths", "На всех смертях рядом, не только своих", false));
@@ -57,6 +58,8 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
         long start;
         double[] bolt;   // точки молнии
         double[] souls;  // смещения душ
+        dev.mraz1visual.render.Ribbon soul; // «душа» для «Растворения»
+        double seed;
     }
 
     private final List<Fx> fx = new ArrayList<>();
@@ -65,7 +68,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
     private long lastAt;
 
     public KillEffect() {
-        super("kill_effect", "Kill Effect", "Кровь, молния, души или волна, когда ты добиваешь цель.", Category.VISUALS);
+        super("kill_effect", "Kill FX", "Цель растворяется в свет, душа уходит вверх — когда ты её добиваешь.", Category.VISUALS);
         instance = this;
     }
 
@@ -108,6 +111,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
     }
 
     private void play(Minecraft mc, LivingEntity last) {
+        if (fx.size() >= 6) return; // без спама: не больше шести эффектов сразу
         Fx f = new Fx();
         f.x = last.getX();
         f.y = last.getY();
@@ -132,6 +136,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
             f.souls[i * 3 + 2] = Math.sin(a) * r;
         }
         fx.add(f);
+        if (style.getId().equals("ascend")) ascend(last, f);
         if (style.getId().equals("blood")) blood(mc, f);
         if (style.getId().equals("shards") || style.getId().equals("all")) {
             for (int i = 0; i < 40; i++) {
@@ -144,17 +149,65 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
         if (sound.get()) mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.AMETHYST_BLOCK_CHIME, 0.6f, 1f));
     }
 
+    /** Растворение: тело рассыпается в светящиеся частицы, плывущие вверх; душа — лента, уходящая в небо. */
+    private void ascend(LivingEntity e, Fx f) {
+        int n = dev.mraz1visual.render.Fx.count(70);
+        double w = e.getBbWidth();
+        for (int i = 0; i < n; i++) {
+            double px = f.x + (rnd.nextDouble() - 0.5) * w, py = f.y + rnd.nextDouble() * f.h, pz = f.z + (rnd.nextDouble() - 0.5) * w;
+            int c = col(0.1f + rnd.nextFloat() * 0.6f, 1f);
+            dev.mraz1visual.render.FxParticles.spawn(px, py, pz, (px - f.x) * 0.6, 0.5 + rnd.nextDouble() * 0.9, (pz - f.z) * 0.6,
+                    1.0f + rnd.nextFloat() * 0.8f, 0.035f + rnd.nextFloat() * 0.035f, c, -0.15f, rnd.nextFloat() < 0.3f,
+                    rnd.nextFloat() < 0.12f ? dev.mraz1visual.render.FxParticles.STAR : dev.mraz1visual.render.FxParticles.DOT, true, 0.5f, 1.4f);
+        }
+        f.soul = new dev.mraz1visual.render.Ribbon(64);
+        f.soul.life = 0.5f;
+        f.soul.minStep = 0.04;
+        f.seed = rnd.nextDouble() * 10;
+    }
+
+    private int col(float t, float a) {
+        String p = preset.getId();
+        return dev.mraz1visual.render.Fx.color(p, t, dev.mraz1visual.render.Fx.time() * 0.3f, color.get(), color.get(), a);
+    }
+
+    private long lastRender;
+
     @Override
     public void renderWorld(WorldDraw d, float pt) {
         long now = System.currentTimeMillis();
+        float fdt = lastRender == 0 ? 0 : Math.min(0.05f, (now - lastRender) / 1000f);
+        lastRender = now;
         renderBlood(d, now);
-        fx.removeIf(f -> now - f.start > 1600);
+        fx.removeIf(f -> now - f.start > 1800);
         String s = style.getId();
         int c = color.get();
         for (Fx f : fx) {
             float t = (now - f.start) / 1600f;
+            if (s.equals("ascend") && f.soul != null) {
+                float u = Math.min(1f, (now - f.start) / 1800f);
+                // душа: поднимается с плавным покачиванием, замедляясь к концу
+                double rise = dev.mraz1visual.render.Ease.outCubic(u) * 3.2;
+                double sx = f.x + Math.sin(u * 7 + f.seed) * 0.25 * (1 - u * 0.5), sz = f.z + Math.cos(u * 5.5 + f.seed) * 0.25 * (1 - u * 0.5);
+                double sy = f.y + f.h * 0.55 + rise;
+                if (u < 0.85f) f.soul.push(sx, sy, sz, fdt);
+                else f.soul.age(fdt);
+                float a = 1f - dev.mraz1visual.render.Ease.smooth((u - 0.6f) / 0.4f);
+                d.glowBegin();
+                f.soul.draw(d, dev.mraz1visual.render.Ribbon.FACING, 0.22, a * 0.7f, preset.getId(), c, c, sx, sy, sz);
+                if (u < 0.85f) d.billboardDot(sx, sy, sz, 0.28, col(0.3f, a * 0.35f), 14);
+                // кольцо света у ног
+                float ru = Math.min(1f, (now - f.start) / 1100f);
+                double r = 0.3 + dev.mraz1visual.render.Ease.outExpo(ru) * 2.2;
+                float ra = (float) Math.pow(1 - ru, 1.4);
+                dev.mraz1visual.render.FxDraw.haloRing(d, f.x, f.y + 0.04, f.z, r, 0.3, col(0.45f, ra * 0.35f), dev.mraz1visual.render.Fx.segments(64));
+                d.glowEnd();
+                if (u < 0.85f) d.billboardDot(sx, sy, sz, 0.06, Colors.mulAlpha(0xFFFFFFFF, a), 8);
+                dev.mraz1visual.render.FxDraw.softRing(d, f.x, f.y + 0.045, f.z, r, 0.015, col(0.1f, ra), dev.mraz1visual.render.Fx.segments(64));
+                continue;
+            }
             if (s.equals("lightning") || s.equals("all")) {
-                float a = t < 0.35f ? 1f - t / 0.35f * 0.5f : Math.max(0, 0.5f - (t - 0.35f));
+                float a = dev.mraz1visual.render.Fx.flash(t < 0.35f ? 1f - t / 0.35f * 0.5f : Math.max(0, 0.5f - (t - 0.35f)));
                 if (a > 0) {
                     for (int i = 0; i + 3 < f.bolt.length; i += 3) {
                         d.line(f.bolt[i], f.bolt[i + 1], f.bolt[i + 2], f.bolt[i + 3], f.bolt[i + 4], f.bolt[i + 5], 0.35, Colors.mulAlpha(c, a * 0.25f));

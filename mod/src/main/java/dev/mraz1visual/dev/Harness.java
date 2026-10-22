@@ -190,6 +190,7 @@ public final class Harness {
                 else if (a[1].equals("cat") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessCategory(Category.valueOf(a[2]));
                 else if (a[1].equals("reveal") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessReveal(a[2]);
                 else if (a[1].equals("yaw") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessPreview(Float.parseFloat(a[2]));
+                else if (a[1].equals("section") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessSection(a[2]);
             }
             case "video" -> {
                 // video <предел FPS> <vsync true|false> <дальность>
@@ -247,6 +248,25 @@ public final class Harness {
             }
             case "gallery" -> dev.mraz1visual.ui.ModelGallery.open(dev.mraz1visual.ui.ModelGallery.Tab.valueOf(a[1].toUpperCase(java.util.Locale.ROOT)));
             case "use" -> mc.options.keyUse.setDown(a[1].equals("on"));
+            case "attack" -> {
+                // ближайшая живая сущность в 6 блоках — настоящий удар (событие для визуалов)
+                net.minecraft.world.entity.LivingEntity best = null;
+                double bd = 36;
+                for (var en : mc.level.entitiesForRendering()) {
+                    if (en == mc.player || !(en instanceof net.minecraft.world.entity.LivingEntity le)) continue;
+                    double dd = en.distanceToSqr(mc.player);
+                    if (dd < bd) { bd = dd; best = le; }
+                }
+                if (best == null) log("  nothing to attack");
+                else {
+                    mc.gameMode.attack(mc.player, best);
+                    mc.player.swing(InteractionHand.MAIN_HAND);
+                }
+            }
+            case "jump" -> mc.player.jumpFromGround();
+            case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
+            case "preset" -> dev.mraz1visual.module.VisualPresets.apply(a[1]);
+            case "slot" -> mc.player.getInventory().setSelectedSlot(Integer.parseInt(a[1]));
             case "quit" -> {
                 log("done");
                 active = false;
