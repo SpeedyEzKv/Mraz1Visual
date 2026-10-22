@@ -1,6 +1,6 @@
 # Полный выпуск Mraz1Visual на серверах GitHub.
 # Каждый push в main (или кнопка Run workflow во вкладке Actions):
-#   1) собирает мод mraz1visual.jar (Linux, Java 21);
+#   1) собирает мод под все версии Minecraft (mraz1visual-<версия>+mc<mc>.jar; mraz1visual.jar = 1.21.11 для старых лаунчеров);
 #   2) собирает лаунчер Mraz1Visual-setup.exe (Windows);
 #   3) публикует релиз v0.1.<номер> с mraz1visual.jar, manifest.json и Mraz1Visual-setup.exe.
 # Лаунчер сам скачивает mraz1visual.jar и manifest.json из последнего релиза,
@@ -33,9 +33,11 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: |
+            21
+            25
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build mraz1visual.jar
+      - name: Build all versions
         run: |
           set -o pipefail
           bash ./gradlew build --no-daemon --console=plain -Pmod_version=$VERSION -Pdev_sodium=false -Pdev_mcef=false 2>&1 | tee ../build.log
@@ -48,14 +50,15 @@ jobs:
             grep -E -A3 "error:|What went wrong|Caused by|> " ../build.log | grep -v "^\s*at " | head -n 150
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Pick jar
+      - name: Pick jars
         run: |
-          JAR=$(ls build/libs/*.jar | grep -v -e sources -e dev | head -n1)
-          cp "$JAR" ../mraz1visual.jar
+          mkdir -p ../dist-mod
+          cp build/libs/all/*.jar ../dist-mod/
+          cp build/libs/all/*+mc1.21.11.jar ../dist-mod/mraz1visual.jar
       - uses: actions/upload-artifact@v4
         with:
           name: mod
-          path: mraz1visual.jar
+          path: dist-mod/*.jar
 
   launcher:
     runs-on: windows-latest
@@ -113,6 +116,9 @@ jobs:
                elif ($old | length) > 0 then $old
                else [{version: $v, date: $d, items: (.changelog // [])}] end) as $rel
             | .releases = ($rel | .[:30])' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+          # версии Minecraft: файл, sha256, Fabric Loader/API, Sodium/Iris/MCEF — лаунчер ставит нужное сам
+          node tools/release/versions-manifest.js dist "https://github.com/${{ github.repository }}/releases/download/v$VERSION" > versions.json
+          jq --slurpfile vs versions.json '.versions = $vs[0]' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
           # заметки релиза на GitHub — то же, что лаунчер покажет первым
           jq -r '(.releases[0].items // .changelog // []) | map("- " + .) | join("\n")' dist/manifest.json > notes.md
       - uses: softprops/action-gh-release@v2
@@ -123,5 +129,6 @@ jobs:
           make_latest: true
           files: |
             dist/mraz1visual.jar
+            dist/mraz1visual-*.jar
             dist/manifest.json
             dist/Mraz1Visual-setup.exe

@@ -76,6 +76,7 @@ java {
 tasks.withType(JavaCompile).configureEach {
     it.options.release = javaVersion
     it.options.encoding = 'UTF-8'
+    it.options.compilerArgs += ['-Xmaxerrs', '5000']
 }
 
 jar {

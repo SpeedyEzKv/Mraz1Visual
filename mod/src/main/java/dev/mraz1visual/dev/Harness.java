@@ -41,7 +41,8 @@ import java.util.Locale;
  * inventory · close · swing · key up|sprint|jump on|off · quit
  */
 public final class Harness {
-    private static final String WORLD = "harness";
+    // свой мир на каждую версию: открытый в 26.x мир нельзя потом открыть в 1.21.11
+    private static final String WORLD = net.minecraft.SharedConstants.getCurrentVersion().id().startsWith("1.") ? "harness" : "harness-" + net.minecraft.SharedConstants.getCurrentVersion().id();
     private static boolean active;
     private static Path dir;
     private static List<String> script = List.of();

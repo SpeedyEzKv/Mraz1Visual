@@ -21,7 +21,8 @@ stonecutter {
     centralScript = 'build.gradle'
     create(rootProject) {
         // Таблица и статусы — VERSIONS.md. 26.1.2 покрывает 26.1–26.1.2.
-        versions '1.21.11', '26.1.2', '26.2', '26.3'
+        // 26.2 и 26.3 — порт в работе (V2_PLAN.md): движок переписан (экраны в mc.gui, нет MultiBufferSource, новый VertexFormat)
+        versions '1.21.11', '26.1.2'
         vcsVersion = '1.21.11'
     }
 }
