@@ -15,7 +15,7 @@ import java.util.List;
  */
 public final class Atlas {
     public final int w, h;
-    final int[] px;
+    int[] px;
     final int[] glow;           // null — эмиссивного слоя нет
     final List<Slot> anims = new ArrayList<>();
     public Identifier texture, glowTexture;
@@ -154,6 +154,11 @@ public final class Atlas {
         NativeImage ni = new NativeImage(w, h, false);
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) ni.setPixel(x, y, src[y * w + x]);
         return new DynamicTexture(() -> "mraz1visual " + label, ni);
+    }
+
+    /** После выгрузки на видеокарту копия пикселей в куче не нужна (у анимированных обновляется NativeImage текстуры). */
+    void dropCpuCopy() {
+        px = null;
     }
 
     void release() {

@@ -25,3 +25,24 @@
 **Сторонних ассетов не добавлено.** Все эффекты процедурные: частицы, ленты, кольца, ромбы, виньетки и линии скорости
 рисуются кодом (`render/Fx*`, `render/Ribbon`, модули в `module/`). Блеск зачарований перекрашивает **ванильную** текстуру
 игры прямо в памяти (файлы не копируются). Идеи — общие для визуальных клиентов направления; чужой код, текстуры, модели и шейдеры не использовались.
+
+## Встроенная косметика (ветка `ios26-overhaul`)
+
+Паки встроены в клиент **с разрешения авторов** (подтверждения — `permissions/`, таблица — [`PERMISSIONS.md`](PERMISSIONS.md)):
+
+| Коллекция | Автор | Ссылка | Статус |
+|---|---|---|---|
+| Blades of Majestica | Eftann | https://modrinth.com/project/3tXcbjvK | встроено, используется с разрешения автора |
+| Weapons Pack — Free Edition | Redstone Labs | https://discord.gg/fBQRQyAsj7 | встроено, используется с разрешения автора |
+| Fantasy Sword (`.bbmodel`) | автор модели | — | встроено под нейтральным именем, с разрешения автора |
+| Carnivoret Weapon Set Vol. 1 | EliteCreatures / khawndev | https://mcmodels.net | ждёт подтверждения в `permissions/carnivoret/` |
+| CUBEES Currets I, CUBEES RE Biomes 1 | Cubees Studio | https://discord.gg/N8K2sQdbx9 | ждёт подтверждения в `permissions/cubees_*` |
+
+Набор **Mraz1Visual** (8 мечей, 2 топора, булава, крылья, плащи, нимбы, питомцы) — свой: модели и текстуры
+сгенерированы кодом (`tools/cosmetics/gen-mraz1.js`, процедурные модули клиента).
+
+## Музыка и тексты
+- **JLayer** 1.0.1 (MP3) — LGPL-2.1, javazoom.net. Встроен в .jar отдельной библиотекой (jar-in-jar), не изменён.
+- **jflac-codec** 1.5.2 (FLAC) — Apache License 2.0.
+- **stb_vorbis** (OGG) — public domain / MIT, из LWJGL, который уже есть в игре.
+- **LRCLIB** (https://lrclib.net) — открытый API синхронных текстов песен; тексты кэшируются только локально, для личного показа.

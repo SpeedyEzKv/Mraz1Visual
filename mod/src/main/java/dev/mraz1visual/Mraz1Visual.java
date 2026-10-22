@@ -70,7 +70,6 @@ public final class Mraz1Visual implements ClientModInitializer {
         PlayStats.load();
         AccountStore.load();
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> {
-            dev.mraz1visual.models.ModelRegistry.reload();
             AccountStore.autoLogin();
             WindowBranding.applyIcon();
             mc.updateTitle();
@@ -84,6 +83,11 @@ public final class Mraz1Visual implements ClientModInitializer {
 
     private static int modelTick;
 
+    private static boolean on(String id) {
+        var m = MODULES.find(id);
+        return m != null && m.isEnabled();
+    }
+
     private static Object lastLevel;
 
     private static void tick(Minecraft mc) {
@@ -93,6 +97,7 @@ public final class Mraz1Visual implements ClientModInitializer {
             dev.mraz1visual.render.FxParticles.clear();
         }
         dev.mraz1visual.models.ModelRegistry.tick(modelTick++);
+        if (modelTick % 20 == 1 && (on("weapon_skins") || on("model_pets") || on("model_cosmetics"))) dev.mraz1visual.models.ModelRegistry.ensureLoaded();
         dev.mraz1visual.wallpaper.WallpaperPlayer.tick();
         int key = Modules.client.menuKey.get();
         boolean down = Keys.isDown(key);

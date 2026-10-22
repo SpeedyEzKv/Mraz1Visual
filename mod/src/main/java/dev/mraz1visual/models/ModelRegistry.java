@@ -64,8 +64,21 @@ public final class ModelRegistry {
         return out;
     }
 
+    private static volatile boolean requested;
+
+    /**
+     * Модели грузятся по требованию — когда включены скины, питомцы или косметика либо открыта галерея:
+     * пока они не нужны, клиент не держит в памяти сотни атласов и вершин.
+     */
+    public static void ensureLoaded() {
+        if (requested) return;
+        requested = true;
+        reload();
+    }
+
     /** Перечитать обе папки (в фоне). */
     public static synchronized void reload() {
+        requested = true;
         int gen = ++generation;
         loading = true;
         done = 0;
@@ -105,8 +118,8 @@ public final class ModelRegistry {
         for (ModelEntry e : loaded) {
             if (map.containsKey(e.id)) continue;
             try {
-                for (Mesh m : e.states.values()) m.atlas.upload(e.name);
-                for (ModelEntry fx : e.effects) for (Mesh m : fx.states.values()) m.atlas.upload(fx.name);
+                for (Mesh m : e.states.values()) { m.atlas.upload(e.name); m.atlas.dropCpuCopy(); }
+                for (ModelEntry fx : e.effects) for (Mesh m : fx.states.values()) { m.atlas.upload(fx.name); m.atlas.dropCpuCopy(); }
             } catch (Throwable t) {
                 e.error = "текстура не загрузилась: " + t.getMessage();
             }

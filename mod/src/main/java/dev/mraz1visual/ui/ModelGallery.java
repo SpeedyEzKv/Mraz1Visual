@@ -66,6 +66,7 @@ public final class ModelGallery extends Screen {
 
     private ModelGallery(Tab tab, Screen parent) {
         super(Component.literal("3D-модели"));
+        ModelRegistry.ensureLoaded();
         this.tab = tab;
         this.parent = parent;
     }
@@ -491,7 +492,84 @@ public final class ModelGallery extends Screen {
 
     // ── косметика ────────────────────────────────────────────
 
+    /** Встроенный набор клиента: процедурные крылья, плащи, нимбы и питомцы — включаются одним кликом. */
+    private static final String[][] BUILTIN = {
+            // категория, название, модуль, настройка=значение…, цвет образца
+            {"Крылья", "Перьевые", "wings_3d", "style=angel", "#F2F0FF"},
+            {"Крылья", "Драконьи", "wings_3d", "style=dragon", "#7A3B3B"},
+            {"Крылья", "Стеклянные", "wings_3d", "style=energy", "#8FD8FF"},
+            {"Крылья", "Механические", "wings_3d", "style=mech", "#9AA0AA"},
+            {"Плащи", "Затмение", "cape", "style=eclipse", "#1E1B2E"},
+            {"Плащи", "Градиент", "cape", "style=gradient", "#B9A6FF"},
+            {"Плащи", "Графит", "cape", "style=plain|color=#FF2C2C34", "#2C2C34"},
+            {"Плащи", "Аметист", "cape", "style=plain|color=#FF8C6CFF", "#8C6CFF"},
+            {"Плащи", "Изумруд", "cape", "style=plain|color=#FF2FA37A", "#2FA37A"},
+            {"Плащи", "Закат", "cape", "style=gradient|color=#FFFF9A6B", "#FF9A6B"},
+            {"Головные уборы", "Нимб", "halo", "style=ring", "#FFE7A8"},
+            {"Головные уборы", "Корона из света", "halo", "style=crown", "#FFD36B"},
+            {"Головные уборы", "Орбита огоньков", "halo", "style=orbit", "#8FD8FF"},
+            {"Головные уборы", "Китайская шляпа", "china_hat", "", "#B8E6FF"},
+            {"Питомцы", "Дракончик", "pets", "kind=dragon", "#5FD49A"},
+            {"Питомцы", "Котик-призрак", "pets", "kind=cat", "#B8D8FF"},
+            {"Питомцы", "Стеклянный лис", "pets", "kind=fox", "#9FE6FF"},
+            {"Питомцы", "Совёнок", "pets", "kind=owl", "#F6D9A8"},
+            {"Питомцы", "Дрон", "pets", "kind=drone", "#4FD8FF"},
+            {"Питомцы", "Медуза", "pets", "kind=jelly", "#FF8AD8"},
+    };
+
+    private static boolean builtinOn(String[] b) {
+        var m = dev.mraz1visual.Mraz1Visual.MODULES.find(b[2]);
+        if (m == null || !m.isEnabled()) return false;
+        if (b[3].isEmpty()) return true;
+        for (String kv : b[3].split("\\|")) {
+            String[] p = kv.split("=", 2);
+            for (var s : m.settings()) if (s.id.equals(p[0]) && !s.toJson().getAsString().equalsIgnoreCase(p[1])) return false;
+        }
+        return true;
+    }
+
+    private static void applyBuiltin(String[] b) {
+        var m = dev.mraz1visual.Mraz1Visual.MODULES.find(b[2]);
+        if (m == null) return;
+        if (builtinOn(b)) { m.setEnabled(false); return; }
+        if (!b[3].isEmpty()) for (String kv : b[3].split("\\|")) {
+            String[] p = kv.split("=", 2);
+            for (var s : m.settings()) if (s.id.equals(p[0]) && s.fromJson(new com.google.gson.JsonPrimitive(p[1]))) dev.mraz1visual.setting.Setting.globalChangeHook.run();
+        }
+        m.setEnabled(true);
+    }
+
+    /** Карточки встроенного набора: по категориям, образец цвета, «включено». @return y под ними. */
+    private int drawBuiltin(int mx, int my, int x, int y, int w) {
+        String cat = null;
+        int cx = x, cw = 112, ch = 22;
+        for (String[] b : BUILTIN) {
+            if (!b[0].equals(cat)) {
+                cat = b[0];
+                if (cx != x) y += ch + 4;
+                d.text(cat, Fonts.Kind.BOLD, x + 4, y + 2, Theme.TEXT_DIM);
+                y += 14;
+                cx = x;
+            }
+            if (cx + cw > x + w) { cx = x; y += ch + 4; }
+            boolean on = builtinOn(b), hov = Widget.hit(mx, my, cx, y, cw, ch);
+            d.round(cx, y, cw, ch, 11, on ? Theme.GLASS_ACTIVE : hov ? Theme.HOVER : Theme.GLASS_CARD);
+            int col = 0xFF000000 | Integer.parseInt(b[4].substring(1), 16);
+            d.disc(cx + 11, y + ch / 2f, 4.5f, col);
+            d.text(Draw.ellipsize(b[1], cw - 30), cx + 21, Draw.textY(y, ch), on ? Theme.TEXT : Theme.TEXT_DIM);
+            if (on) d.disc(cx + cw - 9, y + ch / 2f, 2.5f, Theme.accent());
+            hits.add(new Hit(cx, y, cw, ch, () -> applyBuiltin(b)));
+            cx += cw + 4;
+        }
+        return y + ch + 10;
+    }
+
     private void drawCosmetics(GuiGraphics g, int mx, int my, int y, int h) {
+        int by0 = y;
+        d.text("Набор Mraz1Visual — всё встроено, ничего не нужно скачивать", Fonts.Kind.BOLD, wx + 18, y + 2, Theme.TEXT);
+        int nextY = drawBuiltin(mx, my, wx + 14, y + 18, ww - 28);
+        h -= nextY - by0;
+        y = nextY;
         List<ModelEntry> list = new ArrayList<>();
         for (ModelEntry e : ModelRegistry.all()) if ((e.kind == ModelEntry.Kind.HAT || e.kind == ModelEntry.Kind.WING) && matches(e)) list.add(e);
         ModelEntry hat = ModelCosmetics.pick(ModelEntry.Kind.HAT), wing = ModelCosmetics.pick(ModelEntry.Kind.WING);
