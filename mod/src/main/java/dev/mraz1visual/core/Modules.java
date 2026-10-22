@@ -15,8 +15,6 @@ public final class Modules {
         // ── Игрок ────────────────────────────────────────────
         m.register(new AutoSprint());
         m.register(new HotbarSwap());
-        m.register(new OffhandTotem());
-        m.register(new ClickPearl());
         m.register(new NoFriendDamage());
         m.register(new FakePlayer());
         m.register(new AutoRespawn());
@@ -31,8 +29,6 @@ public final class Modules {
         m.register(new Hud());
         m.register(new NameTags());
         m.register(new TargetEsp());
-        m.register(new Esp());
-        m.register(new Trajectories());
         m.register(new HitEffects());
         m.register(new HitSounds());
         m.register(new MotionBlur());
@@ -42,7 +38,6 @@ public final class Modules {
         m.register(new ChinaHat());
         m.register(new Trails());
         m.register(new Hitboxes());
-        m.register(new SkeletonEsp());
         m.register(new BlockOutline());
         m.register(new Animations());
         m.register(new SwingAnimations());
