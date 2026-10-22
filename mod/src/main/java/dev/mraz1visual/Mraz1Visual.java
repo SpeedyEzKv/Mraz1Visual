@@ -60,9 +60,16 @@ public final class Mraz1Visual implements ClientModInitializer {
         dev.mraz1visual.music.MediaClient.start();
         dev.mraz1visual.render.FriendGuard.register();
         dev.mraz1visual.dev.Harness.init();
+        // импортированные 3D-модели: выбор и позы — из своего файла, сами паки читаются в фоне после старта
+        dev.mraz1visual.models.ModelPrefs.load();
+        dev.mraz1visual.ui.ModelPreview.register();
+        dev.mraz1visual.models.ModelRegistry.onLoaded = () -> {
+            for (var e : dev.mraz1visual.models.ModelRegistry.all()) dev.mraz1visual.models.ModelPrefs.applyPose(e);
+        };
         PlayStats.load();
         AccountStore.load();
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> {
+            dev.mraz1visual.models.ModelRegistry.reload();
             AccountStore.autoLogin();
             WindowBranding.applyIcon();
             mc.updateTitle();
@@ -74,7 +81,10 @@ public final class Mraz1Visual implements ClientModInitializer {
         ModuleManager.LOG.info("Mraz1Visual ready: {} modules", MODULES.all().size());
     }
 
+    private static int modelTick;
+
     private static void tick(Minecraft mc) {
+        dev.mraz1visual.models.ModelRegistry.tick(modelTick++);
         dev.mraz1visual.wallpaper.WallpaperPlayer.tick();
         int key = Modules.client.menuKey.get();
         boolean down = Keys.isDown(key);

@@ -112,11 +112,39 @@ public final class FireHand extends Module implements AttackListener {
         f.useOutline(quads);
         // меч заменён своим — контур ауры по его клинку (диагональ модели), а не по ванильному спрайту
         if (sword && CustomSwords.replacing()) f.outline = BLADE;
-        f.simulate(ps.last().normal(), first, gui);
-        if (f.count == 0 && f.activeK < 0.02f) return;
+        f.finish(ps, c, first, gui);
+    }
+
+    /** Аура вокруг импортированного скина: контур — по рамке его модели (в пространстве модели предмета). */
+    public static void submitAuraBounds(PoseStack ps, SubmitNodeCollector c, ItemDisplayContext ctx, float[] bounds, boolean gui) {
+        FireHand f = instance;
+        if (f == null || !f.isEnabled()) return;
+        if (f.when.getId().equals("weapon") && !ItemFx.currentIsWeapon()) return;
+        System.arraycopy(bounds, 0, f.box, 0, 6);
+        f.bx0 = bounds[0]; f.by0 = bounds[1]; f.bz = (bounds[2] + bounds[5]) / 2f;
+        f.bS = Math.max(1e-4f, Math.max(bounds[3] - bounds[0], bounds[4] - bounds[1]));
+        f.outline = RING;
+        f.finish(ps, c, ctx == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || ctx == ItemDisplayContext.FIRST_PERSON_LEFT_HAND, gui);
+    }
+
+    private void finish(PoseStack ps, SubmitNodeCollector c, boolean first, boolean gui) {
+        FireHand f = this;
+        simulate(ps.last().normal(), first, gui);
+        if (count == 0 && activeK < 0.02f) return;
         // оси экрана для «спрайтов» — в пространстве, куда поза переводит модель
         boolean camAxes = !first && !gui;
         c.submitCustomGeometry(ps, dev.mraz1visual.render.FxVertex.glow(), (pose, vc) -> f.draw(vc, pose.pose(), camAxes, gui));
+    }
+
+    /** Точки по периметру рамки модели (для 3D-моделей без рёбер спрайта). */
+    private static final float[] RING = new float[24 * 4];
+
+    static {
+        for (int i = 0; i < 24; i++) {
+            double a = Math.PI * 2 * i / 24;
+            RING[i * 4] = 0.5f + 0.5f * (float) Math.cos(a); RING[i * 4 + 1] = 0.5f + 0.5f * (float) Math.sin(a);
+            RING[i * 4 + 2] = (float) Math.cos(a); RING[i * 4 + 3] = (float) Math.sin(a);
+        }
     }
 
     private void useOutline(List<BakedQuad> quads) {
@@ -135,16 +163,7 @@ public final class FireHand extends Module implements AttackListener {
     private float[] extract(List<BakedQuad> quads) {
         int n = 0;
         for (BakedQuad q : quads) if (q.direction() != Direction.NORTH && q.direction() != Direction.SOUTH) n++;
-        if (n < 6) {
-            // 3D-модель без рёбер спрайта — точки по периметру рамки
-            float[] o = new float[24 * 4];
-            for (int i = 0; i < 24; i++) {
-                double a = Math.PI * 2 * i / 24;
-                float cx = 0.5f + 0.5f * (float) Math.cos(a), cy = 0.5f + 0.5f * (float) Math.sin(a);
-                o[i * 4] = cx; o[i * 4 + 1] = cy; o[i * 4 + 2] = (float) Math.cos(a); o[i * 4 + 3] = (float) Math.sin(a);
-            }
-            return o;
-        }
+        if (n < 6) return RING; // 3D-модель без рёбер спрайта — точки по периметру рамки
         float[] o = new float[n * 4];
         int k = 0;
         for (BakedQuad q : quads) {

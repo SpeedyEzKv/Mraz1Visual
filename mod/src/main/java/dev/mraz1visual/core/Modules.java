@@ -96,6 +96,9 @@ public final class Modules {
         m.register(new FireHand());
         m.register(new CustomSwords());
         m.register(new Pets());
+        m.register(new dev.mraz1visual.module.ModelPets());
+        m.register(new dev.mraz1visual.module.WeaponSkins());
+        m.register(new dev.mraz1visual.module.ModelCosmetics());
         m.register(new Accessories());
         m.register(new AmbientFx());
         m.register(new HitMarker());

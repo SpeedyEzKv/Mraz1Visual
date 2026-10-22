@@ -3,6 +3,10 @@ package dev.mraz1visual.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.mraz1visual.module.CustomSwords;
 import dev.mraz1visual.module.FireHand;
+import dev.mraz1visual.module.WeaponSkins;
+import dev.mraz1visual.models.Mesh;
+import dev.mraz1visual.models.ModelDraw;
+import dev.mraz1visual.models.ModelEntry;
 import net.fabricmc.fabric.api.client.rendering.v1.RenderStateDataKey;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -27,17 +31,26 @@ public final class ItemFx {
     public static final RenderStateDataKey<Integer> FLAGS = RenderStateDataKey.create(() -> "mraz1visual:item_flags");
     public static final RenderStateDataKey<Item> ITEM = RenderStateDataKey.create(() -> "mraz1visual:item");
     public static final int MINE = 1, SWORD = 2, WEAPON = 4;
+    /** Импортированный скин предмета, его состояние (натяжение лука и т. п.) и контекст отрисовки. */
+    public static final RenderStateDataKey<ModelEntry> SKIN = RenderStateDataKey.create(() -> "mraz1visual:item_skin");
+    public static final RenderStateDataKey<String> SKIN_STATE = RenderStateDataKey.create(() -> "mraz1visual:item_skin_state");
+    public static final RenderStateDataKey<ItemDisplayContext> CTX = RenderStateDataKey.create(() -> "mraz1visual:item_ctx");
 
     /** Состояние предмета, чей слой сейчас отправляется (между submit предмета и слоя). */
     private static int currentFlags;
     private static Item currentItem;
+    private static ModelEntry currentSkin;
+    private static String currentState;
+    private static ItemDisplayContext currentCtx;
+    /** Поза скина применена к этому слою / скин этого предмета уже отправлен (у предмета бывает несколько слоёв). */
+    private static boolean skinPose, skinDrawn;
     /** Предмет рисуется в превью/инвентаре (ортографическая камера) — ставит слой модели игрока. */
     public static boolean guiPass;
 
     private ItemFx() {}
 
     /** Из миксина ItemModelResolver.updateForTopItem: пометить предмет. */
-    public static void tag(ItemStackRenderState state, ItemStack stack, ItemOwner owner) {
+    public static void tag(ItemStackRenderState state, ItemStack stack, ItemDisplayContext ctx, ItemOwner owner) {
         Minecraft mc = Minecraft.getInstance();
         int flags = 0;
         if (!stack.isEmpty() && mc.player != null && owner == mc.player) {
@@ -47,6 +60,27 @@ public final class ItemFx {
         }
         state.setData(FLAGS, flags == 0 ? null : flags);
         state.setData(ITEM, flags == 0 ? null : stack.getItem());
+        ModelEntry skin = null;
+        if ((flags & MINE) != 0 && WeaponSkins.active()) {
+            skin = WeaponSkins.skinFor(stack);
+            // иконки в хотбаре/инвентаре кэшируются по «личности» модели — без галочки не помечаем вовсе
+            if (skin != null && ctx == ItemDisplayContext.GUI && !WeaponSkins.allowed(ctx, false)) skin = null;
+        }
+        state.setData(SKIN, skin);
+        state.setData(SKIN_STATE, skin == null ? null : WeaponSkins.stateFor(stack));
+        state.setData(CTX, skin == null ? null : ctx);
+        if (skin != null) {
+            // новый ключ кэша иконки: другой скин, состояние или поза — другая картинка
+            state.appendModelIdentityElement(skin);
+            state.appendModelIdentityElement(state.getData(SKIN_STATE));
+            state.appendModelIdentityElement(skin.poseKey);
+            if (skin.animatedTextures()) state.setAnimated();
+        }
+    }
+
+    /** Из миксина ItemStackRenderState.submit: начало отправки предмета (до всех его слоёв). */
+    public static void itemStart() {
+        skinDrawn = false;
     }
 
     /** Из миксина ItemStackRenderState.submit: какой предмет сейчас отправляет слои. */
@@ -54,6 +88,10 @@ public final class ItemFx {
         Integer f = state.getData(FLAGS);
         currentFlags = f == null ? 0 : f;
         currentItem = state.getData(ITEM);
+        currentSkin = state.getData(SKIN);
+        currentState = state.getData(SKIN_STATE);
+        currentCtx = state.getData(CTX);
+        skinPose = false;
     }
 
     /** Предмет, который сейчас рисуется, — оружие (меч, топор, трезубец, булава). */
@@ -64,6 +102,34 @@ public final class ItemFx {
     public static void end() {
         currentFlags = 0;
         currentItem = null;
+        currentSkin = null;
+        skinPose = false;
+    }
+
+    /**
+     * Из миксина вместо ванильной ItemTransform.apply: у скина своя поза (display его модели + ручная подстройка).
+     * @return true — поза скина применена.
+     */
+    public static boolean applySkinTransform(boolean leftHand, PoseStack.Pose pose) {
+        if (currentSkin == null || currentCtx == null || !WeaponSkins.allowed(currentCtx, guiPass)) return false;
+        currentSkin.display[currentCtx.ordinal()].apply(leftHand, pose);
+        skinPose = true;
+        return true;
+    }
+
+    /** Скин вместо квадов или особой модели (щит, трезубец). @return true — ванильное не рисовать. */
+    public static boolean submitSkin(PoseStack ps, SubmitNodeCollector c, ItemDisplayContext ctx, int light, int overlay) {
+        if (!skinPose) return false;
+        if (!skinDrawn) {
+            skinDrawn = true;
+            Mesh m = currentSkin.mesh(currentState);
+            WeaponSkins w = WeaponSkins.get();
+            ModelDraw.submit(c, ps, m, null, -1, overlay, light, w != null && w.glow.get());
+            if (ctx != ItemDisplayContext.GUI && ctx != ItemDisplayContext.GROUND && ctx != ItemDisplayContext.FIXED) {
+                FireHand.submitAuraBounds(ps, c, ctx, m.bounds, guiPass);
+            }
+        }
+        return true;
     }
 
     /**
@@ -72,6 +138,7 @@ public final class ItemFx {
      */
     public static boolean submitLayer(PoseStack ps, SubmitNodeCollector c, ItemDisplayContext ctx, List<BakedQuad> quads) {
         if ((currentFlags & MINE) == 0) return false;
+        if (skinPose) return true;
         boolean replaced = (currentFlags & SWORD) != 0 && CustomSwords.submitModel(ps, c, ctx, quads, currentItem, guiPass);
         if (ctx != ItemDisplayContext.GUI && ctx != ItemDisplayContext.GROUND && ctx != ItemDisplayContext.FIXED) {
             FireHand.submitAura(ps, c, ctx, quads, replaced, guiPass);
