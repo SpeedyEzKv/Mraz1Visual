@@ -75,7 +75,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         d.text(name, Fonts.Kind.BOLD, right - Fonts.width(name, Fonts.Kind.BOLD), ty + 2, Colors.mulAlpha(0xFFE6E6F4, fade));
         d.textRight(currentIsMicrosoft() ? "Microsoft" : "локальная сессия", right, ty + 14, Colors.mulAlpha(0xFF8686A2, fade));
 
-        if (dev.mraz1visual.music.MediaClient.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
+        if (dev.mraz1visual.music.NowPlaying.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
 
         panelAnim = Anim.to(panelAnim, accountsOpen ? 1 : 0, dt);
         if (panelAnim > 0.01f) renderAccounts(mx, my, dt, ty + tile + 12);
@@ -189,7 +189,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         if (e.button() != 0) return false;
         double mx = e.x() / k, my = e.y() / k;
         if (accountsOpen && clickAccounts(mx, my)) return true;
-        if (dev.mraz1visual.music.MediaClient.available() && music.click(musicX(), musicY(), mx, my)) return true;
+        if (dev.mraz1visual.music.NowPlaying.available() && music.click(musicX(), musicY(), mx, my)) return true;
         if (clickItems(mx, my)) return true;
         if (accountsOpen) {
             accountsOpen = false;

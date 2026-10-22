@@ -36,13 +36,14 @@ public final class DiscordRpc extends Module {
      * «Играет в …»). Обычно его передаёт лаунчер из release/manifest.json (поле discord_app_id);
      * без лаунчера — файл config/mraz1visual/discord.txt или эта константа.
      */
-    public static final String APP_ID = "";
+    public static final String APP_ID = "YOUR_DISCORD_APP_ID";
 
     private static final String DOWNLOAD_URL = "https://github.com/SpeedyEzKv/Mraz1Visual/releases/latest";
 
     final BoolSetting showServer = add(new BoolSetting("show_server", "Показывать сервер", true));
     final BoolSetting showCount = add(new BoolSetting("show_count", "Число включённых визуалов", true));
     final BoolSetting button = add(new BoolSetting("button", "Кнопка «Скачать»", true));
+    final BoolSetting music = add(new BoolSetting("music", "«Слушает: исполнитель — трек»", true));
     final ActionSetting portal = add(new ActionSetting("portal", "Discord Developer Portal", "Открыть ›",
             () -> dev.mraz1visual.overlay.Screenshots.openExternal("https://discord.com/developers/applications")));
 
@@ -67,12 +68,17 @@ public final class DiscordRpc extends Module {
             }
         } catch (Throwable ignored) {
         }
-        return APP_ID;
+        return APP_ID.matches("[0-9]{15,22}") ? APP_ID : ""; // заглушка — модуль молча выключен
     }
+
+    /** ID проверяется раз в 30 с (файл маленький), а не каждый тик; без ID поток даже не запускается. */
+    private String cachedId;
 
     @Override
     public void onTick(Minecraft mc) {
         if (++tick % 40 != 1) return; // раз в 2 секунды достаточно
+        if (cachedId == null || tick % 600 == 1) cachedId = appId();
+        if (cachedId.isEmpty()) return;
         wanted = activity(mc).toString();
         if (worker == null || !worker.isAlive()) {
             worker = new Thread(this::loop, "Mraz1Visual Discord");
@@ -99,7 +105,13 @@ public final class DiscordRpc extends Module {
         }
         int on = 0;
         for (Module m : dev.mraz1visual.Mraz1Visual.MODULES.all()) if (m.isEnabled() && !m.alwaysOn()) on++;
-        state = "Minecraft 1.21.11" + (showCount.get() ? " · визуалов: " + on : "");
+        state = "Minecraft 1.21.11 · Mraz1Visual" + (showCount.get() ? " · визуалов: " + on : "");
+        boolean listening = music.get() && dev.mraz1visual.music.NowPlaying.available() && dev.mraz1visual.music.NowPlaying.playing();
+        if (listening) {
+            String ar = dev.mraz1visual.music.NowPlaying.artist(), ti = dev.mraz1visual.music.NowPlaying.title();
+            state = "Слушает: " + (ar.isBlank() ? ti : ar + " — " + ti);
+            if (state.length() > 120) state = state.substring(0, 119) + "…";
+        }
         a.addProperty("details", details);
         a.addProperty("state", state);
         JsonObject ts = new JsonObject();
@@ -108,6 +120,9 @@ public final class DiscordRpc extends Module {
         JsonObject assets = new JsonObject();
         assets.addProperty("large_image", "logo");
         assets.addProperty("large_text", "Mraz1Visual — визуальный клиент");
+        // маленькая картинка — статус (ключи ассетов приложения: music, world, server, menu)
+        assets.addProperty("small_image", listening ? "music" : mc.level == null ? "menu" : mc.getCurrentServer() != null ? "server" : "world");
+        assets.addProperty("small_text", listening ? "Слушает музыку" : details);
         a.add("assets", assets);
         if (button.get()) {
             JsonArray b = new JsonArray();

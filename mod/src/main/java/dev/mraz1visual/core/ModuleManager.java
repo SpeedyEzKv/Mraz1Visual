@@ -40,6 +40,8 @@ public final class ModuleManager {
     public <M extends Module> M register(M m) {
         if (find(m.id) != null) throw new IllegalStateException("duplicate module id " + m.id);
         m.manager = this;
+        // «всегда включённые» (настройки, плеер) — включены и без записи в конфиге
+        if (m.alwaysOn()) m.loadEnabled(true);
         m.bind.onChange(this::markBindsDirty);
         all.add(m);
         byCategory.get(m.category).add(m);

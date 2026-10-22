@@ -266,6 +266,29 @@ public final class Harness {
             case "jump" -> mc.player.jumpFromGround();
             case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
             case "preset" -> dev.mraz1visual.module.VisualPresets.apply(a[1]);
+            case "music" -> {
+                var lib = dev.mraz1visual.music.player.Library.tracks();
+                switch (a[1]) {
+                    case "list" -> {
+                        for (var t : lib) log("  track " + t.artist + " — " + t.title + " (" + t.path.getFileName() + ")");
+                        log("  state playing=" + dev.mraz1visual.music.player.MusicPlayer.playing() + " pos=" + dev.mraz1visual.music.player.MusicPlayer.position()
+                                + " len=" + dev.mraz1visual.music.player.MusicPlayer.length() + " lyrics=" + dev.mraz1visual.music.Lyrics.lines.size()
+                                + " synced=" + dev.mraz1visual.music.Lyrics.synced + " status=" + dev.mraz1visual.music.Lyrics.status);
+                    }
+                    case "play" -> {
+                        String q = a[2].toLowerCase(java.util.Locale.ROOT);
+                        for (int i = 0; i < lib.size(); i++) if (lib.get(i).path.getFileName().toString().toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                            dev.mraz1visual.music.player.MusicPlayer.playList(lib, i);
+                            break;
+                        }
+                    }
+                    case "next" -> dev.mraz1visual.music.player.MusicPlayer.next();
+                    case "seek" -> dev.mraz1visual.music.player.MusicPlayer.seek(Long.parseLong(a[2]));
+                    case "stop" -> dev.mraz1visual.music.player.MusicPlayer.stop();
+                    case "screen" -> mc.setScreen(new dev.mraz1visual.ui.MusicScreen(null));
+                    default -> log("  music ?");
+                }
+            }
             case "slot" -> mc.player.getInventory().setSelectedSlot(Integer.parseInt(a[1]));
             case "quit" -> {
                 log("done");

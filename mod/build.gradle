@@ -32,6 +32,12 @@ dependencies {
         modLocalRuntime "maven.modrinth:mcef-modern:${project.mcef_version}"
     }
 
+    // Встроенный музыкальный плеер: MP3 — JLayer (LGPL-2.1), FLAC — jflac (Apache-2.0); OGG — stb_vorbis из LWJGL игры
+    implementation "javazoom:jlayer:1.0.1"
+    include "javazoom:jlayer:1.0.1"
+    implementation "org.jflac:jflac-codec:1.5.2"
+    include "org.jflac:jflac-codec:1.5.2"
+
     // Проверка совместимости: dev-клиент запускается сразу с Sodium и Iris
     if (project.findProperty('dev_sodium') == 'true') {
         modLocalRuntime "maven.modrinth:sodium:${project.sodium_version}"

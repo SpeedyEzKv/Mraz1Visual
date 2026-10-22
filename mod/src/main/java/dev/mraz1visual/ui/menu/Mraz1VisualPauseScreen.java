@@ -56,7 +56,7 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
         renderItems(mx, my, dt);
         renderBrand(left);
         renderAccount(place());
-        if (MediaClient.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
+        if (dev.mraz1visual.music.NowPlaying.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
     }
 
     /**
@@ -93,7 +93,7 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         if (e.button() != 0) return false;
         double mx = e.x() / k, my = e.y() / k;
-        if (MediaClient.available() && music.click(musicX(), musicY(), mx, my)) return true;
+        if (dev.mraz1visual.music.NowPlaying.available() && music.click(musicX(), musicY(), mx, my)) return true;
         return clickItems(mx, my);
     }
 

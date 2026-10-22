@@ -31,7 +31,7 @@ import java.util.Map;
  * оружия, избранное, поиск, ручная поза), «Питомцы» (выбор активного, кнопки анимаций) и «Косметика» (шляпа, крылья).
  */
 public final class ModelGallery extends Screen {
-    public enum Tab { SKINS("Скины"), PETS("Питомцы"), COSMETICS("Косметика");
+    public enum Tab { SKINS("Скины"), PETS("Питомцы"), COSMETICS("Косметика"), AUTHORS("Авторы");
         final String title;
         Tab(String t) { title = t; }
     }
@@ -138,6 +138,7 @@ public final class ModelGallery extends Screen {
         int bodyY = wy + TOP_H, bodyH = wh - TOP_H - FOOT_H;
         switch (tab) {
             case SKINS -> drawSkins(g, mx, my, bodyY, bodyH, dt);
+            case AUTHORS -> drawAuthors(mx, my, bodyY, bodyH);
             case PETS -> drawPets(g, mx, my, bodyY, bodyH, dt);
             case COSMETICS -> drawCosmetics(g, mx, my, bodyY, bodyH);
         }
@@ -230,7 +231,22 @@ public final class ModelGallery extends Screen {
         ModelEntry chosen = ModelRegistry.get(ModelPrefs.weapons.get(slot));
         int gx = wx + 12 + SLOT_W + 12, gw = ww - (gx - wx) - 12 - (chosen != null ? SIDE_W + 10 : 0);
         List<ModelEntry> list = new ArrayList<>();
-        for (ModelEntry e : ModelRegistry.of(ModelEntry.Kind.WEAPON)) if (matches(e)) list.add(e);
+        // коллекции: встроенные паки по отдельности и «Мои файлы»
+        int fx = gx0(), fy = y + 2;
+        fx = chip(mx, my, fx, fy, "Все", collectionFilter.equals("all"), () -> setCollection("all"));
+        for (ModelRegistry.Collection c : ModelRegistry.collections()) {
+            if (!c.kind().equals("weapons") || !hasCollection(c.id())) continue;
+            String id = c.id();
+            fx = chip(mx, my, fx, fy, c.title(), collectionFilter.equals(id), () -> setCollection(id));
+        }
+        chip(mx, my, fx, fy, "Мои файлы", collectionFilter.equals("local"), () -> setCollection("local"));
+        y += 24;
+        h -= 24;
+        for (ModelEntry e : ModelRegistry.of(ModelEntry.Kind.WEAPON)) {
+            if (!matches(e)) continue;
+            if (collectionFilter.equals("local") ? e.builtin : !collectionFilter.equals("all") && !collectionFilter.equals(e.collection)) continue;
+            list.add(e);
+        }
         list.sort((a, b) -> Boolean.compare(ModelPrefs.favorites.contains(b.id), ModelPrefs.favorites.contains(a.id)));
         grid(g, mx, my, gx, y, gw, h, list, chosen, e -> {
             if (e.broken()) return;
@@ -239,6 +255,53 @@ public final class ModelGallery extends Screen {
             ModelPrefs.save();
         }, "Положите паки (zip, папки, .bbmodel, png) в mraz1visual/weapon_skins и нажмите «Обновить папку».");
         if (chosen != null) poseEditor(mx, my, gx + gw + 10, y + 4, chosen);
+    }
+
+    private String collectionFilter = "all";
+
+    private int gx0() { return wx + 12 + SLOT_W + 12; }
+
+    private boolean hasCollection(String id) {
+        for (ModelEntry e : ModelRegistry.all()) if (id.equals(e.collection)) return true;
+        return false;
+    }
+
+    private void setCollection(String id) {
+        collectionFilter = id;
+        scrollTarget = scroll = 0;
+    }
+
+    /** Капсула-фильтр. @return x следующей. */
+    private int chip(int mx, int my, int x, int y, String label, boolean on, Runnable r) {
+        label = Draw.ellipsize(label, 86);
+        int w = d.width(label) + 16;
+        boolean hov = Widget.hit(mx, my, x, y, w, 18);
+        d.round(x, y, w, 18, 9, on ? Theme.GLASS_ACTIVE : hov ? Theme.HOVER : Theme.GLASS_CARD);
+        d.textCenter(label, x + w / 2, Draw.textY(y, 18), on ? Theme.TEXT : Theme.TEXT_DIM);
+        hits.add(new Hit(x, y, w, 18, r));
+        return x + w + 4;
+    }
+
+    /** «Авторы»: каждая встроенная коллекция — название, автор, ссылка, пометка о разрешении; плюс открытые библиотеки. */
+    private void drawAuthors(int mx, int my, int y, int h) {
+        int x = wx + 20, cy = y + 6, w = ww - 40;
+        d.text("Встроенная косметика", Fonts.Kind.BOLD, x, cy, Theme.TEXT);
+        cy += 16;
+        for (ModelRegistry.Collection c : ModelRegistry.collections()) {
+            boolean in = hasCollection(c.id());
+            d.glass(x, cy, w, 34, Theme.RADIUS_CARD, Theme.GLASS_CARD, 0.7f);
+            d.text(c.title(), Fonts.Kind.BOLD, x + 12, cy + 6, Theme.TEXT);
+            d.text(c.author() + (c.url().isEmpty() ? "" : " · " + c.url()), x + 12, cy + 19, Theme.TEXT_DIM);
+            String note = in ? c.note() : "ждёт подтверждения разрешения — пока только из своих файлов";
+            d.textRight(Draw.ellipsize(note, w / 2), x + w - 12, Draw.textY(cy, 34), in ? Theme.TEXT_MUTED : 0xFFFFB86B);
+            if (!c.url().isEmpty()) {
+                String url = c.url();
+                hits.add(new Hit(x, cy, w, 34, () -> net.minecraft.util.Util.getPlatform().openUri(url)));
+            }
+            cy += 38;
+            if (cy > y + h - 40) break;
+        }
+        d.text("Шрифты: Manrope, Unbounded, Inter (SIL OFL), DejaVu. Подробно — CREDITS.md в репозитории.", x, cy + 6, Theme.TEXT_MUTED);
     }
 
     private void setModule(String id) {
@@ -279,6 +342,12 @@ public final class ModelGallery extends Screen {
                 else preview(g, e, null, hov ? spin : 0, 0, -45, 1.05f, cx + 4, cy + 4, CARD_W - 8, 78);
             }
             d.text(Draw.ellipsize(e.name, CARD_W - 12), cx + 7, cy + 84, Theme.TEXT);
+            // своё новое — маленькая метка «Новое»
+            if ("mraz1".equals(e.collection)) {
+                int bw = d.width("Новое") + 10;
+                d.round(cx + 6, cy + 6, bw, 13, 6, Colors.withAlpha(Theme.accent(), 0xC8));
+                d.textCenter("Новое", cx + 6 + bw / 2, Draw.textY(cy + 6, 13), 0xFFFFFFFF);
+            }
             d.text(Draw.ellipsize(e.sourceLabel(), CARD_W - 12), cx + 7, cy + 97, Theme.TEXT_MUTED);
             // избранное
             if (e.kind == ModelEntry.Kind.WEAPON) {

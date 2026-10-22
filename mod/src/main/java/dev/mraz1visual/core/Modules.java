@@ -103,6 +103,8 @@ public final class Modules {
         m.register(new dev.mraz1visual.module.FrostBreath());
         m.register(new dev.mraz1visual.module.Cinematic());
         m.register(new dev.mraz1visual.module.EnchantGlint());
+        m.register(new dev.mraz1visual.module.MusicPlayerModule());
+        m.register(new dev.mraz1visual.module.LyricsHud());
         m.register(new dev.mraz1visual.module.SlotPulse());
         m.register(new dev.mraz1visual.module.LandingDust());
         m.register(new dev.mraz1visual.module.PickupSparkle());
