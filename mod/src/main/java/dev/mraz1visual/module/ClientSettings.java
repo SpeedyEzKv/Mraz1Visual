@@ -23,6 +23,10 @@ public final class ClientSettings extends Module {
             "auto", "Авто", "small", "Мелкий", "large", "Крупный")
             .group("Окно"));
 
+    public final EnumSetting menuStyle = add(new EnumSetting("menu_style", "Вид меню", 0,
+            "v2", "Новое", "classic", "Классическое")
+            .group("Окно"));
+
     public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 0,
             "blur", "Размытие", "dim", "Затемнение", "none", "Нет")
             .group("Окно"));

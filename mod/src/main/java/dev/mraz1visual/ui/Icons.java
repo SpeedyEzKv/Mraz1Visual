@@ -109,6 +109,8 @@ public final class Icons {
             case WINGS -> CAPE;
             case PETS -> PAW;
             case SKY -> CLOUD;
+            case SHADERS -> SUN;
+            case STAFF -> SHIELD;
             case PERFORMANCE -> GAUGE;
             case MISC -> GRID;
             case MUSIC -> NOTE;

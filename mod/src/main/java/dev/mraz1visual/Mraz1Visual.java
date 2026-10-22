@@ -27,6 +27,7 @@ public final class Mraz1Visual implements ClientModInitializer {
     public static ConfigManager CONFIG;
 
     private static Mraz1VisualScreen screen;
+    private static dev.mraz1visual.ui.ClientScreen screenV2;
     private static boolean menuKeyWasDown, overlayWasDown;
 
     @Override
@@ -116,6 +117,12 @@ public final class Mraz1Visual implements ClientModInitializer {
     }
 
     public static void openMenu(Minecraft mc) {
+        if (!Modules.client.menuStyle.getId().equals("classic")) {
+            if (screenV2 == null) screenV2 = new dev.mraz1visual.ui.ClientScreen();
+            screenV2.setParent(mc.screen);
+            mc.setScreen(screenV2);
+            return;
+        }
         if (screen == null) screen = new Mraz1VisualScreen();
         screen.setParent(mc.screen);
         mc.setScreen(screen);
