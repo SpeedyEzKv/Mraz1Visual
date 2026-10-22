@@ -25,7 +25,7 @@ public final class Icons {
             Map.entry("hud", HUD),
             Map.entry("name_tags", TAG),
             Map.entry("target_esp", TARGET),
-            Map.entry("esp", ESPBOX),
+            Map.entry("postfx", SUN),
             Map.entry("trajectories", ARC),
             Map.entry("hit_effects", STAR),
             Map.entry("hit_sounds", NOTE),

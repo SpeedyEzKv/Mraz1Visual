@@ -190,6 +190,7 @@ public final class Harness {
                 if (s == null) log("  no setting " + a[1] + "." + a[2]);
                 else if (!s.fromJson(value(v))) log("  bad value " + v);
             }
+            case "pfxstage" -> dev.mraz1visual.render.post.PostFx.stage = Integer.parseInt(a[1]);
             case "gui" -> {
                 if (a[1].equals("open")) Mraz1Visual.openMenu(mc);
                 else if (a[1].equals("close")) mc.setScreen(null);

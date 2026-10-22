@@ -37,4 +37,22 @@ public final class Mc {
         mc.resizeDisplay();
         //?}
     }
+
+    /** Дальняя плоскость проекции мира (для линейной глубины в пост-обработке). */
+    public static float depthFar(Minecraft mc) {
+        //? if >=26.1 {
+        /*return Math.max(64f, mc.options.getEffectiveRenderDistance() * 64f);
+        *///?} else {
+        return mc.gameRenderer.getDepthFar();
+        //?}
+    }
+
+    /** Время суток в тиках (0 — рассвет, 6000 — полдень). В 26.x время идёт через «часы мира» — берём игровое. */
+    public static long dayTime(net.minecraft.client.multiplayer.ClientLevel level) {
+        //? if >=26.1 {
+        /*return level.getGameTime() % 24000L;
+        *///?} else {
+        return level.getDayTime();
+        //?}
+    }
 }

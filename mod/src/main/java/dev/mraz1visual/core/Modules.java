@@ -32,6 +32,7 @@ public final class Modules {
         m.register(new HitEffects());
         m.register(new HitSounds());
         m.register(new MotionBlur());
+        m.register(new PostFxModule());
         m.register(new AspectRatio());
         m.register(new FullBright());
         m.register(new JumpCircle());

@@ -60,6 +60,7 @@ loom {
             programArgs '--width', '1600', '--height', '900'
             // профилирование: ./gradlew runClient -Pjfr=путь.jfr
             if (project.findProperty('jfr')) vmArg "-XX:StartFlightRecording=filename=${project.findProperty('jfr')},settings=profile"
+            if (project.findProperty('pfxProfile')) vmArg '-Dmraz1.pfx.profile=true'
         }
     }
 }
