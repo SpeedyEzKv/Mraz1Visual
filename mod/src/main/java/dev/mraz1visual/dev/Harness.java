@@ -225,7 +225,7 @@ public final class Harness {
                 for (var e : dev.mraz1visual.models.ModelRegistry.all()) {
                     kinds.merge(e.kind + (e.broken() ? " broken" : ""), 1, Integer::sum);
                     if (e.broken()) log("  BROKEN " + e.id + ": " + e.error);
-                    else if (a.length > 1 && a[1].equals("all")) log("  " + e.kind + " " + e.id + " states=" + e.states.keySet()
+                    else if (a.length > 1 && a[1].equals("all")) log("  " + e.kind + (e.builtin ? " [builtin " + e.collection + "]" : "") + " " + e.id + " states=" + e.states.keySet()
                             + " anims=" + e.anims.size() + " fx=" + e.effects.size() + " quads=" + e.mesh().quads
                             + " atlas=" + e.mesh().atlas.w + "x" + e.mesh().atlas.h + (e.warnings.isEmpty() ? "" : " warn=" + e.warnings));
                 }

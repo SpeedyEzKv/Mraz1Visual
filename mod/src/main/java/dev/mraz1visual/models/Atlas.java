@@ -37,6 +37,8 @@ public final class Atlas {
     }
 
     final Slot[] slots;
+    /** В текстурах много полупрозрачных пикселей (стекло, лёд) — рисуется полупрозрачным типом, а не вырезкой. */
+    public final boolean translucent;
 
     private Atlas(int w, int h, Slot[] slots) {
         this.w = w;
@@ -46,6 +48,16 @@ public final class Atlas {
         boolean anyGlow = false;
         for (Slot s : slots) if (s != null && s.img.glow != null) anyGlow = true;
         this.glow = anyGlow ? new int[w * h] : null;
+        int semi = 0, opaque = 0;
+        for (Slot s : slots) {
+            if (s == null) continue;
+            for (int c : s.img.frames[0]) {
+                int a = c >>> 24;
+                if (a > 8) opaque++;
+                if (a > 20 && a < 235) semi++;
+            }
+        }
+        this.translucent = opaque > 0 && semi * 100 / opaque >= 3;
         for (Slot s : slots) {
             if (s == null) continue;
             blit(px, s, s.img.frames[s.img.order[0]]);

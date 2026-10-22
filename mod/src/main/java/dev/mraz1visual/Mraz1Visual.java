@@ -65,6 +65,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         dev.mraz1visual.ui.ModelPreview.register();
         dev.mraz1visual.models.ModelRegistry.onLoaded = () -> {
             for (var e : dev.mraz1visual.models.ModelRegistry.all()) dev.mraz1visual.models.ModelPrefs.applyPose(e);
+            dev.mraz1visual.module.WeaponSkins.applyMaterial();
         };
         PlayStats.load();
         AccountStore.load();

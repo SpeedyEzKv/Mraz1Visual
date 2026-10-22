@@ -7,6 +7,7 @@ import dev.mraz1visual.models.ModelPrefs;
 import dev.mraz1visual.models.ModelRegistry;
 import dev.mraz1visual.setting.ActionSetting;
 import dev.mraz1visual.setting.BoolSetting;
+import dev.mraz1visual.setting.EnumSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.tags.ItemTags;
@@ -34,6 +35,9 @@ public final class WeaponSkins extends Module {
     final BoolSetting hotbar = add(new BoolSetting("hotbar", "Хотбар", true).group("Где подменять"));
     final BoolSetting inventory = add(new BoolSetting("inventory", "Инвентарь", true).group("Где подменять"));
     final BoolSetting preview = add(new BoolSetting("preview", "Превью в меню", true).group("Где подменять"));
+    public final EnumSetting material = add(new EnumSetting("material", "Материал", 0, "realistic", "Реалистичный", "original", "Оригинал")
+            .hint("Реалистичный: световая кромка по краям (fresnel) и блик неба — металл и стекло читаются объёмно.")
+            .onChange(WeaponSkins::applyMaterial));
     public final BoolSetting glow = add(new BoolSetting("glow", "Свечение", true)
             .hint("Эмиссивные текстуры (*_e) и яркие части плоских скинов светятся в темноте."));
     final ActionSetting gallery = add(new ActionSetting("gallery", "Галерея скинов", "Открыть",
@@ -47,6 +51,11 @@ public final class WeaponSkins extends Module {
     public WeaponSkins() {
         super("weapon_skins", "Weapon Skins", "3D-скины оружия из своих паков (папка mraz1visual/weapon_skins). Только у тебя на экране.", Category.SWORDS);
         instance = this;
+    }
+
+    public static void applyMaterial() {
+        WeaponSkins w = instance;
+        dev.mraz1visual.models.ModelDraw.rimStrength = w != null && w.material.getId().equals("original") ? 0f : 0.38f;
     }
 
     public static WeaponSkins get() {

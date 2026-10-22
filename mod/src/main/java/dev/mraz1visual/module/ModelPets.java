@@ -295,8 +295,12 @@ public final class ModelPets extends Module implements WorldLayer {
         ps.scale(s, s, s);
         ps.translate(0, -base, 0);
         if (m.bones.length > 0) ModelDraw.bones(m, pose);
-        VertexConsumer vc = src.getBuffer(RenderTypes.entityCutoutNoCull(m.texture()));
+        VertexConsumer vc = src.getBuffer(ModelDraw.solidType(m));
         ModelDraw.draw(m, ps.last(), vc, -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.SOLID);
+        if (ModelDraw.rimStrength > 0.01f) {
+            ModelDraw.viewFromCamera(true);
+            ModelDraw.draw(m, ps.last(), src.getBuffer(ModelDraw.rimType()), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.RIM);
+        }
         if (glow.get() && m.hasGlow) {
             if (m.selfGlow) ModelDraw.draw(m, ps.last(), src.getBuffer(RenderTypes.eyes(m.texture())), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.GLOW_SELF);
             if (m.atlas.glowTexture != null) ModelDraw.draw(m, ps.last(), src.getBuffer(RenderTypes.eyes(m.atlas.glowTexture)), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.GLOW_LAYER);

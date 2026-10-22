@@ -76,7 +76,9 @@ public final class ModelPreview {
             ps.translate(-(b[0] + b[3]) / 2f, -(b[1] + b[4]) / 2f, -(b[2] + b[5]) / 2f);
             if (m.bones.length > 0) ModelDraw.bones(m, s.bonePose());
             int light = LightTexture.FULL_BRIGHT, ov = OverlayTexture.NO_OVERLAY;
-            ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.entityCutoutNoCull(m.texture())), -1, ov, light, ModelDraw.SOLID);
+            ModelDraw.viewFromCamera(false);
+            ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.solidType(m)), -1, ov, light, ModelDraw.SOLID);
+            if (ModelDraw.rimStrength > 0.01f) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.rimType()), -1, ov, light, ModelDraw.RIM);
             if (s.glow() && m.selfGlow) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.eyes(m.texture())), -1, ov, light, ModelDraw.GLOW_SELF);
             if (s.glow() && m.atlas.glowTexture != null) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.eyes(m.atlas.glowTexture)), -1, ov, light, ModelDraw.GLOW_LAYER);
             ps.popPose();

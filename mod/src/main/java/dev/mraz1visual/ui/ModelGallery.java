@@ -201,7 +201,8 @@ public final class ModelGallery extends Screen {
     private boolean matches(ModelEntry e) {
         if (search.isEmpty()) return true;
         String q = search.toString().toLowerCase(Locale.ROOT);
-        return e.name.toLowerCase(Locale.ROOT).contains(q) || e.source.toLowerCase(Locale.ROOT).contains(q);
+        return e.name.toLowerCase(Locale.ROOT).contains(q) || e.sourceLabel().toLowerCase(Locale.ROOT).contains(q)
+                || e.author.toLowerCase(Locale.ROOT).contains(q);
     }
 
     // ── скины ────────────────────────────────────────────────
@@ -278,7 +279,7 @@ public final class ModelGallery extends Screen {
                 else preview(g, e, null, hov ? spin : 0, 0, -45, 1.05f, cx + 4, cy + 4, CARD_W - 8, 78);
             }
             d.text(Draw.ellipsize(e.name, CARD_W - 12), cx + 7, cy + 84, Theme.TEXT);
-            d.text(Draw.ellipsize(e.source, CARD_W - 12), cx + 7, cy + 97, Theme.TEXT_MUTED);
+            d.text(Draw.ellipsize(e.sourceLabel(), CARD_W - 12), cx + 7, cy + 97, Theme.TEXT_MUTED);
             // избранное
             if (e.kind == ModelEntry.Kind.WEAPON) {
                 boolean fav = ModelPrefs.favorites.contains(e.id);
@@ -289,7 +290,7 @@ public final class ModelGallery extends Screen {
                     ModelPrefs.save();
                 }));
             }
-            if (hov) hover = e.broken() ? "Ошибка: " + e.error : e.name + " — " + e.source + " (" + e.format + ")"
+            if (hov) hover = e.broken() ? "Ошибка: " + e.error : e.name + " — " + e.sourceLabel() + (e.builtin ? " · " + e.author : "") + " (" + e.format + ")"
                     + (e.warnings.isEmpty() ? "" : ", предупреждений: " + e.warnings.size());
             if (my >= y && my < y + h) hits.add(new Hit(cx, cy, CARD_W, CARD_H, () -> pick.pick(e)));
         }
