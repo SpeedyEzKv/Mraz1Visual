@@ -6,7 +6,7 @@
 
 import java.util.zip.ZipInputStream
 
-def cosmeticsOut = file('src/main/resources/assets/mraz1visual/cosmetics')
+def cosmeticsOut = rootProject.file('src/main/resources/assets/mraz1visual/cosmetics')
 
 /** Все файлы архива (с вложенными zip) как путь → байты. Обратные слеши — в прямые. */
 def readZip
