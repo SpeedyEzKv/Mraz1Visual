@@ -75,7 +75,7 @@ function percent(p) {
 function idleStatus() {
   if (!info) return;
   if (!info.has_mraz1visual && !info.online) status("Mraz1Visual ещё не установлен", "Положи mraz1visual.jar в папку игры → game/mods");
-  else status(`Версия ${info.version} · Minecraft ${info.minecraft}`, "Нажми «Играть» — потом игра запустится сама");
+  else status(`Версия ${info.version} · Minecraft ${info.selected || info.minecraft}`, "Нажми «Играть» — потом игра запустится сама");
 }
 
 // ── данные ───────────────────────────────────────────────────
@@ -106,8 +106,34 @@ function renderInfo() {
   $("ramValue").textContent = Math.round(info.ram_mb / 1024) + " ГБ";
   $("ramHint").textContent = `Свободно ${gb(info.free_ram_mb)} из ${gb(info.total_ram_mb)} ГБ · советуем 4–6`;
   $("folder").textContent = info.game_dir;
+  renderVersions();
+  document.querySelectorAll("#sodiumSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.sodium));
+  document.querySelectorAll("#irisSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === (info.iris && info.sodium)));
   document.querySelectorAll("#closeSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.close_on_launch));
   idleStatus();
+}
+// ── версии Minecraft: бейджи «Рекомендуется / Новая / Бета» ──
+const BADGE = { recommended: "Рекомендуется", new: "Новая", beta: "Бета" };
+function renderVersions() {
+  const box = $("versions");
+  box.innerHTML = "";
+  (info.versions || []).forEach(([v, st]) => {
+    const b = document.createElement("button");
+    b.className = "ver" + (v === info.selected ? " on" : "");
+    b.innerHTML = `<span class="vn"></span><span class="vb ${st}"></span>`;
+    b.querySelector(".vn").textContent = v;
+    b.querySelector(".vb").textContent = BADGE[st] || st;
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      info.selected = v;
+      await saveProfile();
+      renderInfo();
+    };
+    box.appendChild(b);
+  });
+}
+async function saveProfile() {
+  await invoke("set_profile", { mcVersion: info.selected, sodium: info.sodium, iris: info.iris });
 }
 // ── что нового: новые обновления сверху ──────────────────────
 function verKey(v) {
@@ -288,6 +314,18 @@ $("back").onclick = () => show("home");
 $("openFolder").onclick = () => invoke("open_folder");
 $("ram").oninput = () => { $("ramValue").textContent = Math.round($("ram").value / 1024) + " ГБ"; };
 $("ram").onchange = saveSettings;
+document.querySelectorAll("#sodiumSeg button").forEach((b) => (b.onclick = () => {
+  info.sodium = b.dataset.v === "1";
+  if (!info.sodium) info.iris = false;
+  renderInfo();
+  saveProfile();
+}));
+document.querySelectorAll("#irisSeg button").forEach((b) => (b.onclick = () => {
+  info.iris = b.dataset.v === "1";
+  if (info.iris) info.sodium = true;
+  renderInfo();
+  saveProfile();
+}));
 document.querySelectorAll("#closeSeg button").forEach((b) => (b.onclick = () => {
   info.close_on_launch = b.dataset.v === "1";
   renderInfo();

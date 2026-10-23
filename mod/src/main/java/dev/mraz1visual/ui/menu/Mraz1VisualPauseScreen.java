@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.music.MediaClient;
 import dev.mraz1visual.music.MusicWidget;
@@ -10,7 +11,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /** Меню паузы (Esc) в стиле клиента. */
 public final class Mraz1VisualPauseScreen extends MenuBase {
@@ -56,7 +56,7 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
         renderItems(mx, my, dt);
         renderBrand(left);
         renderAccount(place());
-        if (MediaClient.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
+        if (dev.mraz1visual.music.NowPlaying.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
     }
 
     /**
@@ -73,7 +73,7 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
                 if (child instanceof Button b) {
                     String msg = b.getMessage().getString();
                     if (msg.equals(toMenu) || msg.equals(disconnect)) {
-                        b.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                        b.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                         return;
                     }
                 }
@@ -93,13 +93,13 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
         if (e.button() != 0) return false;
         double mx = e.x() / k, my = e.y() / k;
-        if (MediaClient.available() && music.click(musicX(), musicY(), mx, my)) return true;
+        if (dev.mraz1visual.music.NowPlaying.available() && music.click(musicX(), musicY(), mx, my)) return true;
         return clickItems(mx, my);
     }
 
     @Override
     public boolean keyPressed(KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (e.key() == InputConstants.KEY_ESCAPE) {
             minecraft.setScreen(null);
             return true;
         }

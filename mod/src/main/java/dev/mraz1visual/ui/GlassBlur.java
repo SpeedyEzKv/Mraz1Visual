@@ -7,7 +7,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
 import dev.mraz1visual.core.ModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -33,8 +32,32 @@ public final class GlassBlur {
 
     private GlassBlur() {}
 
-    /** Обновить размытие под текущий кадр. false — не получилось (тогда рисуйте ванильный фон). */
+    private static boolean requested;
+    private static int requestedLevels = 4;
+
+    /**
+     * Обновить размытие под текущий кадр. false — не получилось (тогда рисуйте ванильный фон).
+     * В 26.x GUI собирается раньше мира — тогда размытие считается позже, сразу после мира (afterLevel),
+     * а здесь только заказывается на следующий кадр.
+     */
     public static boolean update(int levels) {
+        //? if >=26.1 {
+        /*requested = true;
+        requestedLevels = levels;
+        return !failed && result != null;
+        *///?} else {
+        return compute(levels);
+        //?}
+    }
+
+    /** Из GameRendererPostMixin: мир уже в кадре — посчитать заказанное размытие. */
+    public static void afterLevel() {
+        if (!requested) return;
+        requested = false;
+        compute(requestedLevels);
+    }
+
+    private static boolean compute(int levels) {
         if (failed) return false;
         try {
             RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
@@ -79,7 +102,7 @@ public final class GlassBlur {
         int usage = GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_RENDER_ATTACHMENT;
         for (int i = 0; i < LEVELS; i++) {
             int lw = Math.max(1, w >> (i + 1)), lh = Math.max(1, h >> (i + 1));
-            tex[i] = device.createTexture("mraz1visual glass blur " + i, usage, TextureFormat.RGBA8, lw, lh, 1, 1);
+            tex[i] = device.createTexture("mraz1visual glass blur " + i, usage, dev.mraz1visual.compat.Mc.RGBA8, lw, lh, 1, 1);
             fbo[i] = GlStateManager.glGenFramebuffers();
             GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, fbo[i]);
             GlStateManager._glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL30.GL_TEXTURE_2D, ((GlTexture) tex[i]).glId(), 0);

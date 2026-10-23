@@ -15,8 +15,6 @@ public final class Modules {
         // ── Игрок ────────────────────────────────────────────
         m.register(new AutoSprint());
         m.register(new HotbarSwap());
-        m.register(new OffhandTotem());
-        m.register(new ClickPearl());
         m.register(new NoFriendDamage());
         m.register(new FakePlayer());
         m.register(new AutoRespawn());
@@ -31,18 +29,16 @@ public final class Modules {
         m.register(new Hud());
         m.register(new NameTags());
         m.register(new TargetEsp());
-        m.register(new Esp());
-        m.register(new Trajectories());
         m.register(new HitEffects());
         m.register(new HitSounds());
         m.register(new MotionBlur());
+        m.register(new PostFxModule());
         m.register(new AspectRatio());
         m.register(new FullBright());
         m.register(new JumpCircle());
         m.register(new ChinaHat());
         m.register(new Trails());
         m.register(new Hitboxes());
-        m.register(new SkeletonEsp());
         m.register(new BlockOutline());
         m.register(new Animations());
         m.register(new SwingAnimations());
@@ -103,6 +99,8 @@ public final class Modules {
         m.register(new dev.mraz1visual.module.FrostBreath());
         m.register(new dev.mraz1visual.module.Cinematic());
         m.register(new dev.mraz1visual.module.EnchantGlint());
+        m.register(new dev.mraz1visual.module.MusicPlayerModule());
+        m.register(new dev.mraz1visual.module.LyricsHud());
         m.register(new dev.mraz1visual.module.SlotPulse());
         m.register(new dev.mraz1visual.module.LandingDust());
         m.register(new dev.mraz1visual.module.PickupSparkle());
@@ -133,6 +131,8 @@ public final class Modules {
         m.register(new AutoAccept());
         m.register(new AutoReconnect());
         m.register(new ItemScroller());
+        m.register(new Wheels.Staff());
+        m.register(new Wheels.Phrase());
         m.register(new Desktop());
         m.register(new AutoCommand());
         m.register(new StreamerMode());

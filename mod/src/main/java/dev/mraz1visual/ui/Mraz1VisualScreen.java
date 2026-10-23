@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.core.Category;
@@ -30,7 +31,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import java.util.Map;
 public final class Mraz1VisualScreen extends Screen implements Host {
     private static final String BRAND = "MRAZ1VISUAL";
     private static final int SEARCH_MAX = 32;
-    private static final Category[] MODULE_TABS = {Category.VISUALS, Category.SWORDS, Category.WINGS, Category.COSMETICS, Category.PETS, Category.SKY, Category.PERFORMANCE, Category.PLAYER, Category.MISC};
+    private static final Category[] MODULE_TABS = {Category.VISUALS, Category.SWORDS, Category.WINGS, Category.COSMETICS, Category.PETS, Category.SKY, Category.MUSIC, Category.PERFORMANCE, Category.PLAYER, Category.MISC};
     private static final int NAV_H = 26, NAV_STEP = 28, HINT_H = 0, CARD_HEAD = 40, CARD_R = Theme.RADIUS_CARD, COL_GAP = 10, CARD_GAP = 10;
     private static final int TILE = 20, ICON = 9;
     private static final Path FAV_FILE = dev.mraz1visual.util.TextFiles.DIR.resolve("favorites.txt");
@@ -1178,20 +1178,20 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             return true;
         }
         if (popup != null) {
-            if (key == GLFW.GLFW_KEY_ESCAPE) popup = null;
+            if (key == InputConstants.KEY_ESCAPE) popup = null;
             return true;
         }
         if (configsMode() && profiles.isTyping()) {
-            boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+            boolean ctrl = (e.modifiers() & InputConstants.MOD_CONTROL) != 0;
             return profiles.keyPressed(key, ctrl, minecraft.keyboardHandler::getClipboard);
         }
         if (searchFocused) {
             switch (key) {
-                case GLFW.GLFW_KEY_ESCAPE -> {
+                case InputConstants.KEY_ESCAPE -> {
                     if (!search.isEmpty()) setSearch("");
                     else searchFocused = false;
                 }
-                case GLFW.GLFW_KEY_BACKSPACE -> {
+                case InputConstants.KEY_BACKSPACE -> {
                     int len = search.length();
                     if (len > 0) {
                         int cp = search.codePointBefore(len);
@@ -1199,7 +1199,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
                         onSearchChanged();
                     }
                 }
-                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+                case InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> {
                     if (!cards.isEmpty()) cards.get(0).open = true;
                     searchFocused = false;
                 }
@@ -1209,7 +1209,7 @@ public final class Mraz1VisualScreen extends Screen implements Host {
             }
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE || key == cs.menuKey.get()) {
+        if (key == InputConstants.KEY_ESCAPE || key == cs.menuKey.get()) {
             onClose();
             return true;
         }

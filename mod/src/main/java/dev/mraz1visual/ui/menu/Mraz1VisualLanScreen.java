@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.ui.widget.CycleWidget;
@@ -14,7 +15,6 @@ import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.HttpUtil;
 import net.minecraft.world.level.GameType;
-import org.lwjgl.glfw.GLFW;
 
 /** «Мир в локальной сети»: режим игры, команды, порт. */
 public final class Mraz1VisualLanScreen extends MenuBase {
@@ -95,8 +95,14 @@ public final class Mraz1VisualLanScreen extends MenuBase {
             form.error = "Порт занят или неверный";
             return;
         }
+        //? if >=26.3 {
+        /*boolean ok = server.publishServer(net.minecraft.server.MinecraftServer.MultiplayerScope.LAN, commands.get(), p);
+        *///?} elif >=26.2 {
+        /*boolean ok = server.publishServer(net.minecraft.server.MinecraftServer.MultiplayerScope.LAN, MODES[mode.get()], commands.get(), p);
+        *///?} else {
         boolean ok = server.publishServer(MODES[mode.get()], commands.get(), p);
-        minecraft.gui.getChat().addMessage(ok
+        //?}
+        dev.mraz1visual.compat.Mc.chat(minecraft, ok
                 ? Component.translatable("commands.publish.started", p)
                 : Component.translatable("commands.publish.failed"));
         minecraft.updateTitle();
@@ -114,15 +120,15 @@ public final class Mraz1VisualLanScreen extends MenuBase {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+        if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             publish();
             return true;
         }
-        return form.key(key, (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
+        return form.key(key, (e.modifiers() & InputConstants.MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
     }
 
     @Override

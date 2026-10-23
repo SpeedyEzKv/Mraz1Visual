@@ -34,6 +34,14 @@ public final class ModelEntry {
     public String error;
     /** Вид оружия «по умолчанию» для подписи источника: CIT, CraftEngine, bbmodel, PNG. */
     public String format = "";
+    /** Встроенная косметика (из .jar) или свои файлы игрока; коллекция и автор — для подписи и раздела «Авторы». */
+    public boolean builtin;
+    public String collection = "", sourceTitle = "", author = "";
+
+    /** Подпись источника: коллекция встроенной косметики или «Мои файлы». */
+    public String sourceLabel() {
+        return builtin ? sourceTitle : "Мои файлы · " + source;
+    }
     /** Ключ позы для кэша иконок: новый объект при каждой правке позы. */
     public Object poseKey = new Object();
 

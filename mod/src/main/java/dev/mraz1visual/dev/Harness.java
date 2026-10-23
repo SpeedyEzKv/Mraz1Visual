@@ -41,7 +41,8 @@ import java.util.Locale;
  * inventory · close · swing · key up|sprint|jump on|off · quit
  */
 public final class Harness {
-    private static final String WORLD = "harness";
+    // свой мир на каждую версию: открытый в 26.x мир нельзя потом открыть в 1.21.11
+    private static final String WORLD = net.minecraft.SharedConstants.getCurrentVersion().id().startsWith("1.") ? "harness" : "harness-" + net.minecraft.SharedConstants.getCurrentVersion().id();
     private static boolean active;
     private static Path dir;
     private static List<String> script = List.of();
@@ -124,10 +125,20 @@ public final class Harness {
             if (mc.getLevelSource().levelExists(WORLD)) {
                 mc.createWorldOpenFlows().openWorld(WORLD, () -> mc.setScreen(new TitleScreen()));
             } else {
+                //? if >=26.1 {
+                /*LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE,
+                        new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT);
+                *///?} else {
                 GameRules rules = new GameRules(FeatureFlags.DEFAULT_FLAGS);
                 LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
+                //?}
                 mc.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(1234L, false, false),
-                        WorldPresets::createFlatWorldDimensions, new TitleScreen());
+                        //? if >=26.2 {
+                        /*p -> p.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
+                        *///?} else {
+                        WorldPresets::createFlatWorldDimensions,
+                        //?}
+                        new TitleScreen());
             }
         } catch (Throwable t) {
             log("ERROR opening world: " + t);
@@ -184,10 +195,13 @@ public final class Harness {
                 if (s == null) log("  no setting " + a[1] + "." + a[2]);
                 else if (!s.fromJson(value(v))) log("  bad value " + v);
             }
+            case "pfxstage" -> dev.mraz1visual.render.post.PostFx.stage = Integer.parseInt(a[1]);
             case "gui" -> {
                 if (a[1].equals("open")) Mraz1Visual.openMenu(mc);
                 else if (a[1].equals("close")) mc.setScreen(null);
                 else if (a[1].equals("cat") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessCategory(Category.valueOf(a[2]));
+                else if (a[1].equals("cat") && mc.screen instanceof dev.mraz1visual.ui.ClientScreen s) s.harnessTab(a[2]);
+                else if (a[1].equals("reveal") && mc.screen instanceof dev.mraz1visual.ui.ClientScreen s) s.harnessReveal(a[2]);
                 else if (a[1].equals("reveal") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessReveal(a[2]);
                 else if (a[1].equals("yaw") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessPreview(Float.parseFloat(a[2]));
                 else if (a[1].equals("section") && mc.screen instanceof dev.mraz1visual.ui.Mraz1VisualScreen s) s.harnessSection(a[2]);
@@ -196,6 +210,7 @@ public final class Harness {
                 // video <предел FPS> <vsync true|false> <дальность>
                 mc.options.framerateLimit().set(Integer.parseInt(a[1]));
                 mc.options.enableVsync().set(Boolean.parseBoolean(a[2]));
+                //? if <26.2
                 mc.getWindow().updateVsync(Boolean.parseBoolean(a[2]));
                 mc.options.renderDistance().set(Integer.parseInt(a[3]));
             }
@@ -204,7 +219,7 @@ public final class Harness {
             }
             case "inventory" -> mc.setScreen(new InventoryScreen(mc.player));
             case "close" -> mc.setScreen(null);
-            case "swing" -> mc.player.swing(InteractionHand.MAIN_HAND);
+            case "swing" -> dev.mraz1visual.compat.Mc.swing(mc.player);
             case "key" -> {
                 boolean on = a[2].equals("on");
                 switch (a[1]) {
@@ -225,7 +240,7 @@ public final class Harness {
                 for (var e : dev.mraz1visual.models.ModelRegistry.all()) {
                     kinds.merge(e.kind + (e.broken() ? " broken" : ""), 1, Integer::sum);
                     if (e.broken()) log("  BROKEN " + e.id + ": " + e.error);
-                    else if (a.length > 1 && a[1].equals("all")) log("  " + e.kind + " " + e.id + " states=" + e.states.keySet()
+                    else if (a.length > 1 && a[1].equals("all")) log("  " + e.kind + (e.builtin ? " [builtin " + e.collection + "]" : "") + " " + e.id + " states=" + e.states.keySet()
                             + " anims=" + e.anims.size() + " fx=" + e.effects.size() + " quads=" + e.mesh().quads
                             + " atlas=" + e.mesh().atlas.w + "x" + e.mesh().atlas.h + (e.warnings.isEmpty() ? "" : " warn=" + e.warnings));
                 }
@@ -260,12 +275,35 @@ public final class Harness {
                 if (best == null) log("  nothing to attack");
                 else {
                     mc.gameMode.attack(mc.player, best);
-                    mc.player.swing(InteractionHand.MAIN_HAND);
+                    dev.mraz1visual.compat.Mc.swing(mc.player);
                 }
             }
             case "jump" -> mc.player.jumpFromGround();
             case "cinematic" -> dev.mraz1visual.module.Cinematic.harnessToggle();
             case "preset" -> dev.mraz1visual.module.VisualPresets.apply(a[1]);
+            case "music" -> {
+                var lib = dev.mraz1visual.music.player.Library.tracks();
+                switch (a[1]) {
+                    case "list" -> {
+                        for (var t : lib) log("  track " + t.artist + " — " + t.title + " (" + t.path.getFileName() + ")");
+                        log("  state playing=" + dev.mraz1visual.music.player.MusicPlayer.playing() + " pos=" + dev.mraz1visual.music.player.MusicPlayer.position()
+                                + " len=" + dev.mraz1visual.music.player.MusicPlayer.length() + " lyrics=" + dev.mraz1visual.music.Lyrics.lines.size()
+                                + " synced=" + dev.mraz1visual.music.Lyrics.synced + " status=" + dev.mraz1visual.music.Lyrics.status);
+                    }
+                    case "play" -> {
+                        String q = a[2].toLowerCase(java.util.Locale.ROOT);
+                        for (int i = 0; i < lib.size(); i++) if (lib.get(i).path.getFileName().toString().toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                            dev.mraz1visual.music.player.MusicPlayer.playList(lib, i);
+                            break;
+                        }
+                    }
+                    case "next" -> dev.mraz1visual.music.player.MusicPlayer.next();
+                    case "seek" -> dev.mraz1visual.music.player.MusicPlayer.seek(Long.parseLong(a[2]));
+                    case "stop" -> dev.mraz1visual.music.player.MusicPlayer.stop();
+                    case "screen" -> mc.setScreen(new dev.mraz1visual.ui.MusicScreen(null));
+                    default -> log("  music ?");
+                }
+            }
             case "slot" -> mc.player.getInventory().setSelectedSlot(Integer.parseInt(a[1]));
             case "quit" -> {
                 log("done");

@@ -35,7 +35,7 @@ public final class DeathCoords extends Module implements WorldLayer {
         if (dead && !wasDead) {
             int bx = p.getBlockX(), by = p.getBlockY(), bz = p.getBlockZ();
             String text = bx + " " + by + " " + bz;
-            if (chat.get()) p.displayClientMessage(Component.literal("§7Mraz1Visual: ты умер на §f" + text), false);
+            if (chat.get()) dev.mraz1visual.compat.Mc.message(p, Component.literal("§7Mraz1Visual: ты умер на §f" + text), false);
             if (copy.get()) mc.keyboardHandler.setClipboard(text);
             dim = mc.level.dimension().toString();
             x = bx + 0.5;

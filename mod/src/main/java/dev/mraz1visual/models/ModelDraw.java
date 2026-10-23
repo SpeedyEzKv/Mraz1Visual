@@ -16,7 +16,23 @@ import org.joml.Matrix4f;
  */
 public final class ModelDraw {
     /** Проходы: обычный (текстура модели), свечение эмиссивных текстур, свечение слоя *_e. */
-    public static final int SOLID = 0, GLOW_SELF = 1, GLOW_LAYER = 2;
+    public static final int SOLID = 0, GLOW_SELF = 1, GLOW_LAYER = 2, RIM = 3;
+
+    /** Материал «Реалистичный»: сила световой кромки (fresnel) и блика сверху; 0 — «Оригинал». */
+    public static float rimStrength = 0.38f;
+    /** Поворот камеры (мир → вид) для нормалей вне руки и меню; обновляется раз в кадр. */
+    private static final Matrix3f VIEW = new Matrix3f();
+    private static boolean worldSpace;
+    private static final org.joml.Quaternionf Q = new org.joml.Quaternionf();
+
+    /** Перед отрисовкой в мире (3-е лицо, питомцы): нормали надо довернуть камерой. В руке и в меню поза уже видовая. */
+    public static void viewFromCamera(boolean world) {
+        worldSpace = world;
+        if (world) {
+            Q.set(net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation()).conjugate();
+            VIEW.set(Q);
+        }
+    }
 
     private ModelDraw() {}
 
@@ -57,7 +73,8 @@ public final class ModelDraw {
         Matrix3f pn = pose.normal();
         float[] d = m.data;
         byte want = pass == GLOW_SELF ? Mesh.GLOW : Mesh.SOLID;
-        if (pass != SOLID) light = LightTexture.FULL_BRIGHT;
+        if (pass != SOLID) light = dev.mraz1visual.compat.Mc.FULL_BRIGHT;
+        int baseColor = color;
         int lastBone = Integer.MIN_VALUE;
         Matrix4f mm = pm;
         Matrix3f nn = pn;
@@ -74,6 +91,7 @@ public final class ModelDraw {
                     nn = pn;
                 }
             }
+            color = baseColor;
             int o = q * 4 * Mesh.STRIDE;
             float nx0 = d[o + 5], ny0 = d[o + 6], nz0 = d[o + 7];
             float nx = nn.m00 * nx0 + nn.m10 * ny0 + nn.m20 * nz0;
@@ -81,12 +99,29 @@ public final class ModelDraw {
             float nz = nn.m02 * nx0 + nn.m12 * ny0 + nn.m22 * nz0;
             float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (len > 1e-6f) { nx /= len; ny /= len; nz /= len; }
+            if (pass == RIM) {
+                // видовая нормаль: кромка там, где грань повёрнута к зрителю ребром, блик — на гранях, смотрящих в небо
+                float vx = nx, vy = ny, vz = nz;
+                if (worldSpace) {
+                    vx = VIEW.m00 * nx + VIEW.m10 * ny + VIEW.m20 * nz;
+                    vy = VIEW.m01 * nx + VIEW.m11 * ny + VIEW.m21 * nz;
+                    vz = VIEW.m02 * nx + VIEW.m12 * ny + VIEW.m22 * nz;
+                }
+                float fres = 1 - Math.abs(vz);
+                fres = fres * fres * fres;
+                float sky = Math.max(0, ny);
+                sky = sky * sky * sky * sky;
+                int a = Math.round(255 * rimStrength * Math.min(1f, fres * 0.9f + sky * 0.35f));
+                if (a < 4) continue;
+                color = a << 24 | 0xF2F7FF;
+            }
             for (int i = 0; i < 4; i++, o += Mesh.STRIDE) {
                 float x = d[o], y = d[o + 1], z = d[o + 2];
                 float tx = mm.m00() * x + mm.m10() * y + mm.m20() * z + mm.m30();
                 float ty = mm.m01() * x + mm.m11() * y + mm.m21() * z + mm.m31();
                 float tz = mm.m02() * x + mm.m12() * y + mm.m22() * z + mm.m32();
-                vc.addVertex(tx, ty, tz, color, d[o + 3], d[o + 4], overlay, light, nx, ny, nz);
+                if (pass == RIM) vc.addVertex(tx, ty, tz, color, 0.5f, 0.5f, overlay, light, nx, ny, nz);
+                else vc.addVertex(tx, ty, tz, color, d[o + 3], d[o + 4], overlay, light, nx, ny, nz);
             }
         }
     }
@@ -99,12 +134,14 @@ public final class ModelDraw {
         int color, overlay, light, pass;
         float[] pose;
         float[] poseCopy = new float[9 * 64];
+        boolean world;
 
         @Override
         public void render(PoseStack.Pose p, VertexConsumer vc) {
             Mesh m = mesh;
             if (m == null) return;
             if (m.bones.length > 0) bones(m, pose == null ? null : poseCopy);
+            worldSpace = world;
             draw(m, p, vc, color, overlay, light, pass);
         }
     }
@@ -118,7 +155,12 @@ public final class ModelDraw {
 
     /** Типы рендера модели: твёрдые части без отсечения граней (плоские детали видны с обеих сторон). */
     public static RenderType solidType(Mesh m) {
-        return RenderTypes.entityCutoutNoCull(m.texture());
+        return m.atlas.translucent ? RenderTypes.entityTranslucent(m.texture()) : RenderTypes.entityCutoutNoCull(m.texture());
+    }
+
+    /** Тип прохода материала: белая текстура, свет складывается (как у эмиссивных глаз). */
+    public static RenderType rimType() {
+        return RenderTypes.eyes(dev.mraz1visual.render.SkyTextures.white());
     }
 
     /**
@@ -129,6 +171,7 @@ public final class ModelDraw {
         if (m == null || m.texture() == null) return;
         m.atlas.lastUsed = System.currentTimeMillis();
         submitPass(c, ps, solidType(m), m, bonePose, color, overlay, light, SOLID);
+        if (rimStrength > 0.01f) submitPass(c, ps, rimType(), m, bonePose, color, overlay, light, RIM);
         if (!glow || !m.hasGlow) return;
         if (m.selfGlow) submitPass(c, ps, RenderTypes.eyes(m.texture()), m, bonePose, color, overlay, light, GLOW_SELF);
         if (m.atlas.glowTexture != null) submitPass(c, ps, RenderTypes.eyes(m.atlas.glowTexture), m, bonePose, color, overlay, light, GLOW_LAYER);
@@ -143,6 +186,7 @@ public final class ModelDraw {
         j.light = light;
         j.pass = pass;
         j.pose = bonePose;
+        j.world = worldSpace;
         if (bonePose != null) {
             if (j.poseCopy.length < bonePose.length) j.poseCopy = new float[bonePose.length];
             System.arraycopy(bonePose, 0, j.poseCopy, 0, bonePose.length);

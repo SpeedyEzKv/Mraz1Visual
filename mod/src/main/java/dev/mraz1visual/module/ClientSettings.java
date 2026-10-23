@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.setting.ActionSetting;
@@ -9,18 +10,21 @@ import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.setting.KeySetting;
 import dev.mraz1visual.setting.SliderSetting;
 import dev.mraz1visual.ui.Theme;
-import org.lwjgl.glfw.GLFW;
 
 /** Настройки самого клиента. Живут как модуль без тумблера — тот же конфиг и тот же GUI. */
 public final class ClientSettings extends Module {
-    public final KeySetting menuKey = add(new KeySetting("menu_key", "Открыть меню", GLFW.GLFW_KEY_RIGHT_SHIFT)
+    public final KeySetting menuKey = add(new KeySetting("menu_key", "Открыть меню", InputConstants.KEY_RSHIFT)
             .group("Управление"));
 
-    public final KeySetting overlayKey = add(new KeySetting("overlay_key", "Оверлей: Shift +", GLFW.GLFW_KEY_TAB)
+    public final KeySetting overlayKey = add(new KeySetting("overlay_key", "Оверлей: Shift +", InputConstants.KEY_TAB)
             .group("Управление"));
 
     public final EnumSetting size = add(new EnumSetting("size", "Размер окна", 0,
             "auto", "Авто", "small", "Мелкий", "large", "Крупный")
+            .group("Окно"));
+
+    public final EnumSetting menuStyle = add(new EnumSetting("menu_style", "Вид меню", 0,
+            "v2", "Новое", "classic", "Классическое")
             .group("Окно"));
 
     public final EnumSetting background = add(new EnumSetting("background", "Фон за окном", 0,

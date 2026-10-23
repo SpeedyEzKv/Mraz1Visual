@@ -1,5 +1,6 @@
 package dev.mraz1visual;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.config.ConfigManager;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.core.Modules;
@@ -7,7 +8,6 @@ import dev.mraz1visual.account.AccountStore;
 import dev.mraz1visual.input.Keys;
 import dev.mraz1visual.overlay.OverlayScreen;
 import dev.mraz1visual.overlay.PlayStats;
-import org.lwjgl.glfw.GLFW;
 import dev.mraz1visual.module.AutoAccept;
 import dev.mraz1visual.module.AutoCommand;
 import dev.mraz1visual.module.Crosshair;
@@ -27,11 +27,13 @@ public final class Mraz1Visual implements ClientModInitializer {
     public static ConfigManager CONFIG;
 
     private static Mraz1VisualScreen screen;
+    private static dev.mraz1visual.ui.ClientScreen screenV2;
     private static boolean menuKeyWasDown, overlayWasDown;
 
     @Override
     public void onInitializeClient() {
         migrateOldConfig();
+        dev.mraz1visual.render.post.ShaderPackInstaller.install();
         MODULES.init();
         CONFIG = new ConfigManager(MODULES);
         CONFIG.load();
@@ -65,11 +67,11 @@ public final class Mraz1Visual implements ClientModInitializer {
         dev.mraz1visual.ui.ModelPreview.register();
         dev.mraz1visual.models.ModelRegistry.onLoaded = () -> {
             for (var e : dev.mraz1visual.models.ModelRegistry.all()) dev.mraz1visual.models.ModelPrefs.applyPose(e);
+            dev.mraz1visual.module.WeaponSkins.applyMaterial();
         };
         PlayStats.load();
         AccountStore.load();
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> {
-            dev.mraz1visual.models.ModelRegistry.reload();
             AccountStore.autoLogin();
             WindowBranding.applyIcon();
             mc.updateTitle();
@@ -83,6 +85,11 @@ public final class Mraz1Visual implements ClientModInitializer {
 
     private static int modelTick;
 
+    private static boolean on(String id) {
+        var m = MODULES.find(id);
+        return m != null && m.isEnabled();
+    }
+
     private static Object lastLevel;
 
     private static void tick(Minecraft mc) {
@@ -92,6 +99,7 @@ public final class Mraz1Visual implements ClientModInitializer {
             dev.mraz1visual.render.FxParticles.clear();
         }
         dev.mraz1visual.models.ModelRegistry.tick(modelTick++);
+        if (modelTick % 20 == 1 && (on("weapon_skins") || on("model_pets") || on("model_cosmetics"))) dev.mraz1visual.models.ModelRegistry.ensureLoaded();
         dev.mraz1visual.wallpaper.WallpaperPlayer.tick();
         int key = Modules.client.menuKey.get();
         boolean down = Keys.isDown(key);
@@ -99,7 +107,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         menuKeyWasDown = down;
 
         // оверлей: Shift + клавиша (по умолчанию Tab)
-        boolean shift = Keys.isDown(GLFW.GLFW_KEY_LEFT_SHIFT) || Keys.isDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+        boolean shift = Keys.isDown(InputConstants.KEY_LSHIFT) || Keys.isDown(InputConstants.KEY_RSHIFT);
         boolean ov = shift && Keys.isDown(Modules.client.overlayKey.get());
         if (ov && !overlayWasDown && mc.screen == null && mc.level != null) mc.setScreen(new OverlayScreen());
         overlayWasDown = ov;
@@ -110,6 +118,12 @@ public final class Mraz1Visual implements ClientModInitializer {
     }
 
     public static void openMenu(Minecraft mc) {
+        if (!Modules.client.menuStyle.getId().equals("classic")) {
+            if (screenV2 == null) screenV2 = new dev.mraz1visual.ui.ClientScreen();
+            screenV2.setParent(mc.screen);
+            mc.setScreen(screenV2);
+            return;
+        }
         if (screen == null) screen = new Mraz1VisualScreen();
         screen.setParent(mc.screen);
         mc.setScreen(screen);

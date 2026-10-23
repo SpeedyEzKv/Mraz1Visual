@@ -244,7 +244,7 @@ public final class ModelPets extends Module implements WorldLayer {
         if (!firstPerson.get() && mc.options.getCameraType() == CameraType.FIRST_PERSON) return;
         MultiBufferSource src = d.source();
         if (src == null) return;
-        int light = LevelRenderer.getLightColor(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
+        int light = dev.mraz1visual.compat.Mc.lightCoords(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
         float pop = easeBack(appear);
         drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, m.bounds[1], light);
         if (fx != null) {
@@ -295,8 +295,12 @@ public final class ModelPets extends Module implements WorldLayer {
         ps.scale(s, s, s);
         ps.translate(0, -base, 0);
         if (m.bones.length > 0) ModelDraw.bones(m, pose);
-        VertexConsumer vc = src.getBuffer(RenderTypes.entityCutoutNoCull(m.texture()));
+        VertexConsumer vc = src.getBuffer(ModelDraw.solidType(m));
         ModelDraw.draw(m, ps.last(), vc, -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.SOLID);
+        if (ModelDraw.rimStrength > 0.01f) {
+            ModelDraw.viewFromCamera(true);
+            ModelDraw.draw(m, ps.last(), src.getBuffer(ModelDraw.rimType()), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.RIM);
+        }
         if (glow.get() && m.hasGlow) {
             if (m.selfGlow) ModelDraw.draw(m, ps.last(), src.getBuffer(RenderTypes.eyes(m.texture())), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.GLOW_SELF);
             if (m.atlas.glowTexture != null) ModelDraw.draw(m, ps.last(), src.getBuffer(RenderTypes.eyes(m.atlas.glowTexture)), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.GLOW_LAYER);
@@ -325,7 +329,7 @@ public final class ModelPets extends Module implements WorldLayer {
         ps.mulPose(com.mojang.math.Axis.YP.rotation(0.45f));
         ps.scale(s, s, s);
         ps.translate(0, -m.bounds[1], 0);
-        ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, net.minecraft.client.renderer.LightTexture.FULL_BRIGHT, mp.glow.get());
+        ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, dev.mraz1visual.compat.Mc.FULL_BRIGHT, mp.glow.get());
         ps.popPose();
     }
 }

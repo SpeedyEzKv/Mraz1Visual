@@ -1,0 +1,67 @@
+{
+  "collections": [
+    {
+      "id": "majestica",
+      "title": "Blades of Majestica",
+      "author": "Eftann",
+      "url": "https://modrinth.com/project/3tXcbjvK",
+      "kind": "weapons",
+      "note": "Используется с разрешения автора",
+      "stem": "blades-of-majestica"
+    },
+    {
+      "id": "carnivoret",
+      "title": "Carnivoret Weapon Set Vol. 1",
+      "author": "EliteCreatures / khawndev",
+      "url": "https://mcmodels.net",
+      "kind": "weapons",
+      "note": "Используется с разрешения автора",
+      "stem": "Carnivoret Weapon Set Volume 1"
+    },
+    {
+      "id": "weapons_free",
+      "title": "Weapons Pack — Free Edition",
+      "author": "Redstone Labs",
+      "url": "https://discord.gg/fBQRQyAsj7",
+      "kind": "weapons",
+      "note": "Используется с разрешения автора",
+      "stem": "Weapons Pack - Free Edition"
+    },
+    {
+      "id": "fantasy_sword",
+      "title": "Fantasy Sword",
+      "author": "автор модели (Blockbench)",
+      "url": "",
+      "kind": "weapons",
+      "note": "Используется с разрешения автора",
+      "stem": "fantasy_sword"
+    },
+    {
+      "id": "cubees_currets",
+      "title": "CUBEES Currets I",
+      "author": "Cubees Studio",
+      "url": "https://discord.gg/N8K2sQdbx9",
+      "kind": "pets",
+      "note": "Используется с разрешения автора",
+      "stem": "cubees_currets"
+    },
+    {
+      "id": "cubees_biomes",
+      "title": "CUBEES RE Biomes 1",
+      "author": "Cubees Studio",
+      "url": "https://discord.gg/N8K2sQdbx9",
+      "kind": "pets",
+      "note": "Используется с разрешения автора",
+      "stem": "cubees_biomes"
+    },
+    {
+      "id": "mraz1",
+      "title": "Mraz1Visual",
+      "author": "Mraz1Visual",
+      "url": "https://github.com/SpeedyEzKv/Mraz1Visual",
+      "kind": "weapons",
+      "note": "Свой набор клиента",
+      "stem": "mraz1"
+    }
+  ]
+}

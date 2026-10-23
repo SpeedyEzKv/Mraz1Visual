@@ -15,7 +15,7 @@ import java.util.List;
  */
 public final class Atlas {
     public final int w, h;
-    final int[] px;
+    int[] px;
     final int[] glow;           // null — эмиссивного слоя нет
     final List<Slot> anims = new ArrayList<>();
     public Identifier texture, glowTexture;
@@ -37,6 +37,8 @@ public final class Atlas {
     }
 
     final Slot[] slots;
+    /** В текстурах много полупрозрачных пикселей (стекло, лёд) — рисуется полупрозрачным типом, а не вырезкой. */
+    public final boolean translucent;
 
     private Atlas(int w, int h, Slot[] slots) {
         this.w = w;
@@ -46,6 +48,16 @@ public final class Atlas {
         boolean anyGlow = false;
         for (Slot s : slots) if (s != null && s.img.glow != null) anyGlow = true;
         this.glow = anyGlow ? new int[w * h] : null;
+        int semi = 0, opaque = 0;
+        for (Slot s : slots) {
+            if (s == null) continue;
+            for (int c : s.img.frames[0]) {
+                int a = c >>> 24;
+                if (a > 8) opaque++;
+                if (a > 20 && a < 235) semi++;
+            }
+        }
+        this.translucent = opaque > 0 && semi * 100 / opaque >= 3;
         for (Slot s : slots) {
             if (s == null) continue;
             blit(px, s, s.img.frames[s.img.order[0]]);
@@ -142,6 +154,11 @@ public final class Atlas {
         NativeImage ni = new NativeImage(w, h, false);
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) ni.setPixel(x, y, src[y * w + x]);
         return new DynamicTexture(() -> "mraz1visual " + label, ni);
+    }
+
+    /** После выгрузки на видеокарту копия пикселей в куче не нужна (у анимированных обновляется NativeImage текстуры). */
+    void dropCpuCopy() {
+        px = null;
     }
 
     void release() {

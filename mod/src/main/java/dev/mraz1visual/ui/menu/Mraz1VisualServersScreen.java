@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.ui.Anim;
 import dev.mraz1visual.ui.Colors;
 import dev.mraz1visual.ui.Draw;
@@ -17,7 +18,6 @@ import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -418,25 +418,25 @@ public final class Mraz1VisualServersScreen extends MenuBase {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        boolean ctrl = (e.modifiers() & InputConstants.MOD_CONTROL) != 0;
+        if (key == InputConstants.KEY_ESCAPE) {
             if (mode != Mode.LIST) setMode(Mode.LIST);
             else onClose();
             return true;
         }
-        boolean enter = key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER;
+        boolean enter = key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER;
         switch (mode) {
             case LIST -> {
                 if (enter && selected >= 0 && selected < rows.size()) join(rows.get(selected).data);
-                else if (key == GLFW.GLFW_KEY_DOWN && !rows.isEmpty()) selected = Math.min(rows.size() - 1, selected + 1);
-                else if (key == GLFW.GLFW_KEY_UP && !rows.isEmpty()) selected = Math.max(0, selected - 1);
-                else if (key == GLFW.GLFW_KEY_DELETE) deleteSelected();
+                else if (key == InputConstants.KEY_DOWN && !rows.isEmpty()) selected = Math.min(rows.size() - 1, selected + 1);
+                else if (key == InputConstants.KEY_UP && !rows.isEmpty()) selected = Math.max(0, selected - 1);
+                else if (key == InputConstants.KEY_DELETE) deleteSelected();
                 else return false;
                 return true;
             }
             case ADD -> {
                 if (enter) submitAdd();
-                else if (key == GLFW.GLFW_KEY_TAB) {
+                else if (key == InputConstants.KEY_TAB) {
                     boolean toAddr = nameIn.focused;
                     nameIn.focused = !toAddr;
                     addrIn.focused = toAddr;

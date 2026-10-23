@@ -88,6 +88,10 @@ public final class PlayerPreview {
         userTurned = true;
     }
 
+    public float yaw() {
+        return yaw;
+    }
+
     public boolean turned() {
         return userTurned;
     }

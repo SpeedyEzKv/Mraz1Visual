@@ -1,5 +1,6 @@
 package dev.mraz1visual.browser;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -25,7 +26,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2f;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Встроенный браузер (Chromium через MCEF Modern) в стиле клиента:
@@ -306,21 +306,21 @@ public final class BrowserScreen extends Screen {
     public boolean keyPressed(KeyEvent e) {
         if (address.focused) {
             int key = e.key();
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 navigate(address.value());
                 address.focused = false;
                 if (browser != null) browser.setFocus(true);
                 return true;
             }
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 address.focused = false;
                 return true;
             }
-            boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+            boolean ctrl = (e.modifiers() & InputConstants.MOD_CONTROL) != 0;
             address.keyPressed(key, ctrl, minecraft.keyboardHandler::getClipboard);
             return true;
         }
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (e.key() == InputConstants.KEY_ESCAPE) {
             onClose();
             return true;
         }

@@ -64,8 +64,21 @@ public final class ModelRegistry {
         return out;
     }
 
+    private static volatile boolean requested;
+
+    /**
+     * Модели грузятся по требованию — когда включены скины, питомцы или косметика либо открыта галерея:
+     * пока они не нужны, клиент не держит в памяти сотни атласов и вершин.
+     */
+    public static void ensureLoaded() {
+        if (requested) return;
+        requested = true;
+        reload();
+    }
+
     /** Перечитать обе папки (в фоне). */
     public static synchronized void reload() {
+        requested = true;
         int gen = ++generation;
         loading = true;
         done = 0;
@@ -77,7 +90,9 @@ public final class ModelRegistry {
                 Files.createDirectories(WEAPONS);
                 Files.createDirectories(PETS);
                 List<Path> w = list(WEAPONS), p = list(PETS);
-                total = w.size() + p.size();
+                total = w.size() + p.size() + 1;
+                scanBuiltin(loaded);
+                done++;
                 for (Path f : w) { scanWeapons(f, loaded); done++; }
                 for (Path f : p) { scanPets(f, loaded); done++; }
             } catch (Throwable t) {
@@ -103,8 +118,8 @@ public final class ModelRegistry {
         for (ModelEntry e : loaded) {
             if (map.containsKey(e.id)) continue;
             try {
-                for (Mesh m : e.states.values()) m.atlas.upload(e.name);
-                for (ModelEntry fx : e.effects) for (Mesh m : fx.states.values()) m.atlas.upload(fx.name);
+                for (Mesh m : e.states.values()) { m.atlas.upload(e.name); m.atlas.dropCpuCopy(); }
+                for (ModelEntry fx : e.effects) for (Mesh m : fx.states.values()) { m.atlas.upload(fx.name); m.atlas.dropCpuCopy(); }
             } catch (Throwable t) {
                 e.error = "текстура не загрузилась: " + t.getMessage();
             }
@@ -153,7 +168,11 @@ public final class ModelRegistry {
             out.add(broken("weapon:" + packName, PackFs.stripExt(packName), packName, ModelEntry.Kind.WEAPON, t));
             return;
         }
-        String source = PackFs.stripExt(packName);
+        scanWeapons(fs, PackFs.stripExt(packName), out);
+    }
+
+    private static void scanWeapons(PackFs fs, String source, List<ModelEntry> out) {
+        String packName = source;
         ItemModelLoader.TexCache cache = new ItemModelLoader.TexCache();
         Set<String> used = new java.util.HashSet<>();
         int before = out.size();
@@ -190,6 +209,14 @@ public final class ModelRegistry {
             }
             out.add(e);
         }
+        Map<String, String> names = new HashMap<>();
+        byte[] nj = fs.get("names.json");
+        if (nj != null) {
+            try {
+                for (var en : Json.parse(nj).entrySet()) names.put(en.getKey().toLowerCase(Locale.ROOT), en.getValue().getAsString());
+            } catch (Exception ignored) {
+            }
+        }
         // 2) модели предметов (CraftEngine, ItemsAdder, обычные ресурспаки) — с группировкой состояний
         Map<String, Map<String, String>> groups = new LinkedHashMap<>();
         for (String path : fs.paths(".json")) {
@@ -210,7 +237,7 @@ public final class ModelRegistry {
             String key = PackFs.baseName(g.getKey());
             Map<String, String> states = g.getValue();
             String id = "weapon:" + source + "/" + key;
-            ModelEntry e = new ModelEntry(id, pretty(key), source, kindFor(key));
+            ModelEntry e = new ModelEntry(id, names.getOrDefault(key.toLowerCase(Locale.ROOT), pretty(key)), source, kindFor(key));
             e.format = states.values().iterator().next().contains("/cit/") ? "OptiFine CIT" : "Item JSON";
             e.bindHint = bindFromName(key);
             try {
@@ -316,7 +343,64 @@ public final class ModelRegistry {
             out.add(broken("pet:" + packName, PackFs.stripExt(packName), packName, ModelEntry.Kind.PET, t));
             return;
         }
-        String source = PackFs.stripExt(packName);
+        scanPets(fs, PackFs.stripExt(packName), out);
+    }
+
+    // ── встроенная косметика (ресурсы мода) ───────────────────
+
+    /** Коллекция встроенной косметики: пак в .jar, его автор и ссылка. */
+    public record Collection(String id, String title, String author, String url, String kind, String note, String stem) {}
+
+    private static volatile List<Collection> collections = List.of();
+
+    public static List<Collection> collections() { return collections; }
+
+    public static Collection collection(String id) {
+        for (Collection c : collections) if (c.id().equals(id)) return c;
+        return null;
+    }
+
+    /** Встроенные паки из ресурсов мода: сразу доступны, ничего не нужно скачивать. */
+    private static void scanBuiltin(List<ModelEntry> out) {
+        var mod = FabricLoader.getInstance().getModContainer("mraz1visual").orElse(null);
+        if (mod == null) return;
+        Path root = mod.findPath("assets/mraz1visual/cosmetics").orElse(null);
+        if (root == null) return;
+        List<Collection> list = new ArrayList<>();
+        try {
+            com.google.gson.JsonObject j = Json.parse(Files.readAllBytes(root.resolve("collections.json")));
+            for (var el : j.getAsJsonArray("collections")) {
+                com.google.gson.JsonObject o = el.getAsJsonObject();
+                list.add(new Collection(Json.s(o, "id", ""), Json.s(o, "title", ""), Json.s(o, "author", ""), Json.s(o, "url", ""),
+                        Json.s(o, "kind", "weapons"), Json.s(o, "note", ""), Json.s(o, "stem", Json.s(o, "id", ""))));
+            }
+        } catch (Exception e) {
+            ModuleManager.LOG.warn("Mraz1Visual models: нет collections.json встроенной косметики", e);
+        }
+        collections = List.copyOf(list);
+        for (Collection c : list) {
+            Path dir = root.resolve(c.id());
+            if (!Files.isDirectory(dir)) continue; // пак ещё не встроен (ждёт разрешения) — только локальный импорт
+            int before = out.size();
+            try {
+                PackFs fs = PackFs.open(dir);
+                if (c.kind().equals("pets")) scanPets(fs, c.stem(), out);
+                else scanWeapons(fs, c.stem(), out);
+            } catch (Throwable t) {
+                ModuleManager.LOG.warn("Mraz1Visual models: встроенный пак {} не прочитан", c.id(), t);
+            }
+            for (int i = before; i < out.size(); i++) {
+                ModelEntry e = out.get(i);
+                e.builtin = true;
+                e.collection = c.id();
+                e.sourceTitle = c.title();
+                e.author = c.author();
+            }
+        }
+    }
+
+    private static void scanPets(PackFs fs, String source, List<ModelEntry> out) {
+        String packName = source;
         Map<String, ModelEntry> pets = new LinkedHashMap<>();
         List<ModelEntry> fx = new ArrayList<>();
         for (String path : fs.paths(".bbmodel")) {

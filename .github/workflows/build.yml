@@ -1,0 +1,62 @@
+# Проверка сборки для каждой версии Minecraft (ветки и PR; релиз — release.yml при push в main).
+# Матрица = версии из mod/settings.gradle. На каждую: компиляция, checkMixins (цели миксинов по байткоду), jar.
+name: Build
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches-ignore: [main]
+    paths-ignore: ["**.md"]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.v.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "list=$(grep -E "^\s*versions " mod/settings.gradle | grep -o "'[^']*'" | tr -d "'" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  mod:
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mc: ${{ fromJson(needs.versions.outputs.list) }}
+    defaults:
+      run:
+        working-directory: mod
+    steps:
+      - uses: actions/checkout@v4
+      # Java 21 — для мода под 1.21.11 (toolchain), Java 25 — сам Gradle/Loom и 26.x
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build ${{ matrix.mc }}
+        run: |
+          set -o pipefail
+          bash ./gradlew :${{ matrix.mc }}:build --no-daemon --console=plain -Pdev_sodium=false -Pdev_mcef=false 2>&1 | tee ../build.log
+      - name: Mixin report
+        if: always()
+        run: |
+          {
+            echo "## Minecraft ${{ matrix.mc }}"
+            echo '```'
+            cat versions/${{ matrix.mc }}/build/mixincheck.txt 2>/dev/null || echo "нет отчёта"
+            grep -E -A3 "error:|What went wrong" ../build.log | grep -v "^\s*at " | head -n 80 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mraz1visual-mc${{ matrix.mc }}
+          path: mod/build/libs/all/*.jar

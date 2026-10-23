@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.EnumSetting;
@@ -14,7 +15,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Difficulty;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -137,7 +137,7 @@ public final class Mraz1VisualCreateWorldScreen extends MenuBase {
                     bypass = true;
                     minecraft.setScreen(vanilla); // ванильный экран — родитель для экрана загрузки
                     bypass = false;
-                    b.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                    b.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                     return;
                 }
             }
@@ -170,15 +170,15 @@ public final class Mraz1VisualCreateWorldScreen extends MenuBase {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+        if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             create();
             return true;
         }
-        return form.key(key, (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
+        return form.key(key, (e.modifiers() & InputConstants.MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
     }
 
     @Override

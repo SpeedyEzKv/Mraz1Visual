@@ -1,0 +1,10 @@
+option.SHADOW_QUALITY=Shadow softness
+option.SSR_STEPS=Water reflection steps
+option.SUN_STRENGTH=Sunlight
+option.WATER_ALPHA=Water opacity
+option.WAVING_PLANTS=Waving plants
+option.COLORED_LIGHT=Warm block light
+option.LABPBR=LabPBR highlights
+profile.LOW=Low
+profile.MEDIUM=Medium
+profile.HIGH=High

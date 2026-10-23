@@ -1,5 +1,6 @@
 package dev.mraz1visual.overlay;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.config.ConfigManager;
@@ -18,7 +19,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -340,9 +340,9 @@ public final class OverlayScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        boolean shift = (e.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0;
-        if (key == GLFW.GLFW_KEY_ESCAPE || (shift && key == Modules.client.overlayKey.get())) {
-            if (viewing != null && key == GLFW.GLFW_KEY_ESCAPE) viewing = null;
+        boolean shift = (e.modifiers() & InputConstants.MOD_SHIFT) != 0;
+        if (key == InputConstants.KEY_ESCAPE || (shift && key == Modules.client.overlayKey.get())) {
+            if (viewing != null && key == InputConstants.KEY_ESCAPE) viewing = null;
             else onClose();
             return true;
         }

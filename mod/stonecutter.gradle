@@ -1,0 +1,7 @@
+plugins {
+    id 'dev.kikugie.stonecutter'
+}
+
+// Версия, под которую сейчас «развёрнут» src/ (в git всегда 1.21.11).
+// Переключить: ./gradlew "Set active project to 26.3"; собрать все: ./gradlew build (jar'ы — в build/libs/all)
+stonecutter.active '1.21.11'

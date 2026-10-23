@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -8,7 +9,6 @@ import dev.mraz1visual.setting.KeySetting;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Свободный обзор: пока держишь клавишу, мышь крутит только камеру,
@@ -16,7 +16,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class FreeLook extends Module {
     private static FreeLook instance;
-    final KeySetting key = add(new KeySetting("key", "Клавиша", GLFW.GLFW_KEY_LEFT_ALT));
+    final KeySetting key = add(new KeySetting("key", "Клавиша", InputConstants.KEY_LALT));
     final BoolSetting thirdPerson = add(new BoolSetting("third_person", "Вид от третьего лица", true));
 
     private boolean active;

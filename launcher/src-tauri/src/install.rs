@@ -67,7 +67,7 @@ pub struct Installed {
 
 pub async fn install(paths: &Paths, manifest: &Manifest, progress: &dyn Progress) -> Result<Installed> {
     let client = net::client();
-    let java = ensure_java(&client, paths, progress).await.context("Java")?;
+    let java = ensure_java(&client, paths, manifest.java.max(21), progress).await.context("Java")?;
     let (vjson_path, vjson) = ensure_version_json(&client, paths, &manifest.minecraft).await.context("версия Minecraft")?;
     let (fabric_path, fabric) = ensure_fabric_profile(&client, paths, manifest).await.context("Fabric")?;
 
@@ -161,8 +161,8 @@ fn java_exe(dir: &Path) -> Option<PathBuf> {
     None
 }
 
-async fn ensure_java(client: &reqwest::Client, paths: &Paths, progress: &dyn Progress) -> Result<PathBuf> {
-    let dir = paths.runtime().join("java21");
+async fn ensure_java(client: &reqwest::Client, paths: &Paths, major: u32, progress: &dyn Progress) -> Result<PathBuf> {
+    let dir = paths.runtime().join(format!("java{major}"));
     if let Some(p) = java_exe(&dir) {
         report(progress, Stage::Java, 1, 1);
         return Ok(p);
@@ -172,8 +172,8 @@ async fn ensure_java(client: &reqwest::Client, paths: &Paths, progress: &dyn Pro
         bail!("автоустановка Java сейчас только для Windows");
     }
     let arch = if cfg!(target_arch = "aarch64") { "aarch64" } else { "x64" };
-    let url = format!("https://api.adoptium.net/v3/binary/latest/21/ga/{os}/{arch}/jre/hotspot/normal/eclipse");
-    let archive = paths.runtime().join("java21.zip");
+    let url = format!("https://api.adoptium.net/v3/binary/latest/{major}/ga/{os}/{arch}/jre/hotspot/normal/eclipse");
+    let archive = paths.runtime().join(format!("java{major}.zip"));
     report(progress, Stage::Java, 0, 2);
     net::fetch(client, &Job { url, path: archive.clone(), sha1: None, size: None }).await?;
     report(progress, Stage::Java, 1, 2);
@@ -391,6 +391,14 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
                     }
                 }
             }
+            // проверка sha256 из manifest: битый или подменённый файл не запускаем
+            if let Some(want) = &entry.sha256 {
+                let got = sha256_file(&paths.mods().join(&file))?;
+                if !got.eq_ignore_ascii_case(want) {
+                    let _ = std::fs::remove_file(paths.mods().join(&file));
+                    bail!("{file}: sha256 не совпадает (ожидался {want}, получен {got})");
+                }
+            }
             let _ = std::fs::write(&stamp, m.build.to_string());
             files.push(file);
             continue;
@@ -430,6 +438,39 @@ pub fn has_mraz1visual(paths: &Paths) -> bool {
 }
 
 // ── помощники ────────────────────────────────────────────────
+
+fn sha256_file(path: &Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    let mut f = std::fs::File::open(path)?;
+    let mut h = Sha256::new();
+    std::io::copy(&mut f, &mut h)?;
+    Ok(hex::encode(h.finalize()))
+}
+
+/// Общий конфиг клиента между профилями версий: config/mraz1visual.json и папка config/mraz1visual.
+pub fn sync_config(from_game: &Path, to_game: &Path) {
+    if from_game == to_game {
+        return;
+    }
+    let (fc, tc) = (from_game.join("config"), to_game.join("config"));
+    let _ = std::fs::create_dir_all(&tc);
+    let _ = std::fs::copy(fc.join("mraz1visual.json"), tc.join("mraz1visual.json"));
+    copy_dir(&fc.join("mraz1visual"), &tc.join("mraz1visual"));
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    let Ok(rd) = std::fs::read_dir(from) else { return };
+    let _ = std::fs::create_dir_all(to);
+    for e in rd.flatten() {
+        let p = e.path();
+        let t = to.join(e.file_name());
+        if p.is_dir() {
+            copy_dir(&p, &t);
+        } else {
+            let _ = std::fs::copy(&p, &t);
+        }
+    }
+}
 
 pub fn str_of(v: &Value, key: &str) -> Result<String> {
     v[key].as_str().map(String::from).ok_or_else(|| anyhow!("нет поля {key}"))

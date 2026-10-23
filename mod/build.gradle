@@ -1,8 +1,14 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    // Loom выбирается сам: fabric-loom-remap для 1.21.11, net.fabricmc.fabric-loom для 26.x (VERSIONS.md)
+    id 'dev.kikugie.loom-back-compat'
 }
 
-version = project.mod_version
+def mc = stonecutter.current.version
+def javaVersion = (property('deps.java') as String).toInteger()
+def resourceProps = [version: project.mod_version + '+mc' + mc, minecraft: property('deps.minecraft_range'), java: javaVersion,
+                     loader: property('deps.fabric_loader')]
+
+version = "${project.mod_version}+mc${mc}"
 group = project.maven_group
 
 base {
@@ -18,24 +24,34 @@ repositories {
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    // Официальные маппинги Mojang: тот же нейминг, что в 26.x, порт будет дешёвым
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    minecraft "com.mojang:minecraft:${property('deps.minecraft')}"
+    // Официальные маппинги Mojang (для 26.x не нужны — игра без обфускации)
+    loomx.applyMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${property('deps.fabric_loader')}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${property('deps.fabric_api')}"
 
     // Браузер: компилируемся против API, в игре он необязателен (лаунчер ставит его сам)
-    modCompileOnly "maven.modrinth:mcef-modern:${project.mcef_version}"
+    modCompileOnly "maven.modrinth:mcef-modern:${property('deps.mcef')}"
     // Классы Chromium (CefBrowser) лежат внутри MCEF вложенным jar — для компиляции берём их отдельно
     compileOnly "me.friwi:jcef-api:${project.jcef_api_version}"
     if (project.findProperty('dev_mcef') == 'true') {
-        modLocalRuntime "maven.modrinth:mcef-modern:${project.mcef_version}"
+        modLocalRuntime "maven.modrinth:mcef-modern:${property('deps.mcef')}"
     }
+
+    // Встроенный музыкальный плеер: MP3 — JLayer (LGPL-2.1), FLAC — jflac (Apache-2.0); OGG — stb_vorbis из LWJGL игры
+    implementation "javazoom:jlayer:1.0.1"
+    include "javazoom:jlayer:1.0.1"
+    implementation "org.jflac:jflac-codec:1.5.2"
+    include "org.jflac:jflac-codec:1.5.2"
 
     // Проверка совместимости: dev-клиент запускается сразу с Sodium и Iris
     if (project.findProperty('dev_sodium') == 'true') {
-        modLocalRuntime "maven.modrinth:sodium:${project.sodium_version}"
-        modLocalRuntime "maven.modrinth:iris:${project.iris_version}"
+        modLocalRuntime "maven.modrinth:sodium:${property('deps.sodium')}"
+        modLocalRuntime "maven.modrinth:iris:${property('deps.iris')}"
+        // вложенные библиотеки Iris (в dev-клиенте Loom их не распаковывает) — нужны, чтобы грузились шейдерпаки
+        localRuntime "org.anarres:jcpp:1.4.14"
+        localRuntime "org.antlr:antlr4-runtime:4.13.1"
+        localRuntime "io.github.douira:glsl-transformer:3.0.0-pre3"
     }
 }
 
@@ -43,30 +59,139 @@ dependencies {
 loom {
     runs {
         client {
+            // общая папка запуска mod/run для всех версий: стенд, скриншоты, конфиг
+            runDir = '../../run'
             programArgs '--width', '1600', '--height', '900'
             // профилирование: ./gradlew runClient -Pjfr=путь.jfr
             if (project.findProperty('jfr')) vmArg "-XX:StartFlightRecording=filename=${project.findProperty('jfr')},settings=profile"
+            if (project.findProperty('pfxProfile')) vmArg '-Dmraz1.pfx.profile=true'
         }
     }
 }
 
 processResources {
-    inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') {
-        expand 'version': inputs.properties.version
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
-    it.options.encoding = 'UTF-8'
+    inputs.properties resourceProps
+    filesMatching('fabric.mod.json') { expand resourceProps }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = javaVersion
+    it.options.encoding = 'UTF-8'
+    it.options.compilerArgs += ['-Xmaxerrs', '5000']
 }
 
 jar {
-    from('LICENSE') { rename { "${it}_${project.base.archivesName.get()}" } }
+    from(rootProject.file('LICENSE')) { rename { "${it}_${project.base.archivesName.get()}" } }
 }
+
+// Готовый jar версии → mod/build/libs/all/mraz1visual-<модверсия>+mc<версия>.jar (для CI и лаунчера)
+tasks.register('collectJar', Copy) {
+    group = 'build'
+    from loomx.modJar.flatMap { it.archiveFile }
+    into rootProject.layout.buildDirectory.dir('libs/all')
+}
+tasks.named('build') { finalizedBy 'collectJar' }
+
+apply from: rootProject.file('cosmetics.gradle')
+
+// ── Мультиверсия: переименования API 1.21.11 → 26.x (обратимые строковые замены Stonecutter, VERSIONS.md) ──
+stonecutter {
+    replacements.string(eval(mc, '>=26.1')) {
+        replace 'net.minecraft.client.gui.render.state.', 'net.minecraft.client.renderer.state.gui.'
+        replace 'net.minecraft.client.GuiMessage', 'net.minecraft.client.multiplayer.chat.GuiMessage'
+        replace 'net.minecraft.client.renderer.block.model.BakedQuad', 'net.minecraft.client.resources.model.geometry.BakedQuad'
+        replace 'net.minecraft.client.renderer.block.model.ItemTransform', 'net.minecraft.client.resources.model.cuboid.ItemTransform'
+
+        // GUI: GuiGraphics → GuiGraphicsExtractor, render* → extract*
+        replace 'public void render(GuiGraphics g, int mouseX', 'public void extractRenderState(GuiGraphicsExtractor g, int mouseX'
+        replace 'public void renderBackground(GuiGraphics g, int mouseX', 'public void extractBackground(GuiGraphicsExtractor g, int mouseX'
+        replace 'super.renderBackground(g,', 'super.extractBackground(g,'
+        replace 'super.render(g, mouseX', 'super.extractRenderState(g, mouseX'
+        replace 'original.render(g, delta)', 'original.extractRenderState(g, delta)'
+        replace 'ScreenEvents.afterRender(', 'ScreenEvents.afterExtract('
+        replace 'Screens.getButtons(', 'Screens.getWidgets('
+        replace 'g.drawString(', 'g.text('
+        replace 'g.drawCenteredString(', 'g.centeredText('
+        replace 'g.renderItem(', 'g.item('
+        replace 'g.renderItemDecorations(', 'g.itemDecorations('
+        // Fabric API
+        replace 'SpecialGuiElementRegistry', 'PictureInPictureRendererRegistry'
+        replace 'pip.vertexConsumers()', 'pip.bufferSource()'
+        replace 'LivingEntityFeatureRendererRegistrationCallback', 'LivingEntityRenderLayerRegistrationCallback'
+        replace 'rendering.v1.world.WorldRenderContext', 'rendering.v1.level.LevelRenderContext'
+        replace 'rendering.v1.world.WorldRenderEvents', 'rendering.v1.level.LevelRenderEvents'
+        replace 'WorldRenderContext', 'LevelRenderContext'
+        replace 'WorldRenderEvents', 'LevelRenderEvents'
+        replace 'ctx.worldState()', 'ctx.levelState()'
+        replace 'ctx.matrices()', 'ctx.poseStack()'
+        replace 'ctx.consumers()', 'ctx.bufferSource()'
+        replace 'BEFORE_TRANSLUCENT.register(', 'BEFORE_TRANSLUCENT_TERRAIN.register('
+        replace '.submitGuiElement(', '.addGuiElement('
+        replace '.submitPicturesInPictureState(', '.addPicturesInPictureState('
+        replace 'handleInventoryMouseClick(', 'handleContainerInput('
+        replace 'RenderTypes.entityCutoutNoCull(', 'RenderTypes.entityCutout('
+        replace 'LevelRenderer.getLightColor(', 'LevelRenderer.getLightCoords('
+        replace 'renderEntityInInventoryFollowsMouse', 'extractEntityInInventoryFollowsMouse'
+        replace 'PlayerFaceRenderer.draw(', 'PlayerFaceExtractor.extractRenderState('
+        replace 'getChat().addMessage(', 'getChat().addClientSystemMessage('
+        replace 'list.render(g, -1, -1, 0f)', 'list.extractRenderState(g, -1, -1, 0f)'
+        // миксины: имена методов и пути классов в дескрипторах
+        replace 'method = "setup"', 'method = "alignWithEntity"'
+        replace 'method = "render"', 'method = "extractRenderState"'
+        replace '"renderBlurredBackground"', '"extractBlurredBackground"'
+        replace ';submitEntityRenderState(', ';entity('
+        replace 'net/minecraft/client/renderer/block/model/ItemTransform', 'net/minecraft/client/resources/model/cuboid/ItemTransform'
+        replace 'GuiGraphics', 'GuiGraphicsExtractor'
+        replace 'LightTexture', 'Lightmap'
+        replace 'ClickType', 'ContainerInput'
+    }
+
+    // 26.2: экраны переехали в mc.gui, камера и кадр — в gameRenderer, чат и скрытие HUD — в gui.hud (VERSIONS.md)
+    replacements.string(eval(mc, '>=26.2')) {
+        replace 'mc.getOverlay()', 'mc.gui.overlay()'
+        replace 'gameRenderer.getMainCamera()', 'gameRenderer.mainCamera()'
+        replace 'mc.getMainRenderTarget()', 'mc.gameRenderer.mainRenderTarget()'
+        replace 'Minecraft.getInstance().getMainRenderTarget()', 'Minecraft.getInstance().gameRenderer.mainRenderTarget()'
+        replace 'gui.getChat()', 'gui.hud.getChat()'
+        replace 'mc.options.hideGui', 'mc.gui.hud.isHidden()'
+        replace 'EntityType.', 'net.minecraft.world.entity.EntityTypes.'
+        replace 'gameRenderer.getLighting()', 'gameRenderer.lighting()'
+        // буферов кадра нет: мир пишет через свой перехватчик (compat.GeometryRecorder)
+        replace 'import net.minecraft.client.renderer.MultiBufferSource;', 'import dev.mraz1visual.compat.GeometryRecorder;'
+        replace 'MultiBufferSource', 'GeometryRecorder'
+        replace 'GlStateManager._disableBlend();', 'GlStateManager._disableBlend(0);'
+        // миксины 26.2: руки — submit*, сущность в GUI — с Vector3fc/Quaternionfc
+        replace '"renderHandsWithItems"', '"submitHandsWithItems"'
+        replace 'method = "renderArmWithItem", at = @At("HEAD"), cancellable', 'method = "submitArmWithItem", at = @At("HEAD"), cancellable'
+        replace 'FLorg/joml/Vector3f;Lorg/joml/Quaternionf;Lorg/joml/Quaternionf;IIII)V', 'FLorg/joml/Vector3fc;Lorg/joml/Quaternionfc;Lorg/joml/Quaternionfc;IIII)V'
+    }
+    replacements.regex(eval(mc, '>=26.2')) {
+        replace '\\b(mc|Minecraft\\.getInstance\\(\\))\\.screen\\b(?!\\()', '$1.gui.screen()', '\\b(mc|Minecraft\\.getInstance\\(\\))\\.gui\\.screen\\(\\)', '$1.screen'
+        replace '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.setScreen\\(', '$1.gui.setScreen(', '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.gui\\.setScreen\\(', '$1.setScreen('
+    }
+
+    // 26.3: графика переехала в com.mojang.renderpearl (api/backend), ввод — на SDL3 (коды клавиш — input.KeyCodes)
+    replacements.string(eval(mc, '>=26.3')) {
+        replace 'com.mojang.blaze3d.textures.', 'com.mojang.renderpearl.api.textures.'
+        replace 'com.mojang.blaze3d.opengl.', 'com.mojang.renderpearl.backend.opengl.'
+        replace 'com.mojang.blaze3d.pipeline.RenderPipeline', 'com.mojang.renderpearl.api.pipeline.RenderPipeline'
+        replace 'com.mojang.blaze3d.pipeline.BlendFunction', 'com.mojang.renderpearl.api.pipeline.BlendFunction'
+        replace 'com.mojang.blaze3d.pipeline.ColorTargetState', 'com.mojang.renderpearl.api.pipeline.ColorTargetState'
+        replace 'com.mojang.blaze3d.vertex.VertexFormat', 'com.mojang.renderpearl.api.vertex.VertexFormat'
+        replace 'com.mojang.blaze3d.GpuFormat', 'com.mojang.renderpearl.api.GpuFormat'
+        replace 'com.mojang.blaze3d.PrimitiveTopology', 'com.mojang.renderpearl.api.pipeline.PrimitiveTopology'
+        // PoseStack: поворот кватернионом — rotate
+        replace 'ps.mulPose(Axis.', 'ps.rotate(Axis.'
+        replace 'ps.mulPose(com.mojang.math.Axis.', 'ps.rotate(com.mojang.math.Axis.'
+        replace 'ps.mulPose(rot', 'ps.rotate(rot'
+        replace '.getAttackAnim(', '.getSwingAnimation('
+        // руки от первого лица: ItemInHandRenderer → FirstPersonHandsAndItemsRenderer
+        replace 'import net.minecraft.client.renderer.ItemInHandRenderer;', 'import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;'
+        replace '@Mixin(ItemInHandRenderer.class)', '@Mixin(FirstPersonHandsAndItemsRenderer.class)'
+    }
+}
+apply from: rootProject.file('mixincheck.gradle')

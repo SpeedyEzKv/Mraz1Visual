@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -9,7 +10,6 @@ import dev.mraz1visual.setting.SliderSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.LocalPlayer;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Эмоции для вида от третьего лица (F5) и в инвентаре.
@@ -19,7 +19,7 @@ public final class Emotes extends Module {
     private static Emotes instance;
     final EnumSetting emote = add(new EnumSetting("emote", "Эмоция", 0,
             "wave", "Помахать", "dance", "Танец", "clap", "Хлопки", "bow", "Поклон", "dab", "Дэб", "facepalm", "Фейспалм"));
-    final KeySetting key = add(new KeySetting("key", "Клавиша", GLFW.GLFW_KEY_G));
+    final KeySetting key = add(new KeySetting("key", "Клавиша", InputConstants.KEY_G));
     final SliderSetting duration = add(new SliderSetting("duration", "Длительность", 3, 1, 10, 0.5, " с"));
 
     private boolean was;

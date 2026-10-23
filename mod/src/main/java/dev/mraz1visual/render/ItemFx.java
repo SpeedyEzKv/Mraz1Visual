@@ -124,6 +124,8 @@ public final class ItemFx {
             skinDrawn = true;
             Mesh m = currentSkin.mesh(currentState);
             WeaponSkins w = WeaponSkins.get();
+            // в руке от 1-го лица и в меню поза уже видовая; от 3-го лица — довернуть нормали камерой
+            ModelDraw.viewFromCamera(!guiPass && (ctx == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || ctx == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND));
             ModelDraw.submit(c, ps, m, null, -1, overlay, light, w != null && w.glow.get());
             if (ctx != ItemDisplayContext.GUI && ctx != ItemDisplayContext.GROUND && ctx != ItemDisplayContext.FIXED) {
                 FireHand.submitAuraBounds(ps, c, ctx, m.bounds, guiPass);

@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.account.AccountStore;
 import dev.mraz1visual.account.MicrosoftAuth;
@@ -13,7 +14,6 @@ import dev.mraz1visual.ui.widget.Widget;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -75,7 +75,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         d.text(name, Fonts.Kind.BOLD, right - Fonts.width(name, Fonts.Kind.BOLD), ty + 2, Colors.mulAlpha(0xFFE6E6F4, fade));
         d.textRight(currentIsMicrosoft() ? "Microsoft" : "локальная сессия", right, ty + 14, Colors.mulAlpha(0xFF8686A2, fade));
 
-        if (dev.mraz1visual.music.MediaClient.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
+        if (dev.mraz1visual.music.NowPlaying.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
 
         panelAnim = Anim.to(panelAnim, accountsOpen ? 1 : 0, dt);
         if (panelAnim > 0.01f) renderAccounts(mx, my, dt, ty + tile + 12);
@@ -189,7 +189,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         if (e.button() != 0) return false;
         double mx = e.x() / k, my = e.y() / k;
         if (accountsOpen && clickAccounts(mx, my)) return true;
-        if (dev.mraz1visual.music.MediaClient.available() && music.click(musicX(), musicY(), mx, my)) return true;
+        if (dev.mraz1visual.music.NowPlaying.available() && music.click(musicX(), musicY(), mx, my)) return true;
         if (clickItems(mx, my)) return true;
         if (accountsOpen) {
             accountsOpen = false;
@@ -200,7 +200,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE && accountsOpen) {
+        if (e.key() == InputConstants.KEY_ESCAPE && accountsOpen) {
             accountsOpen = false;
             return true;
         }

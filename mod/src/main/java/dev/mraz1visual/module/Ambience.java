@@ -23,6 +23,8 @@ public final class Ambience extends Module {
         if (time.get()) {
             // 0 тиков = 6:00 утра
             long ticks = Math.round(((hour.get() - 6 + 24) % 24) * 1000);
+            // 26.x: время идёт через «часы мира» (ClientClockManager) — своё время там пока не задаётся
+            //? if <26.1
             mc.level.getLevelData().setDayTime(ticks);
         }
         if (clear.get()) {

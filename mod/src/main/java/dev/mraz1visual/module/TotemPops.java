@@ -46,7 +46,7 @@ public final class TotemPops extends Module implements WorldLayer {
         int n = t.pops.merge(name, 1, Integer::sum);
         if (t.chat.get() && mc.player != null) {
             String who = p == mc.player ? "§bТы" : "§f" + name;
-            mc.player.displayClientMessage(Component.literal("§7Mraz1Visual: " + who + "§7 снёс тотем §e#" + n), false);
+            dev.mraz1visual.compat.Mc.message(mc.player, Component.literal("§7Mraz1Visual: " + who + "§7 снёс тотем §e#" + n), false);
         }
         if (t.ring.get()) t.rings.add(new double[]{p.getX(), p.getY(), p.getZ(), System.currentTimeMillis(), p.getBbHeight()});
     }

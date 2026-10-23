@@ -53,8 +53,13 @@ public final class WorldDraw {
         WorldDraw d = INSTANCE;
         Vec3 cam = ctx.worldState().cameraRenderState.pos;
         PoseStack ps = ctx.matrices();
+        //? if >=26.2 {
+        /*MultiBufferSource src = MultiBufferSource.WORLD.begin();
+        d.collector = ctx.submitNodeCollector();
+        *///?} else {
         MultiBufferSource src = ctx.consumers();
         if (src == null) return;
+        //?}
         d.cx = d.eyeX = cam.x;
         d.cy = d.eyeY = cam.y;
         d.cz = d.eyeZ = cam.z;
@@ -84,7 +89,14 @@ public final class WorldDraw {
         d.vc = null;
         d.worldGlow = false;
         d.src = null;
+        //? if >=26.2 {
+        /*src.flush(d.collector);
+        d.collector = null;
+        *///?}
     }
+
+    //? if >=26.2
+    /*private net.minecraft.client.renderer.SubmitNodeCollector collector;*/
 
     // ── примитивы ────────────────────────────────────────────
 
@@ -310,8 +322,13 @@ public final class WorldDraw {
         ps.scale(s, -s, s);
         var font = mc.font;
         float w = font.width(text);
+        //? if >=26.2 {
+        /*if (collector != null) collector.submitText(ps, -w / 2f, 0, text.getVisualOrderText(), false,
+                net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0xF000F0, color, background, 0);
+        *///?} else {
         font.drawInBatch(text, -w / 2f, 0, color, false, ps.last().pose(), src,
                 net.minecraft.client.gui.Font.DisplayMode.NORMAL, background, 0xF000F0);
+        //?}
         vc = src.getBuffer(RenderTypes.debugQuads());
     }
 

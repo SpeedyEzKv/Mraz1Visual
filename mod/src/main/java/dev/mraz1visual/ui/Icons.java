@@ -25,7 +25,9 @@ public final class Icons {
             Map.entry("hud", HUD),
             Map.entry("name_tags", TAG),
             Map.entry("target_esp", TARGET),
-            Map.entry("esp", ESPBOX),
+            Map.entry("postfx", SUN),
+            Map.entry("staff_wheel", SHIELD),
+            Map.entry("phrase_wheel", CHAT),
             Map.entry("trajectories", ARC),
             Map.entry("hit_effects", STAR),
             Map.entry("hit_sounds", NOTE),
@@ -109,6 +111,8 @@ public final class Icons {
             case WINGS -> CAPE;
             case PETS -> PAW;
             case SKY -> CLOUD;
+            case SHADERS -> SUN;
+            case STAFF -> SHIELD;
             case PERFORMANCE -> GAUGE;
             case MISC -> GRID;
             case MUSIC -> NOTE;

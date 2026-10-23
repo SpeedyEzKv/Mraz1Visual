@@ -1,0 +1,10 @@
+option.SHADOW_QUALITY=Мягкость теней
+option.SSR_STEPS=Шаги отражений воды
+option.SUN_STRENGTH=Сила солнца
+option.WATER_ALPHA=Прозрачность воды
+option.WAVING_PLANTS=Качание растений
+option.COLORED_LIGHT=Тёплый свет блоков
+option.LABPBR=Блики LabPBR
+profile.LOW=Низкое
+profile.MEDIUM=Среднее
+profile.HIGH=Высокое

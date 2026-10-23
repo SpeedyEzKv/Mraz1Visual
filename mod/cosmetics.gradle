@@ -1,0 +1,105 @@
+// Встроенная косметика: из архивов паков (raw-packs/ в корне репозитория или папка «Загрузки») отбираются только
+// нужные клиенту файлы — модели, текстуры, .mcmeta, CIT-свойства — в ресурсы мода. Серверные конфиги (CraftEngine,
+// ItemsAdder, ModelEngine YAML), копии для совместимости и дубликаты питомцев не попадают в .jar.
+// Запуск вручную, когда меняются паки:  ./gradlew importCosmetics
+// Результат коммитится — CI собирает .jar без исходных архивов.
+
+import java.util.zip.ZipInputStream
+
+def cosmeticsOut = rootProject.file('src/main/resources/assets/mraz1visual/cosmetics')
+
+/** Все файлы архива (с вложенными zip) как путь → байты. Обратные слеши — в прямые. */
+def readZip
+readZip = { byte[] data, String prefix, Map<String, byte[]> out, int depth ->
+    def zin = new ZipInputStream(new ByteArrayInputStream(data))
+    def e
+    while ((e = zin.nextEntry) != null) {
+        if (e.directory) continue
+        def name = (prefix + e.name).replace('\\', '/')
+        def bytes = zin.readAllBytes()
+        if (name.toLowerCase().endsWith('.zip') && depth < 3) {
+            readZip(bytes, name.substring(0, name.length() - 4) + '/', out, depth + 1)
+        } else {
+            out[name] = bytes
+        }
+    }
+    out
+}
+
+tasks.register('importCosmetics') {
+    group = 'mraz1visual'
+    description = 'Отобрать модели и текстуры встроенных паков в ресурсы мода'
+    doLast {
+        def roots = [rootProject.file('../raw-packs'), new File(System.getProperty('user.home'), 'Downloads')]
+        def find = { String name -> roots.collect { new File(it, name) }.find { it.exists() } }
+        def packs = [
+                [id: 'majestica', file: 'blades-of-majestica.zip', keep: { String p ->
+                    (p.contains('/optifine/cit/') && (p.endsWith('.json') || p.endsWith('.properties'))) ||
+                            (p.contains('/textures/') && (p.endsWith('.png') || p.endsWith('.png.mcmeta'))) ||
+                            p == 'pack.png' || p.endsWith('/pack.png')
+                }],
+                [id: 'carnivoret', restricted: true, file: 'Carnivoret Weapon Set Volume 1.zip', keep: { String p ->
+                    p.contains('/resourcepack/assets/') && !p.contains('/armor/') && !p.contains('/equipment/') &&
+                            (p.endsWith('.json') || p.endsWith('.png') || p.endsWith('.png.mcmeta'))
+                }, strip: 'Weapons/plugins/CraftEngine/resources/elitecreatures/resourcepack/'],
+                [id: 'weapons_free', file: 'Weapons Pack - Free Edition.zip', keep: { String p ->
+                    // одна копия текстур (папка Files), копии для ItemsAdder/Nexo не нужны
+                    p.toLowerCase().endsWith('.png') && p.contains('Files/')
+                }],
+                [id: 'fantasy_sword', file: 'Zelda fantasy sword redo.bbmodel', single: 'fantasy_sword.bbmodel'],
+                [id: 'cubees_currets', restricted: true, file: 'FREE-Cubees-Currets 1.1.zip', keep: { String p -> p.endsWith('.bbmodel') }, flat: true],
+                [id: 'cubees_biomes', restricted: true, file: 'CUBEES_RE-Biomes1-1.2.zip', keep: { String p -> p.endsWith('.bbmodel') }, flat: true],
+        ]
+        def permissions = rootProject.file('../permissions')
+        packs.each { pack ->
+            // паки, в архиве которых условия запрещают распространение, встраиваются только при подтверждённом
+            // разрешении автора: файл (скриншот, письмо) в permissions/<id>/ или флаг -PcosmeticsAll
+            if (pack.restricted && !project.hasProperty('cosmeticsAll')) {
+                def proof = new File(permissions, pack.id)
+                if (!proof.isDirectory() || !proof.listFiles().any { it.isFile() && !it.name.startsWith('.') && it.name != 'README.md' }) {
+                    project.delete(new File(cosmeticsOut, pack.id))
+                    logger.lifecycle("importCosmetics: ${pack.id} — ждёт подтверждения разрешения в permissions/${pack.id}/")
+                    return
+                }
+            }
+            def src = find(pack.file)
+            if (src == null) {
+                logger.warn("importCosmetics: нет ${pack.file} — пропущен")
+                return
+            }
+            def dir = new File(cosmeticsOut, pack.id)
+            project.delete(dir)
+            dir.mkdirs()
+            if (pack.single) {
+                def text = src.getText('UTF-8')
+                // нейтральное имя без товарного знака
+                text = text.replace('zelda_rework_texture_sword', 'fantasy_sword').replace('Zelda', 'Fantasy').replace('zelda', 'fantasy')
+                new File(dir, pack.single).setText(text, 'UTF-8')
+                logger.lifecycle("importCosmetics: ${pack.id} — 1 файл")
+                return
+            }
+            def files = readZip(src.bytes, '', new LinkedHashMap<String, byte[]>(), 0)
+            def seen = new HashSet<String>()
+            int n = 0
+            long bytes = 0
+            files.each { path, data ->
+                if (!pack.keep(path)) return
+                def rel = path
+                if (pack.strip && rel.startsWith(pack.strip)) rel = rel.substring(pack.strip.length())
+                if (pack.flat) {
+                    // одна модель — один раз (в паках CUBEES одна и та же лежит в нескольких папках совместимости)
+                    def base = rel.substring(rel.lastIndexOf('/') + 1).toLowerCase()
+                    if (!seen.add(base)) return
+                    rel = base
+                }
+                if (pack.id == 'weapons_free') rel = rel.substring(rel.lastIndexOf('/') + 1).toLowerCase()
+                def f = new File(dir, rel)
+                f.parentFile.mkdirs()
+                f.bytes = data
+                n++
+                bytes += data.length
+            }
+            logger.lifecycle("importCosmetics: ${pack.id} — ${n} файлов, ${(bytes / 1024) as int} КБ")
+        }
+    }
+}

@@ -2,6 +2,7 @@ package dev.mraz1visual.ui;
 
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+//? if <26.1
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -27,7 +28,24 @@ public final class Sdf {
     /** Режимы шейдера (младшие 3 бита UV2.y). */
     public static final int FILL = 0, RING = 1, SHADOW = 2, GLASS = 3;
 
+    /** Шейдер фигур: в 26.3 — вариант с новым порядком DynamicTransforms и явными location. */
+    //? if >=26.3 {
+    /*private static final String SHADER = "core/sdf_rect_v3";
+    *///?} else {
+    private static final String SHADER = "core/sdf_rect";
+    //?}
+
     /** Позиция, цвет, локальная точка (UV0), полуразмеры (UV1, ×4), радиус и параметр (UV2, ×4). */
+    //? if >=26.2 {
+    /*// 26.2: формат собирается из GpuFormat (те же типы, что у ванильных UV1/UV2 — по два short)
+    public static final VertexFormat FORMAT = VertexFormat.builder(0)
+            .addAttribute("Position", com.mojang.blaze3d.GpuFormat.RGB32_FLOAT)
+            .addAttribute("Color", com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
+            .addAttribute("UV0", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
+            .addAttribute("UV1", com.mojang.blaze3d.GpuFormat.RG16_SINT)
+            .addAttribute("UV2", com.mojang.blaze3d.GpuFormat.RG16_SINT)
+            .build();
+    *///?} else {
     public static final VertexFormat FORMAT = VertexFormat.builder()
             .add("Position", VertexFormatElement.POSITION)
             .add("Color", VertexFormatElement.COLOR)
@@ -35,14 +53,35 @@ public final class Sdf {
             .add("UV1", VertexFormatElement.UV1)
             .add("UV2", VertexFormatElement.UV2)
             .build();
+    //?}
 
+    //? if >=26.3 {
+    /*public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.GLOBALS_SNIPPET)
+            .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.DYNAMIC_TRANSFORMS)
+    *///?} elif >=26.2 {
+    /*public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.GLOBALS_SNIPPET)
+            .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.MATRICES_PROJECTION)
+    *///?} else {
     public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+    //?}
             .withLocation(Identifier.fromNamespaceAndPath("mraz1visual", "pipeline/sdf_rect"))
-            .withVertexShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("mraz1visual", SHADER))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("mraz1visual", SHADER))
+            //? if >=26.2 {
+            /*.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(java.util.Optional.empty())
+            .withVertexBinding(0, FORMAT)
+            .withPrimitiveTopology(com.mojang.blaze3d.PrimitiveTopology.QUADS)
+            *///?} elif >=26.1 {
+            /*.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(java.util.Optional.empty())
+            .withVertexFormat(FORMAT, VertexFormat.Mode.QUADS)
+            *///?} else {
             .withBlend(BlendFunction.TRANSLUCENT)
             .withVertexFormat(FORMAT, VertexFormat.Mode.QUADS)
             .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            //?}
             .build();
 
     /** Шейдер не собрался — дальше рисуем по-старому (полосками), чтобы GUI не пропал. */

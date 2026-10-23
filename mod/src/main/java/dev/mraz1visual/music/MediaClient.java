@@ -2,9 +2,6 @@ package dev.mraz1visual.music;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
 import javax.imageio.ImageIO;
@@ -106,22 +103,7 @@ public final class MediaClient {
             hasCover = false;
             return;
         }
-        int s = 64;
-        BufferedImage scaled = new BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB);
-        var g = scaled.createGraphics();
-        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        // квадрат из центра
-        int side = Math.min(img.getWidth(), img.getHeight());
-        g.drawImage(img, 0, 0, s, s, (img.getWidth() - side) / 2, (img.getHeight() - side) / 2,
-                (img.getWidth() + side) / 2, (img.getHeight() + side) / 2, null);
-        g.dispose();
-        int[] argb = scaled.getRGB(0, 0, s, s, null, 0, s);
-        Minecraft.getInstance().execute(() -> {
-            NativeImage ni = new NativeImage(s, s, false);
-            for (int y = 0; y < s; y++) for (int x = 0; x < s; x++) ni.setPixel(x, y, argb[y * s + x] | 0xFF000000);
-            Minecraft.getInstance().getTextureManager().register(COVER, new DynamicTexture(() -> "mraz1visual music cover", ni));
-            hasCover = true;
-        });
+        NowPlaying.upload(img, COVER, () -> hasCover = true);
     }
 
     public static void command(String c) {

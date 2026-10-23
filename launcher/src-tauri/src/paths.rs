@@ -2,8 +2,11 @@
 
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct Paths {
     pub root: PathBuf,
+    /// Папка игры профиля: для 1.21.11 — game, для остальных версий — game-<версия> (свои моды и миры).
+    game_dir: Option<PathBuf>,
 }
 
 impl Paths {
@@ -22,13 +25,25 @@ impl Paths {
                 let _ = std::fs::rename(op, np);
             }
         }
-        Self { root }
+        Self { root, game_dir: None }
     }
+
+    /// Профиль версии: своя папка игры (моды и миры не смешиваются), конфиг клиента общий.
+    pub fn for_version(&self, mc: &str) -> Paths {
+        let mut p = self.clone();
+        if mc != "1.21.11" {
+            p.game_dir = Some(self.root.join(format!("game-{mc}")));
+        }
+        p
+    }
+
+    /// Папка игры основного профиля (1.21.11) — там хранится общий конфиг.
+    pub fn main_game(&self) -> PathBuf { self.root.join("game") }
     pub fn runtime(&self) -> PathBuf { self.root.join("runtime") }
     pub fn libraries(&self) -> PathBuf { self.root.join("libraries") }
     pub fn assets(&self) -> PathBuf { self.root.join("assets") }
     pub fn versions(&self) -> PathBuf { self.root.join("versions") }
-    pub fn game(&self) -> PathBuf { self.root.join("game") }
+    pub fn game(&self) -> PathBuf { self.game_dir.clone().unwrap_or_else(|| self.root.join("game")) }
     pub fn mods(&self) -> PathBuf { self.game().join("mods") }
     pub fn logs(&self) -> PathBuf { self.root.join("logs") }
     pub fn settings_file(&self) -> PathBuf { self.root.join("launcher.json") }

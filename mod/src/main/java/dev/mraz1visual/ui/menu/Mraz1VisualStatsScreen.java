@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.ui.Anim;
 import dev.mraz1visual.ui.Colors;
 import dev.mraz1visual.ui.Draw;
@@ -18,7 +19,6 @@ import net.minecraft.stats.StatsCounter;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -219,7 +219,7 @@ public final class Mraz1VisualStatsScreen extends MenuBase {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (e.key() == InputConstants.KEY_ESCAPE) {
             onClose();
             return true;
         }

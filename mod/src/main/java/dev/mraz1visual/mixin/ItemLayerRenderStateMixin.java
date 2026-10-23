@@ -22,6 +22,17 @@ import java.util.List;
  */
 @Mixin(ItemStackRenderState.LayerRenderState.class)
 public abstract class ItemLayerRenderStateMixin {
+    //? if >=26.1 {
+    /*@WrapOperation(method = "submit", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitItem(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/item/ItemDisplayContext;III[ILjava/util/List;Lnet/minecraft/client/renderer/item/ItemStackRenderState$FoilType;)V"),
+            require = 0)
+    private void mraz1visual$item(SubmitNodeCollector c, PoseStack ps, ItemDisplayContext ctx, int light, int overlay, int outline, int[] tints,
+                                  List<BakedQuad> quads, ItemStackRenderState.FoilType foil, Operation<Void> original) {
+        if (ItemFx.submitSkin(ps, c, ctx, light, overlay)) return;
+        if (ItemFx.submitLayer(ps, c, ctx, quads)) return;
+        original.call(c, ps, ctx, light, overlay, outline, tints, quads, foil);
+    }
+    *///?} else {
     @WrapOperation(method = "submit", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitItem(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/world/item/ItemDisplayContext;III[ILjava/util/List;Lnet/minecraft/client/renderer/rendertype/RenderType;Lnet/minecraft/client/renderer/item/ItemStackRenderState$FoilType;)V"),
             require = 0)
@@ -31,16 +42,21 @@ public abstract class ItemLayerRenderStateMixin {
         if (ItemFx.submitLayer(ps, c, ctx, quads)) return;
         original.call(c, ps, ctx, light, overlay, outline, tints, quads, type, foil);
     }
+    //?}
 
     /** Скин оружия: своя поза из display модели скина вместо ванильной. */
+    //? if >=26.1 {
+    /*@WrapOperation(method = "applyTransform", at = @At(value = "INVOKE",
+    *///?} else {
     @WrapOperation(method = "submit", at = @At(value = "INVOKE",
+    //?}
             target = "Lnet/minecraft/client/renderer/block/model/ItemTransform;apply(ZLcom/mojang/blaze3d/vertex/PoseStack$Pose;)V"),
             require = 0)
     private void mraz1visual$transform(ItemTransform t, boolean leftHand, PoseStack.Pose pose, Operation<Void> original) {
         if (!ItemFx.applySkinTransform(leftHand, pose)) original.call(t, leftHand, pose);
     }
 
-    /** Скин оружия вместо особой модели (щит, трезубец). */
+    /** Скин оружия вместо особой модели (щит, трезубец). В 26.x контекста здесь нет — скин подставится через submitItem. */
     @WrapOperation(method = "submit", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/special/SpecialModelRenderer;submit(Ljava/lang/Object;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;IIZI)V"),
             require = 0)

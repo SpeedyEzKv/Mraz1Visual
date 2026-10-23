@@ -14,3 +14,6 @@ mraz1visual/weapon_skins/
 mraz1visual/pets/
 **/mraz1visual/weapon_skins/
 **/mraz1visual/pets/
+
+# Архивы паков для importCosmetics (в репозиторий не коммитятся)
+raw-packs/

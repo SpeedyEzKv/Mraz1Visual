@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.desktop;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.browser.WebView;
 import dev.mraz1visual.overlay.Screenshots;
 import dev.mraz1visual.ui.Draw;
@@ -12,7 +13,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
 
@@ -196,7 +196,7 @@ final class DesktopWindow {
     boolean keyPressed(KeyEvent e, Minecraft mc) {
         if (!address.focused) return false;
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+        if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             view.navigate(address.value());
             lastUrl = "";
             address.focused = false;
@@ -204,11 +204,11 @@ final class DesktopWindow {
             view.setFocus(true);
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             address.focused = false;
             return true;
         }
-        boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean ctrl = (e.modifiers() & InputConstants.MOD_CONTROL) != 0;
         address.keyPressed(key, ctrl, mc.keyboardHandler::getClipboard);
         return true;
     }

@@ -8,11 +8,16 @@ use std::path::Path;
 pub struct Settings {
     pub ram_mb: u64,
     pub close_on_launch: bool,
+    /// Выбранная версия Minecraft; пусто — рекомендуемая.
+    pub mc_version: String,
+    /// Ставить Sodium и Iris (по галочке).
+    pub sodium: bool,
+    pub iris: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { ram_mb: 4096, close_on_launch: false }
+        Self { ram_mb: 4096, close_on_launch: false, mc_version: String::new(), sodium: true, iris: true }
     }
 }
 

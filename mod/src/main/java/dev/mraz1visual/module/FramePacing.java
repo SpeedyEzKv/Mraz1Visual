@@ -6,8 +6,6 @@ import dev.mraz1visual.core.Module;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.EnumSetting;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWVidMode;
 
 /**
  * Ограничение кадров: в меню ванилла держит 60 FPS — здесь выбирается своё значение,
@@ -50,9 +48,8 @@ public final class FramePacing extends Module {
         if (now - hzCheckedAt > 2000) {
             hzCheckedAt = now;
             try {
-                long mon = GLFW.glfwGetPrimaryMonitor();
-                GLFWVidMode mode = mon == 0 ? null : GLFW.glfwGetVideoMode(mon);
-                if (mode != null && mode.refreshRate() > 0) monitorHz = mode.refreshRate();
+                int hz = dev.mraz1visual.compat.Platform.monitorHz();
+                if (hz > 0) monitorHz = hz;
             } catch (Throwable ignored) {
             }
         }

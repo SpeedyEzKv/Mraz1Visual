@@ -16,9 +16,6 @@ import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.resources.IoSupplier;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -85,7 +82,11 @@ final class PacksPanel {
     private Identifier icon(Pack p) {
         if (icons.containsKey(p.getId())) return icons.get(p.getId());
         Identifier id = null;
+        //? if >=26.3 {
+        /*try (var res = p.openMetadata()) {
+        *///?} else {
         try (PackResources res = p.open()) {
+        //?}
             IoSupplier<InputStream> sup = res.getRootResource("pack.png");
             if (sup != null) {
                 try (InputStream in = sup.get()) {
@@ -232,11 +233,8 @@ final class PacksPanel {
 
     /** Окно выбора файлов системы: копируем zip-архивы в папку ресурспаков. */
     private void addPacks() {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            PointerBuffer filters = stack.mallocPointer(1);
-            filters.put(stack.UTF8("*.zip"));
-            filters.flip();
-            String res = TinyFileDialogs.tinyfd_openFileDialog("Ресурспаки", "", filters, "Ресурспак (.zip)", true);
+        try {
+            String res = dev.mraz1visual.compat.Platform.pickFiles("Ресурспаки", new String[]{"*.zip"}, "Ресурспак (.zip)", true, mc.getResourcePackDirectory());
             if (res == null) return;
             Path dir = mc.getResourcePackDirectory();
             int n = 0;

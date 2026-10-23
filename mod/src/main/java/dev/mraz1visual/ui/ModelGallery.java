@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Modules;
 import dev.mraz1visual.models.AnimPlayer;
 import dev.mraz1visual.models.Anim;
@@ -17,7 +18,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ import java.util.Map;
  * оружия, избранное, поиск, ручная поза), «Питомцы» (выбор активного, кнопки анимаций) и «Косметика» (шляпа, крылья).
  */
 public final class ModelGallery extends Screen {
-    public enum Tab { SKINS("Скины"), PETS("Питомцы"), COSMETICS("Косметика");
+    public enum Tab { SKINS("Скины"), PETS("Питомцы"), COSMETICS("Косметика"), AUTHORS("Авторы");
         final String title;
         Tab(String t) { title = t; }
     }
@@ -66,6 +66,7 @@ public final class ModelGallery extends Screen {
 
     private ModelGallery(Tab tab, Screen parent) {
         super(Component.literal("3D-модели"));
+        ModelRegistry.ensureLoaded();
         this.tab = tab;
         this.parent = parent;
     }
@@ -78,7 +79,7 @@ public final class ModelGallery extends Screen {
     public static void openFolder(Path dir) {
         try {
             java.nio.file.Files.createDirectories(dir);
-            net.minecraft.util.Util.getPlatform().openPath(dir);
+            dev.mraz1visual.compat.Platform.openPath(dir);
         } catch (Exception e) {
             dev.mraz1visual.core.ModuleManager.LOG.warn("Не удалось открыть папку {}", dir, e);
         }
@@ -138,6 +139,7 @@ public final class ModelGallery extends Screen {
         int bodyY = wy + TOP_H, bodyH = wh - TOP_H - FOOT_H;
         switch (tab) {
             case SKINS -> drawSkins(g, mx, my, bodyY, bodyH, dt);
+            case AUTHORS -> drawAuthors(mx, my, bodyY, bodyH);
             case PETS -> drawPets(g, mx, my, bodyY, bodyH, dt);
             case COSMETICS -> drawCosmetics(g, mx, my, bodyY, bodyH);
         }
@@ -201,7 +203,8 @@ public final class ModelGallery extends Screen {
     private boolean matches(ModelEntry e) {
         if (search.isEmpty()) return true;
         String q = search.toString().toLowerCase(Locale.ROOT);
-        return e.name.toLowerCase(Locale.ROOT).contains(q) || e.source.toLowerCase(Locale.ROOT).contains(q);
+        return e.name.toLowerCase(Locale.ROOT).contains(q) || e.sourceLabel().toLowerCase(Locale.ROOT).contains(q)
+                || e.author.toLowerCase(Locale.ROOT).contains(q);
     }
 
     // ── скины ────────────────────────────────────────────────
@@ -229,7 +232,22 @@ public final class ModelGallery extends Screen {
         ModelEntry chosen = ModelRegistry.get(ModelPrefs.weapons.get(slot));
         int gx = wx + 12 + SLOT_W + 12, gw = ww - (gx - wx) - 12 - (chosen != null ? SIDE_W + 10 : 0);
         List<ModelEntry> list = new ArrayList<>();
-        for (ModelEntry e : ModelRegistry.of(ModelEntry.Kind.WEAPON)) if (matches(e)) list.add(e);
+        // коллекции: встроенные паки по отдельности и «Мои файлы»
+        int fx = gx0(), fy = y + 2;
+        fx = chip(mx, my, fx, fy, "Все", collectionFilter.equals("all"), () -> setCollection("all"));
+        for (ModelRegistry.Collection c : ModelRegistry.collections()) {
+            if (!c.kind().equals("weapons") || !hasCollection(c.id())) continue;
+            String id = c.id();
+            fx = chip(mx, my, fx, fy, c.title(), collectionFilter.equals(id), () -> setCollection(id));
+        }
+        chip(mx, my, fx, fy, "Мои файлы", collectionFilter.equals("local"), () -> setCollection("local"));
+        y += 24;
+        h -= 24;
+        for (ModelEntry e : ModelRegistry.of(ModelEntry.Kind.WEAPON)) {
+            if (!matches(e)) continue;
+            if (collectionFilter.equals("local") ? e.builtin : !collectionFilter.equals("all") && !collectionFilter.equals(e.collection)) continue;
+            list.add(e);
+        }
         list.sort((a, b) -> Boolean.compare(ModelPrefs.favorites.contains(b.id), ModelPrefs.favorites.contains(a.id)));
         grid(g, mx, my, gx, y, gw, h, list, chosen, e -> {
             if (e.broken()) return;
@@ -238,6 +256,53 @@ public final class ModelGallery extends Screen {
             ModelPrefs.save();
         }, "Положите паки (zip, папки, .bbmodel, png) в mraz1visual/weapon_skins и нажмите «Обновить папку».");
         if (chosen != null) poseEditor(mx, my, gx + gw + 10, y + 4, chosen);
+    }
+
+    private String collectionFilter = "all";
+
+    private int gx0() { return wx + 12 + SLOT_W + 12; }
+
+    private boolean hasCollection(String id) {
+        for (ModelEntry e : ModelRegistry.all()) if (id.equals(e.collection)) return true;
+        return false;
+    }
+
+    private void setCollection(String id) {
+        collectionFilter = id;
+        scrollTarget = scroll = 0;
+    }
+
+    /** Капсула-фильтр. @return x следующей. */
+    private int chip(int mx, int my, int x, int y, String label, boolean on, Runnable r) {
+        label = Draw.ellipsize(label, 86);
+        int w = d.width(label) + 16;
+        boolean hov = Widget.hit(mx, my, x, y, w, 18);
+        d.round(x, y, w, 18, 9, on ? Theme.GLASS_ACTIVE : hov ? Theme.HOVER : Theme.GLASS_CARD);
+        d.textCenter(label, x + w / 2, Draw.textY(y, 18), on ? Theme.TEXT : Theme.TEXT_DIM);
+        hits.add(new Hit(x, y, w, 18, r));
+        return x + w + 4;
+    }
+
+    /** «Авторы»: каждая встроенная коллекция — название, автор, ссылка, пометка о разрешении; плюс открытые библиотеки. */
+    private void drawAuthors(int mx, int my, int y, int h) {
+        int x = wx + 20, cy = y + 6, w = ww - 40;
+        d.text("Встроенная косметика", Fonts.Kind.BOLD, x, cy, Theme.TEXT);
+        cy += 16;
+        for (ModelRegistry.Collection c : ModelRegistry.collections()) {
+            boolean in = hasCollection(c.id());
+            d.glass(x, cy, w, 34, Theme.RADIUS_CARD, Theme.GLASS_CARD, 0.7f);
+            d.text(c.title(), Fonts.Kind.BOLD, x + 12, cy + 6, Theme.TEXT);
+            d.text(c.author() + (c.url().isEmpty() ? "" : " · " + c.url()), x + 12, cy + 19, Theme.TEXT_DIM);
+            String note = in ? c.note() : "ждёт подтверждения разрешения — пока только из своих файлов";
+            d.textRight(Draw.ellipsize(note, w / 2), x + w - 12, Draw.textY(cy, 34), in ? Theme.TEXT_MUTED : 0xFFFFB86B);
+            if (!c.url().isEmpty()) {
+                String url = c.url();
+                hits.add(new Hit(x, cy, w, 34, () -> dev.mraz1visual.compat.Platform.openUri(url)));
+            }
+            cy += 38;
+            if (cy > y + h - 40) break;
+        }
+        d.text("Шрифты: Manrope, Unbounded, Inter (SIL OFL), DejaVu. Подробно — CREDITS.md в репозитории.", x, cy + 6, Theme.TEXT_MUTED);
     }
 
     private void setModule(String id) {
@@ -278,7 +343,13 @@ public final class ModelGallery extends Screen {
                 else preview(g, e, null, hov ? spin : 0, 0, -45, 1.05f, cx + 4, cy + 4, CARD_W - 8, 78);
             }
             d.text(Draw.ellipsize(e.name, CARD_W - 12), cx + 7, cy + 84, Theme.TEXT);
-            d.text(Draw.ellipsize(e.source, CARD_W - 12), cx + 7, cy + 97, Theme.TEXT_MUTED);
+            // своё новое — маленькая метка «Новое»
+            if ("mraz1".equals(e.collection)) {
+                int bw = d.width("Новое") + 10;
+                d.round(cx + 6, cy + 6, bw, 13, 6, Colors.withAlpha(Theme.accent(), 0xC8));
+                d.textCenter("Новое", cx + 6 + bw / 2, Draw.textY(cy + 6, 13), 0xFFFFFFFF);
+            }
+            d.text(Draw.ellipsize(e.sourceLabel(), CARD_W - 12), cx + 7, cy + 97, Theme.TEXT_MUTED);
             // избранное
             if (e.kind == ModelEntry.Kind.WEAPON) {
                 boolean fav = ModelPrefs.favorites.contains(e.id);
@@ -289,7 +360,7 @@ public final class ModelGallery extends Screen {
                     ModelPrefs.save();
                 }));
             }
-            if (hov) hover = e.broken() ? "Ошибка: " + e.error : e.name + " — " + e.source + " (" + e.format + ")"
+            if (hov) hover = e.broken() ? "Ошибка: " + e.error : e.name + " — " + e.sourceLabel() + (e.builtin ? " · " + e.author : "") + " (" + e.format + ")"
                     + (e.warnings.isEmpty() ? "" : ", предупреждений: " + e.warnings.size());
             if (my >= y && my < y + h) hits.add(new Hit(cx, cy, CARD_W, CARD_H, () -> pick.pick(e)));
         }
@@ -362,8 +433,7 @@ public final class ModelGallery extends Screen {
     }
 
     private static boolean hasShiftDown() {
-        long win = Minecraft.getInstance().getWindow().handle();
-        return GLFW.glfwGetKey(win, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS || GLFW.glfwGetKey(win, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+        return dev.mraz1visual.input.Keys.isDown(InputConstants.KEY_LSHIFT) || dev.mraz1visual.input.Keys.isDown(InputConstants.KEY_RSHIFT);
     }
 
     // ── питомцы ──────────────────────────────────────────────
@@ -421,7 +491,84 @@ public final class ModelGallery extends Screen {
 
     // ── косметика ────────────────────────────────────────────
 
+    /** Встроенный набор клиента: процедурные крылья, плащи, нимбы и питомцы — включаются одним кликом. */
+    private static final String[][] BUILTIN = {
+            // категория, название, модуль, настройка=значение…, цвет образца
+            {"Крылья", "Перьевые", "wings_3d", "style=angel", "#F2F0FF"},
+            {"Крылья", "Драконьи", "wings_3d", "style=dragon", "#7A3B3B"},
+            {"Крылья", "Стеклянные", "wings_3d", "style=energy", "#8FD8FF"},
+            {"Крылья", "Механические", "wings_3d", "style=mech", "#9AA0AA"},
+            {"Плащи", "Затмение", "cape", "style=eclipse", "#1E1B2E"},
+            {"Плащи", "Градиент", "cape", "style=gradient", "#B9A6FF"},
+            {"Плащи", "Графит", "cape", "style=plain|color=#FF2C2C34", "#2C2C34"},
+            {"Плащи", "Аметист", "cape", "style=plain|color=#FF8C6CFF", "#8C6CFF"},
+            {"Плащи", "Изумруд", "cape", "style=plain|color=#FF2FA37A", "#2FA37A"},
+            {"Плащи", "Закат", "cape", "style=gradient|color=#FFFF9A6B", "#FF9A6B"},
+            {"Головные уборы", "Нимб", "halo", "style=ring", "#FFE7A8"},
+            {"Головные уборы", "Корона из света", "halo", "style=crown", "#FFD36B"},
+            {"Головные уборы", "Орбита огоньков", "halo", "style=orbit", "#8FD8FF"},
+            {"Головные уборы", "Китайская шляпа", "china_hat", "", "#B8E6FF"},
+            {"Питомцы", "Дракончик", "pets", "kind=dragon", "#5FD49A"},
+            {"Питомцы", "Котик-призрак", "pets", "kind=cat", "#B8D8FF"},
+            {"Питомцы", "Стеклянный лис", "pets", "kind=fox", "#9FE6FF"},
+            {"Питомцы", "Совёнок", "pets", "kind=owl", "#F6D9A8"},
+            {"Питомцы", "Дрон", "pets", "kind=drone", "#4FD8FF"},
+            {"Питомцы", "Медуза", "pets", "kind=jelly", "#FF8AD8"},
+    };
+
+    private static boolean builtinOn(String[] b) {
+        var m = dev.mraz1visual.Mraz1Visual.MODULES.find(b[2]);
+        if (m == null || !m.isEnabled()) return false;
+        if (b[3].isEmpty()) return true;
+        for (String kv : b[3].split("\\|")) {
+            String[] p = kv.split("=", 2);
+            for (var s : m.settings()) if (s.id.equals(p[0]) && !s.toJson().getAsString().equalsIgnoreCase(p[1])) return false;
+        }
+        return true;
+    }
+
+    private static void applyBuiltin(String[] b) {
+        var m = dev.mraz1visual.Mraz1Visual.MODULES.find(b[2]);
+        if (m == null) return;
+        if (builtinOn(b)) { m.setEnabled(false); return; }
+        if (!b[3].isEmpty()) for (String kv : b[3].split("\\|")) {
+            String[] p = kv.split("=", 2);
+            for (var s : m.settings()) if (s.id.equals(p[0]) && s.fromJson(new com.google.gson.JsonPrimitive(p[1]))) dev.mraz1visual.setting.Setting.globalChangeHook.run();
+        }
+        m.setEnabled(true);
+    }
+
+    /** Карточки встроенного набора: по категориям, образец цвета, «включено». @return y под ними. */
+    private int drawBuiltin(int mx, int my, int x, int y, int w) {
+        String cat = null;
+        int cx = x, cw = 112, ch = 22;
+        for (String[] b : BUILTIN) {
+            if (!b[0].equals(cat)) {
+                cat = b[0];
+                if (cx != x) y += ch + 4;
+                d.text(cat, Fonts.Kind.BOLD, x + 4, y + 2, Theme.TEXT_DIM);
+                y += 14;
+                cx = x;
+            }
+            if (cx + cw > x + w) { cx = x; y += ch + 4; }
+            boolean on = builtinOn(b), hov = Widget.hit(mx, my, cx, y, cw, ch);
+            d.round(cx, y, cw, ch, 11, on ? Theme.GLASS_ACTIVE : hov ? Theme.HOVER : Theme.GLASS_CARD);
+            int col = 0xFF000000 | Integer.parseInt(b[4].substring(1), 16);
+            d.disc(cx + 11, y + ch / 2f, 4.5f, col);
+            d.text(Draw.ellipsize(b[1], cw - 30), cx + 21, Draw.textY(y, ch), on ? Theme.TEXT : Theme.TEXT_DIM);
+            if (on) d.disc(cx + cw - 9, y + ch / 2f, 2.5f, Theme.accent());
+            hits.add(new Hit(cx, y, cw, ch, () -> applyBuiltin(b)));
+            cx += cw + 4;
+        }
+        return y + ch + 10;
+    }
+
     private void drawCosmetics(GuiGraphics g, int mx, int my, int y, int h) {
+        int by0 = y;
+        d.text("Набор Mraz1Visual — всё встроено, ничего не нужно скачивать", Fonts.Kind.BOLD, wx + 18, y + 2, Theme.TEXT);
+        int nextY = drawBuiltin(mx, my, wx + 14, y + 18, ww - 28);
+        h -= nextY - by0;
+        y = nextY;
         List<ModelEntry> list = new ArrayList<>();
         for (ModelEntry e : ModelRegistry.all()) if ((e.kind == ModelEntry.Kind.HAT || e.kind == ModelEntry.Kind.WING) && matches(e)) list.add(e);
         ModelEntry hat = ModelCosmetics.pick(ModelEntry.Kind.HAT), wing = ModelCosmetics.pick(ModelEntry.Kind.WING);
@@ -465,17 +612,17 @@ public final class ModelGallery extends Screen {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             if (!search.isEmpty()) { search.setLength(0); scrollTarget = 0; }
             else onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
+        if (key == InputConstants.KEY_BACKSPACE && !search.isEmpty()) {
             search.setLength(search.length() - Character.charCount(search.codePointBefore(search.length())));
             scrollTarget = 0;
             return true;
         }
-        if (key == GLFW.GLFW_KEY_F5) {
+        if (key == InputConstants.KEY_F5) {
             ModelRegistry.reload();
             return true;
         }

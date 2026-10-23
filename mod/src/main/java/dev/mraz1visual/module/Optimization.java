@@ -46,7 +46,7 @@ public final class Optimization extends Module {
     private static void openZako() {
         Minecraft mc = Minecraft.getInstance();
         if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("zakoopt")) {
-            if (mc.player != null) mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+            if (mc.player != null) dev.mraz1visual.compat.Mc.message(mc.player, net.minecraft.network.chat.Component.literal(
                     "ZakoOpt не установлен — обнови клиент через лаунчер Mraz1Visual."), false);
             return;
         }

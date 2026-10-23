@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MinecraftMixin",
+    "GuiScreenMixin",
     "ItemInHandRendererMixin",
     "LivingEntityMixin",
     "ContainerScreenAccessor",

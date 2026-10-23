@@ -32,6 +32,7 @@
   <main id="home" class="view active">
     <button id="play" class="play">ИГРАТЬ</button>
     <div class="meta" id="build">…</div>
+    <div class="versions" id="versions"></div>
     <button class="nav" id="toSettings">НАСТРОЙКИ</button>
     <button class="nav nav2" id="toMarket">МАРКЕТ</button>
     <section class="news">
@@ -58,6 +59,16 @@
       <div><div class="label">Закрывать лаунчер</div><div class="sub">после выхода из игры</div></div>
       <span></span>
       <div class="seg" id="closeSeg"><button data-v="0">Нет</button><button data-v="1">Да</button></div>
+    </div>
+    <div class="row">
+      <div><div class="label">Sodium</div><div class="sub">быстрый рендер, больше FPS</div></div>
+      <span></span>
+      <div class="seg" id="sodiumSeg"><button data-v="0">Нет</button><button data-v="1">Да</button></div>
+    </div>
+    <div class="row">
+      <div><div class="label">Iris</div><div class="sub">шейдерпаки, включая Mraz1 Shaders (нужен Sodium)</div></div>
+      <span></span>
+      <div class="seg" id="irisSeg"><button data-v="0">Нет</button><button data-v="1">Да</button></div>
     </div>
     <button class="nav back" id="back">НАЗАД</button>
   </main>

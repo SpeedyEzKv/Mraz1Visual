@@ -14,8 +14,18 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
+    //? if >=26.1 {
+    /*// 26.x: цвет пишется в переданный вектор, метод ничего не возвращает
+    @org.spongepowered.asm.mixin.injection.Inject(method = "computeFogColor", at = @At("TAIL"), require = 0)
+    private void mraz1visual$fogColor(net.minecraft.client.Camera camera, float pt, net.minecraft.client.multiplayer.ClientLevel level, int distance, float darken,
+                                      Vector4f out, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        Vector4f r = CustomSky.fog(CustomFog.fog(out));
+        if (r != out) out.set(r);
+    }
+    *///?} else {
     @ModifyReturnValue(method = "computeFogColor", at = @At("RETURN"), require = 0)
     private Vector4f mraz1visual$fogColor(Vector4f color) {
         return CustomSky.fog(CustomFog.fog(color));
     }
+    //?}
 }

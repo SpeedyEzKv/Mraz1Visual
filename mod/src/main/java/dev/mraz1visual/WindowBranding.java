@@ -2,8 +2,10 @@ package dev.mraz1visual;
 
 import dev.mraz1visual.core.ModuleManager;
 import net.fabricmc.loader.api.FabricLoader;
+//? if <26.3 {
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWImage;
+//?}
 import org.lwjgl.system.MemoryUtil;
 
 import javax.imageio.ImageIO;
@@ -27,6 +29,8 @@ public final class WindowBranding {
     public static void applyIcon() {
         String os = System.getProperty("os.name", "").toLowerCase();
         if (os.contains("mac")) return; // macOS берёт иконку из приложения
+        // 26.3: окно на SDL3 — иконку ставит сама игра из ресурсов, GLFW нет
+        //? if <26.3 {
         long window = GLFW.glfwGetCurrentContext();
         if (window == 0) return;
         int[] sizes = {16, 32, 48, 128, 256};
@@ -59,5 +63,6 @@ public final class WindowBranding {
         } finally {
             for (ByteBuffer b : buffers) MemoryUtil.memFree(b);
         }
+        //?}
     }
 }
