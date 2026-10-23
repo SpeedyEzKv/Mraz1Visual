@@ -14,6 +14,7 @@ public abstract class GameRendererPostMixin {
     @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;)V", shift = At.Shift.AFTER), require = 0)
     private void mraz1visual$postFx(DeltaTracker delta, boolean tick, CallbackInfo ci) {
         PostFxModule.afterLevel(delta.getGameTimeDeltaPartialTick(false));
+        dev.mraz1visual.ui.GlassBlur.afterLevel();
     }
 
     /** Глубина мира — до того, как игра очистит её под руку. */

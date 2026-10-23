@@ -33,8 +33,32 @@ public final class GlassBlur {
 
     private GlassBlur() {}
 
-    /** Обновить размытие под текущий кадр. false — не получилось (тогда рисуйте ванильный фон). */
+    private static boolean requested;
+    private static int requestedLevels = 4;
+
+    /**
+     * Обновить размытие под текущий кадр. false — не получилось (тогда рисуйте ванильный фон).
+     * В 26.x GUI собирается раньше мира — тогда размытие считается позже, сразу после мира (afterLevel),
+     * а здесь только заказывается на следующий кадр.
+     */
     public static boolean update(int levels) {
+        //? if >=26.1 {
+        /*requested = true;
+        requestedLevels = levels;
+        return !failed && result != null;
+        *///?} else {
+        return compute(levels);
+        //?}
+    }
+
+    /** Из GameRendererPostMixin: мир уже в кадре — посчитать заказанное размытие. */
+    public static void afterLevel() {
+        if (!requested) return;
+        requested = false;
+        compute(requestedLevels);
+    }
+
+    private static boolean compute(int levels) {
         if (failed) return false;
         try {
             RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
