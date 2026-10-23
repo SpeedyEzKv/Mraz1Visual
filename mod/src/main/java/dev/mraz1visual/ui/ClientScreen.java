@@ -142,10 +142,19 @@ public final class ClientScreen extends Screen implements Host {
     private final float[] iconHover = new float[4];
 
     private Screen parent;
+    /** Вкладка Cosmetics: гардероб или список модулей косметики. */
+    private final WardrobePanel wardrobe = new WardrobePanel(() -> cosmeticsModules = true);
+    private boolean cosmeticsModules;
+
+    private Panel panel() {
+        if (tab == Tab.COSMETICS && cosmeticsModules) return null;
+        return panels.get(tab);
+    }
 
     public ClientScreen() {
         super(Component.literal("Mraz1Visual"));
         panels.put(Tab.MARKET, new MarketPanel());
+        panels.put(Tab.COSMETICS, wardrobe);
         panels.put(Tab.FORUM, new SoonPanel("Форум", "Обсуждения игроков Mraz1Visual\nчерез GitHub Discussions.", Icons.CHAT));
     }
 
@@ -203,6 +212,7 @@ public final class ClientScreen extends Screen implements Host {
     }
 
     private void finishClose() {
+        wardrobe.left();
         closing = false;
         popup = null;
         if (listening != null) listening.cancel();
@@ -302,6 +312,9 @@ public final class ClientScreen extends Screen implements Host {
     // ── выбор вкладки и модуля ───────────────────────────────
 
     private void selectTab(Tab t) {
+        // повторный клик по Cosmetics — обратно в гардероб
+        if (t == Tab.COSMETICS) cosmeticsModules = false;
+        if (tab == Tab.COSMETICS && t != Tab.COSMETICS) wardrobe.left();
         if (tab != t && sel != null) lastSel.put(tab, sel);
         tab = t;
         if (!tabLabels) layoutTabs();
@@ -338,6 +351,7 @@ public final class ClientScreen extends Screen implements Host {
             for (Category c : t.cats) {
                 if (c == m.category) {
                     selectTab(t);
+                    if (t == Tab.COSMETICS) cosmeticsModules = true;
                     select(m);
                     scrollListTo(m);
                     return;
@@ -568,7 +582,7 @@ public final class ClientScreen extends Screen implements Host {
         d.glass(wx, wy, ww, wh, 22, wallpaperOn ? 0x330C0C10 : Theme.GLASS_WINDOW, 1.1f);
         d.clip(wx, wy, ww, wh);
         drawTopBar(mx, my, dt, now);
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (tab == Tab.CONFIGS && search.isEmpty()) drawConfigs(mx, my, dt);
         else if (panel != null && search.isEmpty()) panel.render(d, mx, my, dt, wx + PAD, bodyY(), ww - 2 * PAD, bodyH());
         else {
@@ -963,7 +977,7 @@ public final class ClientScreen extends Screen implements Host {
             return true;
         }
         searchFocused = false;
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (search.isEmpty() && tab == Tab.CONFIGS) {
             if (b != 0) return true;
             int x = wx + PAD, y = bodyY(), lw = 180;
@@ -1024,7 +1038,7 @@ public final class ClientScreen extends Screen implements Host {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (panel != null && search.isEmpty()) panel.release(e.x() / k, e.y() / k);
         if (active != null) {
             active.mouseReleased(e.x() / k, activeY(e.y() / k));
@@ -1035,7 +1049,7 @@ public final class ClientScreen extends Screen implements Host {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dragX, double dragY) {
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (panel != null && search.isEmpty()) panel.drag(e.x() / k, e.y() / k);
         if (active != null) active.mouseDragged(e.x() / k, activeY(e.y() / k));
         return true;
@@ -1045,7 +1059,7 @@ public final class ClientScreen extends Screen implements Host {
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (popup != null) return true;
         double mx = mouseX / k, my = mouseY / k;
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (panel != null && search.isEmpty()) {
             panel.scroll(mx, my, scrollY);
             return true;
@@ -1073,7 +1087,7 @@ public final class ClientScreen extends Screen implements Host {
         }
         boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
         if (tab == Tab.CONFIGS && search.isEmpty() && profiles.isTyping()) return profiles.keyPressed(key, ctrl, minecraft.keyboardHandler::getClipboard);
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (panel != null && search.isEmpty() && panel.typing()) return panel.key(key, ctrl);
         if (searchFocused) {
             switch (key) {
@@ -1142,7 +1156,7 @@ public final class ClientScreen extends Screen implements Host {
         if (listening != null || popup != null) return true;
         int cp = e.codepoint();
         if (tab == Tab.CONFIGS && search.isEmpty() && profiles.isTyping()) return profiles.charTyped(cp);
-        Panel panel = panels.get(tab);
+        Panel panel = panel();
         if (panel != null && search.isEmpty() && panel.typing()) return panel.chr(cp);
         if (Character.isISOControl(cp)) return false;
         if (!searchFocused && cp == ' ') return false;
