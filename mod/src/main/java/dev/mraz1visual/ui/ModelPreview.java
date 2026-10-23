@@ -24,7 +24,11 @@ public final class ModelPreview {
     private ModelPreview() {}
 
     public static void register() {
+        //? if >=26.2 {
+        /*SpecialGuiElementRegistry.register(pip -> new Renderer());
+        *///?} else {
         SpecialGuiElementRegistry.register(pip -> new Renderer(pip.vertexConsumers()));
+        //?}
     }
 
     /** Нарисовать модель в прямоугольнике (координаты GUI). pose — поза костей (копируется) или null. */
@@ -49,9 +53,15 @@ public final class ModelPreview {
     }
 
     static final class Renderer extends PictureInPictureRenderer<State> {
+        //? if >=26.2 {
+        /*Renderer() {
+            super();
+        }
+        *///?} else {
         Renderer(MultiBufferSource.BufferSource buffers) {
             super(buffers);
         }
+        //?}
 
         @Override
         public Class<State> getRenderStateClass() {
@@ -63,6 +73,32 @@ public final class ModelPreview {
             return "mraz1visual model preview";
         }
 
+        //? if >=26.2 {
+        /*// 26.2: модель уходит в коллектор PIP — по одному submitCustomGeometry на проход (основа, кромка, свечение)
+        @Override
+        protected void renderToTexture(State s, PoseStack ps, net.minecraft.client.renderer.SubmitNodeCollector c) {
+            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
+            Mesh m = s.mesh();
+            float[] b = m.bounds;
+            ps.pushPose();
+            ps.scale(1, -1, 1);
+            ps.mulPose(Axis.ZP.rotationDegrees(s.roll()));
+            ps.mulPose(Axis.XP.rotationDegrees(s.pitch()));
+            ps.mulPose(Axis.YP.rotationDegrees(s.yaw()));
+            ps.translate(-(b[0] + b[3]) / 2f, -(b[1] + b[4]) / 2f, -(b[2] + b[5]) / 2f);
+            float[] bones = s.bonePose();
+            int light = dev.mraz1visual.compat.Mc.FULL_BRIGHT, ov = OverlayTexture.NO_OVERLAY;
+            ModelDraw.viewFromCamera(false);
+            c.submitCustomGeometry(ps, ModelDraw.solidType(m), (pose, vc) -> {
+                if (m.bones.length > 0) ModelDraw.bones(m, bones);
+                ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.SOLID);
+            });
+            if (ModelDraw.rimStrength > 0.01f) c.submitCustomGeometry(ps, ModelDraw.rimType(), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.RIM));
+            if (s.glow() && m.selfGlow) c.submitCustomGeometry(ps, RenderTypes.eyes(m.texture()), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.GLOW_SELF));
+            if (s.glow() && m.atlas.glowTexture != null) c.submitCustomGeometry(ps, RenderTypes.eyes(m.atlas.glowTexture), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.GLOW_LAYER));
+            ps.popPose();
+        }
+        *///?} else {
         @Override
         protected void renderToTexture(State s, PoseStack ps) {
             Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
@@ -83,5 +119,6 @@ public final class ModelPreview {
             if (s.glow() && m.atlas.glowTexture != null) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.eyes(m.atlas.glowTexture)), -1, ov, light, ModelDraw.GLOW_LAYER);
             ps.popPose();
         }
+        //?}
     }
 }

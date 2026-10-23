@@ -149,5 +149,31 @@ stonecutter {
         replace 'LightTexture', 'Lightmap'
         replace 'ClickType', 'ContainerInput'
     }
+
+    // 26.2: экраны переехали в mc.gui, камера и кадр — в gameRenderer, чат и скрытие HUD — в gui.hud (VERSIONS.md)
+    replacements.string(eval(mc, '>=26.2')) {
+        replace 'mc.getOverlay()', 'mc.gui.overlay()'
+        replace 'gameRenderer.getMainCamera()', 'gameRenderer.mainCamera()'
+        replace 'mc.getMainRenderTarget()', 'mc.gameRenderer.mainRenderTarget()'
+        replace 'Minecraft.getInstance().getMainRenderTarget()', 'Minecraft.getInstance().gameRenderer.mainRenderTarget()'
+        replace 'import com.mojang.blaze3d.textures.TextureFormat;', 'import com.mojang.blaze3d.GpuFormat;'
+        replace 'TextureFormat.RGBA8', 'GpuFormat.RGBA8_UNORM'
+        replace 'gui.getChat()', 'gui.hud.getChat()'
+        replace 'mc.options.hideGui', 'mc.gui.hud.isHidden()'
+        replace 'EntityType.', 'net.minecraft.world.entity.EntityTypes.'
+        replace 'gameRenderer.getLighting()', 'gameRenderer.lighting()'
+        // буферов кадра нет: мир пишет через свой перехватчик (compat.GeometryRecorder)
+        replace 'import net.minecraft.client.renderer.MultiBufferSource;', 'import dev.mraz1visual.compat.GeometryRecorder;'
+        replace 'MultiBufferSource', 'GeometryRecorder'
+        replace 'GlStateManager._disableBlend();', 'GlStateManager._disableBlend(0);'
+        // миксины 26.2: руки — submit*, сущность в GUI — с Vector3fc/Quaternionfc
+        replace '"renderHandsWithItems"', '"submitHandsWithItems"'
+        replace 'method = "renderArmWithItem", at = @At("HEAD"), cancellable', 'method = "submitArmWithItem", at = @At("HEAD"), cancellable'
+        replace 'FLorg/joml/Vector3f;Lorg/joml/Quaternionf;Lorg/joml/Quaternionf;IIII)V', 'FLorg/joml/Vector3fc;Lorg/joml/Quaternionfc;Lorg/joml/Quaternionfc;IIII)V'
+    }
+    replacements.regex(eval(mc, '>=26.2')) {
+        replace '\\b(mc|Minecraft\\.getInstance\\(\\))\\.screen\\b(?!\\()', '$1.gui.screen()', '\\b(mc|Minecraft\\.getInstance\\(\\))\\.gui\\.screen\\(\\)', '$1.screen'
+        replace '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.setScreen\\(', '$1.gui.setScreen(', '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.gui\\.setScreen\\(', '$1.setScreen('
+    }
 }
 apply from: rootProject.file('mixincheck.gradle')

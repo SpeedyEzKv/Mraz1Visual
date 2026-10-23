@@ -12,10 +12,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Подменяет ванильное главное меню и список серверов на свои. Больше ничего. */
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin {
+    // 26.2+: экраны ставит Gui.setScreen — там свой миксин (GuiScreenMixin)
+    //? if <26.2 {
     @ModifyVariable(method = "setScreen", at = @At("HEAD"), argsOnly = true)
     private Screen mraz1visual$route(Screen screen) {
         return MenuRouter.route((Minecraft) (Object) this, screen);
     }
+    //?}
 
     /** World Music: своя музыка вместо ситуационной. */
     @com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "getSituationalMusic", at = @At("RETURN"), require = 0)

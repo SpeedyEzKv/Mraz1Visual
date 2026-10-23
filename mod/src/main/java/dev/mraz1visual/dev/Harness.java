@@ -133,7 +133,12 @@ public final class Harness {
                 LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
                 //?}
                 mc.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(1234L, false, false),
-                        WorldPresets::createFlatWorldDimensions, new TitleScreen());
+                        //? if >=26.2 {
+                        /*p -> p.lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
+                        *///?} else {
+                        WorldPresets::createFlatWorldDimensions,
+                        //?}
+                        new TitleScreen());
             }
         } catch (Throwable t) {
             log("ERROR opening world: " + t);
@@ -205,6 +210,7 @@ public final class Harness {
                 // video <предел FPS> <vsync true|false> <дальность>
                 mc.options.framerateLimit().set(Integer.parseInt(a[1]));
                 mc.options.enableVsync().set(Boolean.parseBoolean(a[2]));
+                //? if <26.2
                 mc.getWindow().updateVsync(Boolean.parseBoolean(a[2]));
                 mc.options.renderDistance().set(Integer.parseInt(a[3]));
             }

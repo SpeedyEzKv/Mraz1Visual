@@ -5,6 +5,7 @@ import dev.mraz1visual.core.ModuleManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.PauseScreen;
+//? if <26.2
 import net.minecraft.client.gui.screens.ShareToLanScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.achievement.StatsScreen;
@@ -48,6 +49,7 @@ public final class MenuRouter {
             if (Modules.client.customPause.get()) {
                 if (screen instanceof PauseScreen p && p.showsPauseMenu() && !Mraz1VisualPauseScreen.bypass) return new Mraz1VisualPauseScreen();
                 if (screen instanceof StatsScreen) return new Mraz1VisualStatsScreen(mc.screen);
+                //? if <26.2
                 if (screen instanceof ShareToLanScreen) return new Mraz1VisualLanScreen(mc.screen);
             }
             if (screen instanceof JoinMultiplayerScreen && Modules.client.customServers.get()) {

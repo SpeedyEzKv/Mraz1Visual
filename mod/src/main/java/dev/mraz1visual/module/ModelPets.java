@@ -244,7 +244,7 @@ public final class ModelPets extends Module implements WorldLayer {
         if (!firstPerson.get() && mc.options.getCameraType() == CameraType.FIRST_PERSON) return;
         MultiBufferSource src = d.source();
         if (src == null) return;
-        int light = LevelRenderer.getLightColor(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
+        int light = dev.mraz1visual.compat.Mc.lightCoords(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
         float pop = easeBack(appear);
         drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, m.bounds[1], light);
         if (fx != null) {

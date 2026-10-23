@@ -45,13 +45,17 @@ public final class PostFx {
     private static final String DEPTH_COPY = """
             #version 330 core
             uniform sampler2D uDepth;
+            uniform float uReverse;
             in vec2 uv;
             out vec4 fragColor;
-            void main() { fragColor = vec4(texture(uDepth, uv).r); }
+            void main() {
+                float d = texture(uDepth, uv).r;
+                fragColor = vec4(uReverse > 0.5 ? 1.0 - d : d);
+            }
             """;
     private static int progDown, progUp, progComp, vao;
     private static int srcFbo, srcTexId = -1;
-    private static int sceneTex, sceneFbo, depthTex, depthFbo, progDepth, pdDepth;
+    private static int sceneTex, sceneFbo, depthTex, depthFbo, progDepth, pdDepth, pdReverse;
     /** Глубина мира сохранена в этом кадре (до очистки под руку). */
     private static boolean depthCaptured;
     private static final int[] downTex = new int[MAX_LEVELS], downFbo = new int[MAX_LEVELS];
@@ -97,6 +101,8 @@ public final class PostFx {
             GL30.glBindVertexArray(vao);
             GL20.glUseProgram(progDepth);
             GL20.glUniform1i(pdDepth, 0);
+            // 26.2+: глубина перевёрнута (дальше = 0) — приводим к привычной, остальные проходы не меняются
+            GL20.glUniform1f(pdReverse, dev.mraz1visual.compat.Mc.REVERSED_Z ? 1f : 0f);
             GlStateManager._bindTexture(((GlTexture) main.getDepthTexture()).glId());
             pass(depthFbo, w, h);
             finish(prevRead, prevDraw, w, h, 1);
@@ -316,6 +322,7 @@ public final class PostFx {
         progComp = program(vsh, read("composite.fsh"));
         progDepth = program(vsh, DEPTH_COPY);
         pdDepth = loc(progDepth, "uDepth");
+        pdReverse = loc(progDepth, "uReverse");
         dSrc = loc(progDown, "uSrc");
         dTexel = loc(progDown, "uTexel");
         dThreshold = loc(progDown, "uThreshold");

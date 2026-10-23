@@ -14,6 +14,13 @@ public final class Mc {
     /** Полная яркость в упакованных координатах света (блок 15, небо 15). */
     public static final int FULL_BRIGHT = 0xF000F0;
 
+    /** Буфер глубины перевёрнут (reversed-Z: дальше = 0) — так с 26.2. */
+    //? if >=26.2 {
+    /*public static final boolean REVERSED_Z = true;
+    *///?} else {
+    public static final boolean REVERSED_Z = false;
+    //?}
+
     /** Сообщение игроку: в чат или над хотбаром. Только локально — на сервер ничего не уходит. */
     public static void message(Player p, Component text, boolean overlay) {
         if (p == null) return;
@@ -35,6 +42,26 @@ public final class Mc {
         /*mc.resizeGui();
         *///?} else {
         mc.resizeDisplay();
+        //?}
+    }
+
+    /** Упакованный свет в точке мира (блок + небо). */
+    public static int lightCoords(net.minecraft.client.multiplayer.ClientLevel level, net.minecraft.core.BlockPos pos) {
+        //? if >=26.2 {
+        /*return net.minecraft.util.LightCoordsUtil.getLightCoords(level, pos);
+        *///?} else {
+        return net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
+        //?}
+    }
+
+    /** Системное сообщение в чат (только у себя). */
+    public static void chat(Minecraft mc, Component text) {
+        //? if >=26.2 {
+        /*mc.gui.hud.getChat().addClientSystemMessage(text);
+        *///?} elif >=26.1 {
+        /*mc.gui.getChat().addClientSystemMessage(text);
+        *///?} else {
+        mc.gui.getChat().addMessage(text);
         //?}
     }
 

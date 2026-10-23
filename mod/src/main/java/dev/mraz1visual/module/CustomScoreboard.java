@@ -57,7 +57,17 @@ public final class CustomScoreboard extends Module {
         Objective obj = null;
         PlayerTeam team = sb.getPlayersTeam(mc.player.getScoreboardName());
         if (team != null) {
+            //? if >=26.2 {
+            /*DisplaySlot ds = team.getColor().map(c -> {
+                try {
+                    return DisplaySlot.valueOf("TEAM_" + c.name());
+                } catch (IllegalArgumentException e) {
+                    return null;
+                }
+            }).orElse(null);
+            *///?} else {
             DisplaySlot ds = DisplaySlot.teamColorToSlot(team.getColor());
+            //?}
             if (ds != null) obj = sb.getDisplayObjective(ds);
         }
         if (obj == null) obj = sb.getDisplayObjective(DisplaySlot.SIDEBAR);

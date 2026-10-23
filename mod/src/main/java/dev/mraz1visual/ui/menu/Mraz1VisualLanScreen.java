@@ -95,8 +95,12 @@ public final class Mraz1VisualLanScreen extends MenuBase {
             form.error = "Порт занят или неверный";
             return;
         }
+        //? if >=26.2 {
+        /*boolean ok = server.publishServer(net.minecraft.server.MinecraftServer.MultiplayerScope.LAN, MODES[mode.get()], commands.get(), p);
+        *///?} else {
         boolean ok = server.publishServer(MODES[mode.get()], commands.get(), p);
-        minecraft.gui.getChat().addMessage(ok
+        //?}
+        dev.mraz1visual.compat.Mc.chat(minecraft, ok
                 ? Component.translatable("commands.publish.started", p)
                 : Component.translatable("commands.publish.failed"));
         minecraft.updateTitle();

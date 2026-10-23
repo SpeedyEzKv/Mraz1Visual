@@ -78,7 +78,11 @@ public final class CustomSky extends Module {
     }
 
     private static ByteBufferBuilder buffer;
+    //? if >=26.2 {
+    /*private static GeometryRecorder src = new GeometryRecorder();
+    *///?} else {
     private static MultiBufferSource.BufferSource src;
+    //?}
     private final Matrix4f pose = new Matrix4f();
 
     // процедурные текстуры: готовятся в фоне, загружаются в кадре
@@ -104,6 +108,9 @@ public final class CustomSky extends Module {
     }
 
     public static void register() {
+        // 26.2+: своя геометрия рисуется только после террейна — небо «до мира» так не нарисовать; модуль там не работает
+        //? if >=26.2
+        /*if (true) return;*/
         WorldRenderEvents.START_MAIN.register(ctx -> {
             CustomSky s = instance;
             if (s == null || !s.isEnabled()) return;
@@ -142,10 +149,12 @@ public final class CustomSky extends Module {
         if (nightK < 0) nightK = target;
         nightK += (target - nightK) * Math.min(1f, dt * 0.15f * (1f - 0.5f * comfortK));
 
+        //? if <26.2 {
         if (buffer == null) {
             buffer = new ByteBufferBuilder(1 << 18);
             src = MultiBufferSource.immediate(buffer);
         }
+        //?}
         // комфорт: потолок яркости и меньше контраста
         float cap = 1f - 0.45f * comfortK;
         float bright = Math.min(cap, (dayBright.getF() * (1 - nightK) + nightBright.getF() * nightK) / 100f);
@@ -167,6 +176,7 @@ public final class CustomSky extends Module {
             // мягкая «вуаль» среднего тона — снижает контраст неба
             sphere(src.getBuffer(RenderTypes.textSeeThrough(SkyTextures.white())), veil << 24 | VEIL, 0f, 1f);
         }
+        //? if <26.2
         src.endBatch();
 
         // туман у края прорисовки — в цвет нашего горизонта (с той же яркостью и вуалью): без светлого/тёмного шва

@@ -35,7 +35,11 @@ public abstract class AvatarRendererMixin {
             original.call(collector, part, pose, type, light, overlay, sprite);
             return;
         }
+        //? if >=26.2 {
+        /*collector.submitModelPart(part, pose, RenderTypes.entityTranslucent(skin), light, overlay, sprite, tint, null, 0);
+        *///?} else {
         collector.submitModelPart(part, pose, RenderTypes.entityTranslucent(skin), light, overlay, sprite, false, false, tint, null, 0);
+        //?}
     }
 
     @WrapOperation(method = "renderHand", at = @At(value = "INVOKE",
