@@ -145,7 +145,7 @@ public final class ClientScreen extends Screen implements Host {
 
     public ClientScreen() {
         super(Component.literal("Mraz1Visual"));
-        panels.put(Tab.MARKET, new SoonPanel("Маркет", "Моды, ресурспаки и шейдеры с Modrinth\nи подборка Mraz1 — в один клик.", Icons.GEM));
+        panels.put(Tab.MARKET, new MarketPanel());
         panels.put(Tab.FORUM, new SoonPanel("Форум", "Обсуждения игроков Mraz1Visual\nчерез GitHub Discussions.", Icons.CHAT));
     }
 
