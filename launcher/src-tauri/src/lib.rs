@@ -199,6 +199,9 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     if !manifest.discord_app_id.is_empty() {
         extra.push(format!("-Dmraz1visual.discord={}", manifest.discord_app_id.trim()));
     }
+    if !manifest.github_client_id.trim().is_empty() {
+        extra.push(format!("-Dmraz1visual.github={}", manifest.github_client_id.trim()));
+    }
     if let Some(m) = state.media.get_or_init(media::start).await {
         extra.push(format!("-Dmraz1visual.media.port={}", m.port));
         extra.push(format!("-Dmraz1visual.media.token={}", m.token));

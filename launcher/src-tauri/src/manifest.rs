@@ -36,6 +36,9 @@ pub struct Manifest {
     /// Версии Minecraft, под которые собран мод (manifest v2): файл, sha256, Fabric Loader/API, Sodium/Iris/MCEF.
     #[serde(default)]
     pub versions: Vec<VersionEntry>,
+    /// client_id OAuth-приложения GitHub (Device Flow) для вкладки «Форум» в моде. Не секрет; токенов здесь нет.
+    #[serde(default)]
+    pub github_client_id: String,
     /// Нужная Java (21 для 1.21.11, 25 для 26.x).
     #[serde(default = "java21")]
     pub java: u32,
@@ -163,6 +166,7 @@ impl Manifest {
             video: None,
             discord_app_id: String::new(),
             versions: vec![],
+            github_client_id: String::new(),
             java: 21,
         }
     }

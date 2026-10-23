@@ -155,7 +155,7 @@ public final class ClientScreen extends Screen implements Host {
         super(Component.literal("Mraz1Visual"));
         panels.put(Tab.MARKET, new MarketPanel());
         panels.put(Tab.COSMETICS, wardrobe);
-        panels.put(Tab.FORUM, new SoonPanel("Форум", "Обсуждения игроков Mraz1Visual\nчерез GitHub Discussions.", Icons.CHAT));
+        panels.put(Tab.FORUM, new ForumPanel());
     }
 
     public void setParent(Screen parent) {
