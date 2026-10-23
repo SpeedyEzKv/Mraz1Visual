@@ -1,5 +1,6 @@
 package dev.mraz1visual;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.config.ConfigManager;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.core.Modules;
@@ -7,7 +8,6 @@ import dev.mraz1visual.account.AccountStore;
 import dev.mraz1visual.input.Keys;
 import dev.mraz1visual.overlay.OverlayScreen;
 import dev.mraz1visual.overlay.PlayStats;
-import org.lwjgl.glfw.GLFW;
 import dev.mraz1visual.module.AutoAccept;
 import dev.mraz1visual.module.AutoCommand;
 import dev.mraz1visual.module.Crosshair;
@@ -107,7 +107,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         menuKeyWasDown = down;
 
         // оверлей: Shift + клавиша (по умолчанию Tab)
-        boolean shift = Keys.isDown(GLFW.GLFW_KEY_LEFT_SHIFT) || Keys.isDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+        boolean shift = Keys.isDown(InputConstants.KEY_LSHIFT) || Keys.isDown(InputConstants.KEY_RSHIFT);
         boolean ov = shift && Keys.isDown(Modules.client.overlayKey.get());
         if (ov && !overlayWasDown && mc.screen == null && mc.level != null) mc.setScreen(new OverlayScreen());
         overlayWasDown = ov;

@@ -219,7 +219,7 @@ public final class Harness {
             }
             case "inventory" -> mc.setScreen(new InventoryScreen(mc.player));
             case "close" -> mc.setScreen(null);
-            case "swing" -> mc.player.swing(InteractionHand.MAIN_HAND);
+            case "swing" -> dev.mraz1visual.compat.Mc.swing(mc.player);
             case "key" -> {
                 boolean on = a[2].equals("on");
                 switch (a[1]) {
@@ -275,7 +275,7 @@ public final class Harness {
                 if (best == null) log("  nothing to attack");
                 else {
                     mc.gameMode.attack(mc.player, best);
-                    mc.player.swing(InteractionHand.MAIN_HAND);
+                    dev.mraz1visual.compat.Mc.swing(mc.player);
                 }
             }
             case "jump" -> mc.player.jumpFromGround();

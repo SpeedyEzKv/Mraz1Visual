@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -34,7 +35,7 @@ public final class Waypoints extends Module implements WorldLayer {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("mraz1visual").resolve("waypoints.json");
 
-    final KeySetting addKey = add(new KeySetting("add_key", "Поставить точку", org.lwjgl.glfw.GLFW.GLFW_KEY_B));
+    final KeySetting addKey = add(new KeySetting("add_key", "Поставить точку", com.mojang.blaze3d.platform.InputConstants.KEY_B));
     final KeySetting removeKey = add(new KeySetting("remove_key", "Убрать ближайшую", KeySetting.NONE));
     final ColorSetting color = add(new ColorSetting("color", "Цвет точек", 0xB0B8B4F2).group("Вид"));
 

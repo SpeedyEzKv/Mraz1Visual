@@ -132,6 +132,11 @@ public final class GeometryRecorder {
             return this;
         }
 
+        // 26.3: третьи UV (без @Override — в 26.2 такого метода нет)
+        public VertexConsumer setUv3(float u, float v) {
+            return this;
+        }
+
         @Override
         public VertexConsumer setLineWidth(float w) {
             mask |= LINE;

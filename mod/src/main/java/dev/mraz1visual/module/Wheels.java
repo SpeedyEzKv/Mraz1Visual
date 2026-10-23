@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -9,7 +10,6 @@ import dev.mraz1visual.ui.WheelScreen;
 import dev.mraz1visual.util.TextFiles;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ public final class Wheels {
      * (их нет в дереве команд — значит, прав нет, и колесо не откроется). Команда уходит как обычная команда чата.
      */
     public static final class Staff extends Module {
-        final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", GLFW.GLFW_KEY_V));
+        final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", InputConstants.KEY_V));
         final ActionSetting edit = add(new ActionSetting("edit", "Список команд", "Открыть файл ›", () -> open(STAFF_FILE, STAFF_TEMPLATE)));
         private boolean was;
 
@@ -53,7 +53,7 @@ public final class Wheels {
 
     /** Phrase Wheel: свои фразы в обычный чат — выбираешь на колесе, отправляется одна фраза. */
     public static final class Phrase extends Module {
-        final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", GLFW.GLFW_KEY_B));
+        final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", InputConstants.KEY_B));
         final ActionSetting edit = add(new ActionSetting("edit", "Список фраз", "Открыть файл ›", () -> open(PHRASE_FILE, PHRASE_TEMPLATE)));
         private boolean was;
 
@@ -92,7 +92,7 @@ public final class Wheels {
 
     private static void open(String file, String template) {
         TextFiles.lines(file, template);
-        net.minecraft.util.Util.getPlatform().openPath(TextFiles.DIR.resolve(file));
+        dev.mraz1visual.compat.Platform.openPath(TextFiles.DIR.resolve(file));
     }
 
     private static final String STAFF_TEMPLATE = """

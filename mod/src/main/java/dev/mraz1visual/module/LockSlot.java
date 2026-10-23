@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.HudLayer;
 import dev.mraz1visual.core.Module;
@@ -9,12 +10,11 @@ import dev.mraz1visual.ui.Theme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /** Запрет выбросить предмет (Q) из закреплённых слотов хотбара. Клавиша закрепляет текущий слот. */
 public final class LockSlot extends Module implements HudLayer {
     private static LockSlot instance;
-    final KeySetting key = add(new KeySetting("key", "Закрепить слот", GLFW.GLFW_KEY_L));
+    final KeySetting key = add(new KeySetting("key", "Закрепить слот", InputConstants.KEY_L));
     private int mask;
     private boolean was;
 

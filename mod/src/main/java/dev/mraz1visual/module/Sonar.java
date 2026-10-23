@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.core.WorldLayer;
@@ -10,11 +11,10 @@ import dev.mraz1visual.setting.KeySetting;
 import dev.mraz1visual.setting.SliderSetting;
 import dev.mraz1visual.ui.Colors;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 /** Красивая волна по земле от тебя по клавише. Чистая косметика — ничего не подсвечивает. */
 public final class Sonar extends Module implements WorldLayer {
-    final KeySetting key = add(new KeySetting("key", "Клавиша", GLFW.GLFW_KEY_V));
+    final KeySetting key = add(new KeySetting("key", "Клавиша", InputConstants.KEY_V));
     final SliderSetting radius = add(new SliderSetting("radius", "Радиус", 16, 4, 40, 1, " бл."));
     final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFB8B4F2));
 

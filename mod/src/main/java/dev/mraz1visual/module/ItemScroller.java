@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -12,7 +13,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -36,7 +36,7 @@ public final class ItemScroller extends Module {
     }
 
     private static boolean shift() {
-        return Keys.isDown(GLFW.GLFW_KEY_LEFT_SHIFT) || Keys.isDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+        return Keys.isDown(InputConstants.KEY_LSHIFT) || Keys.isDown(InputConstants.KEY_RSHIFT);
     }
 
     private static void quickMove(Minecraft mc, AbstractContainerScreen<?> cs, Slot slot) {

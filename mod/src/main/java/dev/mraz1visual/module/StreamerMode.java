@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.setting.BoolSetting;
@@ -7,7 +8,6 @@ import dev.mraz1visual.setting.EnumSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ public final class StreamerMode extends Module {
     public StreamerMode() {
         super("streamer_mode", "Streamer Mode", "Прячет твой ник на экране — для стримов и скриншотов.", Category.MISC);
         instance = this;
-        bind.set(GLFW.GLFW_KEY_F8);
+        bind.set(InputConstants.KEY_F8);
     }
 
     public static boolean hidesCoords() {

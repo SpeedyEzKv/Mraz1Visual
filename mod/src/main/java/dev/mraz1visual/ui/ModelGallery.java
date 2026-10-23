@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Modules;
 import dev.mraz1visual.models.AnimPlayer;
 import dev.mraz1visual.models.Anim;
@@ -17,7 +18,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -79,7 +79,7 @@ public final class ModelGallery extends Screen {
     public static void openFolder(Path dir) {
         try {
             java.nio.file.Files.createDirectories(dir);
-            net.minecraft.util.Util.getPlatform().openPath(dir);
+            dev.mraz1visual.compat.Platform.openPath(dir);
         } catch (Exception e) {
             dev.mraz1visual.core.ModuleManager.LOG.warn("Не удалось открыть папку {}", dir, e);
         }
@@ -297,7 +297,7 @@ public final class ModelGallery extends Screen {
             d.textRight(Draw.ellipsize(note, w / 2), x + w - 12, Draw.textY(cy, 34), in ? Theme.TEXT_MUTED : 0xFFFFB86B);
             if (!c.url().isEmpty()) {
                 String url = c.url();
-                hits.add(new Hit(x, cy, w, 34, () -> net.minecraft.util.Util.getPlatform().openUri(url)));
+                hits.add(new Hit(x, cy, w, 34, () -> dev.mraz1visual.compat.Platform.openUri(url)));
             }
             cy += 38;
             if (cy > y + h - 40) break;
@@ -433,8 +433,7 @@ public final class ModelGallery extends Screen {
     }
 
     private static boolean hasShiftDown() {
-        long win = Minecraft.getInstance().getWindow().handle();
-        return GLFW.glfwGetKey(win, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS || GLFW.glfwGetKey(win, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+        return dev.mraz1visual.input.Keys.isDown(InputConstants.KEY_LSHIFT) || dev.mraz1visual.input.Keys.isDown(InputConstants.KEY_RSHIFT);
     }
 
     // ── питомцы ──────────────────────────────────────────────
@@ -613,17 +612,17 @@ public final class ModelGallery extends Screen {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             if (!search.isEmpty()) { search.setLength(0); scrollTarget = 0; }
             else onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
+        if (key == InputConstants.KEY_BACKSPACE && !search.isEmpty()) {
             search.setLength(search.length() - Character.charCount(search.codePointBefore(search.length())));
             scrollTarget = 0;
             return true;
         }
-        if (key == GLFW.GLFW_KEY_F5) {
+        if (key == InputConstants.KEY_F5) {
             ModelRegistry.reload();
             return true;
         }

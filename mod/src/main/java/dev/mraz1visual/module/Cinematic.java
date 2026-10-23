@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -9,14 +10,13 @@ import dev.mraz1visual.setting.KeySetting;
 import dev.mraz1visual.setting.SliderSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Кинорежим для кадров и скриншотов: по клавише плавно выезжают киношные полосы, весь HUD прячется,
  * камера становится плавной (ванильная «кинокамера»), по краям — лёгкая виньетка. Повторное нажатие — обратно.
  */
 public final class Cinematic extends Module {
-    final KeySetting key = add(new KeySetting("key", "Клавиша", GLFW.GLFW_KEY_F8));
+    final KeySetting key = add(new KeySetting("key", "Клавиша", InputConstants.KEY_F8));
     final SliderSetting bars = add(new SliderSetting("bars", "Полосы", 11, 4, 20, 1, " %"));
     final BoolSetting smooth = add(new BoolSetting("smooth", "Плавная камера", true));
     final BoolSetting vignette = add(new BoolSetting("vignette", "Виньетка", true));

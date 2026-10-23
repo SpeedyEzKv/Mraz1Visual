@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.ColorSetting;
 import dev.mraz1visual.setting.EnumSetting;
@@ -33,7 +34,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.ChatVisiblity;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -537,7 +537,7 @@ public final class Mraz1VisualOptionsScreen extends MenuBase implements Host {
             listening = null;
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             if (popup != null) popup = null;
             else onClose();
             return true;

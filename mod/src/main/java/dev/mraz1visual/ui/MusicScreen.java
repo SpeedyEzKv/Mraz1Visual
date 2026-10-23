@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.module.MusicPlayerModule;
 import dev.mraz1visual.music.Lyrics;
 import dev.mraz1visual.music.LyricsView;
@@ -15,7 +16,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -385,16 +385,16 @@ public final class MusicScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             if (!search.isEmpty()) search.setLength(0);
             else onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
+        if (key == InputConstants.KEY_BACKSPACE && !search.isEmpty()) {
             search.setLength(search.length() - Character.charCount(search.codePointBefore(search.length())));
             return true;
         }
-        if (key == GLFW.GLFW_KEY_SPACE && search.isEmpty()) {
+        if (key == InputConstants.KEY_SPACE && search.isEmpty()) {
             NowPlaying.command("toggle");
             return true;
         }

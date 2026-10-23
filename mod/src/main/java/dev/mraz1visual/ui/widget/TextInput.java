@@ -1,11 +1,11 @@
 package dev.mraz1visual.ui.widget;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.ui.Anim;
 import dev.mraz1visual.ui.Colors;
 import dev.mraz1visual.ui.Draw;
 import dev.mraz1visual.ui.Fonts;
 import dev.mraz1visual.ui.Theme;
-import org.lwjgl.glfw.GLFW;
 
 /** Однострочное поле ввода. Ctrl+V — вставка, Backspace — удаление. */
 public final class TextInput extends Widget {
@@ -75,7 +75,7 @@ public final class TextInput extends Widget {
     /** @param clipboard текст буфера обмена (запрашивается только при Ctrl+V). */
     public boolean keyPressed(int key, boolean ctrl, java.util.function.Supplier<String> clipboard) {
         if (!focused) return false;
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
+        if (key == InputConstants.KEY_BACKSPACE) {
             int len = sb.length();
             if (len > 0) {
                 if (ctrl) sb.setLength(0);
@@ -84,7 +84,7 @@ public final class TextInput extends Widget {
             }
             return true;
         }
-        if (ctrl && key == GLFW.GLFW_KEY_V) {
+        if (ctrl && key == InputConstants.KEY_V) {
             String clip = clipboard.get();
             if (clip != null) {
                 for (int i = 0; i < clip.length() && sb.length() < maxLen; i++) {

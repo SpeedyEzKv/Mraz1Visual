@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.desktop;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.browser.Browser;
 import dev.mraz1visual.core.Modules;
@@ -18,7 +19,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -381,7 +381,7 @@ public final class DesktopScreen extends Screen {
     public boolean keyPressed(KeyEvent e) {
         DesktopWindow w = top();
         if (w != null && w.keyPressed(e, minecraft)) return true;
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (e.key() == InputConstants.KEY_ESCAPE) {
             if (startOpen) startOpen = false;
             else if (w != null && w.pageFocused) w.setFocus(false); // первый Esc — выйти со страницы
             else onClose();

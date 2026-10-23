@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.account.AccountStore;
 import dev.mraz1visual.account.MicrosoftAuth;
@@ -13,7 +14,6 @@ import dev.mraz1visual.ui.widget.Widget;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -200,7 +200,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE && accountsOpen) {
+        if (e.key() == InputConstants.KEY_ESCAPE && accountsOpen) {
             accountsOpen = false;
             return true;
         }

@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.ui.Anim;
@@ -23,7 +24,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -327,7 +327,7 @@ public final class Mraz1VisualWorldsScreen extends MenuBase {
             String label = Component.translatable(key).getString();
             for (var c : vanilla.children()) {
                 if (c instanceof Button b && b.getMessage().getString().equals(label)) {
-                    b.onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+                    b.onPress(new KeyEvent(InputConstants.KEY_RETURN, 0, 0));
                     return;
                 }
             }
@@ -386,22 +386,22 @@ public final class Mraz1VisualWorldsScreen extends MenuBase {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             if (search.focused) search.focused = false;
             else onClose();
             return true;
         }
-        if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) && current() != null) {
+        if ((key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) && current() != null) {
             play();
             return true;
         }
-        if ((key == GLFW.GLFW_KEY_DOWN || key == GLFW.GLFW_KEY_UP) && !shown.isEmpty()) {
+        if ((key == InputConstants.KEY_DOWN || key == InputConstants.KEY_UP) && !shown.isEmpty()) {
             int pos = shown.indexOf(current());
-            pos = key == GLFW.GLFW_KEY_DOWN ? Math.min(shown.size() - 1, pos + 1) : Math.max(0, pos - 1);
+            pos = key == InputConstants.KEY_DOWN ? Math.min(shown.size() - 1, pos + 1) : Math.max(0, pos - 1);
             selected = all.indexOf(shown.get(pos));
             return true;
         }
-        return search.keyPressed(key, (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
+        return search.keyPressed(key, (e.modifiers() & InputConstants.MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
     }
 
     @Override

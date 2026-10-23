@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.core.Category;
@@ -30,7 +31,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -1078,26 +1078,26 @@ public final class ClientScreen extends Screen implements Host {
             return true;
         }
         if (popup != null) {
-            if (key == GLFW.GLFW_KEY_ESCAPE) popup = null;
+            if (key == InputConstants.KEY_ESCAPE) popup = null;
             return true;
         }
-        if (bellOpen && key == GLFW.GLFW_KEY_ESCAPE) {
+        if (bellOpen && key == InputConstants.KEY_ESCAPE) {
             bellOpen = false;
             return true;
         }
-        boolean ctrl = (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean ctrl = (e.modifiers() & InputConstants.MOD_CONTROL) != 0;
         if (tab == Tab.CONFIGS && search.isEmpty() && profiles.isTyping()) return profiles.keyPressed(key, ctrl, minecraft.keyboardHandler::getClipboard);
         Panel panel = panel();
         if (panel != null && search.isEmpty() && panel.typing()) return panel.key(key, ctrl);
         if (searchFocused) {
             switch (key) {
-                case GLFW.GLFW_KEY_ESCAPE -> {
+                case InputConstants.KEY_ESCAPE -> {
                     if (!search.isEmpty()) {
                         search.setLength(0);
                         onSearchChanged();
                     } else searchFocused = false;
                 }
-                case GLFW.GLFW_KEY_BACKSPACE -> {
+                case InputConstants.KEY_BACKSPACE -> {
                     int len = search.length();
                     if (len > 0) {
                         int cp = search.codePointBefore(len);
@@ -1105,8 +1105,8 @@ public final class ClientScreen extends Screen implements Host {
                         onSearchChanged();
                     }
                 }
-                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> searchFocused = false;
-                case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_UP -> step(key == GLFW.GLFW_KEY_DOWN ? 1 : -1);
+                case InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> searchFocused = false;
+                case InputConstants.KEY_DOWN, InputConstants.KEY_UP -> step(key == InputConstants.KEY_DOWN ? 1 : -1);
                 default -> {
                     return false;
                 }
@@ -1114,25 +1114,25 @@ public final class ClientScreen extends Screen implements Host {
             return true;
         }
         switch (key) {
-            case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_UP -> {
-                step(key == GLFW.GLFW_KEY_DOWN ? 1 : -1);
+            case InputConstants.KEY_DOWN, InputConstants.KEY_UP -> {
+                step(key == InputConstants.KEY_DOWN ? 1 : -1);
                 return true;
             }
-            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_SPACE -> {
+            case InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER, InputConstants.KEY_SPACE -> {
                 if (sel != null && !sel.alwaysOn()) sel.toggle();
                 return true;
             }
-            case GLFW.GLFW_KEY_TAB -> {
+            case InputConstants.KEY_TAB -> {
                 int i = 0;
                 for (int j = 0; j < Tab.BAR.length; j++) if (Tab.BAR[j] == tab) i = j;
-                int n = Tab.BAR.length, dir = (e.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0 ? -1 : 1;
+                int n = Tab.BAR.length, dir = (e.modifiers() & InputConstants.MOD_SHIFT) != 0 ? -1 : 1;
                 selectTab(Tab.BAR[(i + dir + n) % n]);
                 return true;
             }
             default -> {
             }
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE || key == cs.menuKey.get()) {
+        if (key == InputConstants.KEY_ESCAPE || key == cs.menuKey.get()) {
             onClose();
             return true;
         }

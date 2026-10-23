@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.mraz1visual.core.ModuleManager;
 import dev.mraz1visual.ui.Anim;
@@ -19,10 +20,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -203,12 +200,9 @@ public final class WallpaperScreen extends MenuBase {
     // ── действия ─────────────────────────────────────────────
 
     private void pickFile() {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
+        try {
             String[] ext = {"*.mp4", "*.webm", "*.mkv", "*.mov", "*.avi", "*.gif", "*.jpg", "*.jpeg", "*.png", "*.webp", "project.json"};
-            PointerBuffer filters = stack.mallocPointer(ext.length);
-            for (String e : ext) filters.put(stack.UTF8(e));
-            filters.flip();
-            String res = TinyFileDialogs.tinyfd_openFileDialog("Обои", "", filters, "Видео, gif, картинка или project.json", false);
+            String res = dev.mraz1visual.compat.Platform.pickFiles("Обои", ext, "Видео, gif, картинка или project.json", false, dev.mraz1visual.util.TextFiles.DIR.resolve("wallpapers"));
             if (res == null) return;
             Wallpaper w = WallpaperScanner.fromFile(Path.of(res), "Файл");
             if (w != null) WallpaperPlayer.select(w);
@@ -345,12 +339,12 @@ public final class WallpaperScreen extends MenuBase {
 
     @Override
     public boolean keyPressed(KeyEvent e) {
-        if (e.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (e.key() == InputConstants.KEY_ESCAPE) {
             if (!query.isEmpty()) query = "";
             else onClose();
             return true;
         }
-        if (e.key() == GLFW.GLFW_KEY_BACKSPACE && !query.isEmpty()) {
+        if (e.key() == InputConstants.KEY_BACKSPACE && !query.isEmpty()) {
             query = query.substring(0, query.length() - 1);
             scroll = scrollTarget = 0;
             return true;

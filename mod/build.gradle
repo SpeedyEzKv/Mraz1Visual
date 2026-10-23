@@ -156,8 +156,6 @@ stonecutter {
         replace 'gameRenderer.getMainCamera()', 'gameRenderer.mainCamera()'
         replace 'mc.getMainRenderTarget()', 'mc.gameRenderer.mainRenderTarget()'
         replace 'Minecraft.getInstance().getMainRenderTarget()', 'Minecraft.getInstance().gameRenderer.mainRenderTarget()'
-        replace 'import com.mojang.blaze3d.textures.TextureFormat;', 'import com.mojang.blaze3d.GpuFormat;'
-        replace 'TextureFormat.RGBA8', 'GpuFormat.RGBA8_UNORM'
         replace 'gui.getChat()', 'gui.hud.getChat()'
         replace 'mc.options.hideGui', 'mc.gui.hud.isHidden()'
         replace 'EntityType.', 'net.minecraft.world.entity.EntityTypes.'
@@ -174,6 +172,26 @@ stonecutter {
     replacements.regex(eval(mc, '>=26.2')) {
         replace '\\b(mc|Minecraft\\.getInstance\\(\\))\\.screen\\b(?!\\()', '$1.gui.screen()', '\\b(mc|Minecraft\\.getInstance\\(\\))\\.gui\\.screen\\(\\)', '$1.screen'
         replace '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.setScreen\\(', '$1.gui.setScreen(', '\\b(mc|minecraft|Minecraft\\.getInstance\\(\\))\\.gui\\.setScreen\\(', '$1.setScreen('
+    }
+
+    // 26.3: графика переехала в com.mojang.renderpearl (api/backend), ввод — на SDL3 (коды клавиш — input.KeyCodes)
+    replacements.string(eval(mc, '>=26.3')) {
+        replace 'com.mojang.blaze3d.textures.', 'com.mojang.renderpearl.api.textures.'
+        replace 'com.mojang.blaze3d.opengl.', 'com.mojang.renderpearl.backend.opengl.'
+        replace 'com.mojang.blaze3d.pipeline.RenderPipeline', 'com.mojang.renderpearl.api.pipeline.RenderPipeline'
+        replace 'com.mojang.blaze3d.pipeline.BlendFunction', 'com.mojang.renderpearl.api.pipeline.BlendFunction'
+        replace 'com.mojang.blaze3d.pipeline.ColorTargetState', 'com.mojang.renderpearl.api.pipeline.ColorTargetState'
+        replace 'com.mojang.blaze3d.vertex.VertexFormat', 'com.mojang.renderpearl.api.vertex.VertexFormat'
+        replace 'com.mojang.blaze3d.GpuFormat', 'com.mojang.renderpearl.api.GpuFormat'
+        replace 'com.mojang.blaze3d.PrimitiveTopology', 'com.mojang.renderpearl.api.pipeline.PrimitiveTopology'
+        // PoseStack: поворот кватернионом — rotate
+        replace 'ps.mulPose(Axis.', 'ps.rotate(Axis.'
+        replace 'ps.mulPose(com.mojang.math.Axis.', 'ps.rotate(com.mojang.math.Axis.'
+        replace 'ps.mulPose(rot', 'ps.rotate(rot'
+        replace '.getAttackAnim(', '.getSwingAnimation('
+        // руки от первого лица: ItemInHandRenderer → FirstPersonHandsAndItemsRenderer
+        replace 'import net.minecraft.client.renderer.ItemInHandRenderer;', 'import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;'
+        replace '@Mixin(ItemInHandRenderer.class)', '@Mixin(FirstPersonHandsAndItemsRenderer.class)'
     }
 }
 apply from: rootProject.file('mixincheck.gradle')

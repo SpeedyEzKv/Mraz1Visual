@@ -81,7 +81,7 @@ public final class MusicPlayerModule extends Module {
     private static void pickFolder() {
         // системный диалог выбора папки — в фоне, чтобы не держать кадр
         Thread t = new Thread(() -> {
-            String res = org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_selectFolderDialog("Папка с музыкой", System.getProperty("user.home"));
+            String res = dev.mraz1visual.compat.Platform.pickFolder("Папка с музыкой", dev.mraz1visual.util.TextFiles.DIR.resolve("music"));
             if (res != null && !res.isBlank()) MusicPlayer.addFolder(Path.of(res));
         }, "Mraz1Visual folder dialog");
         t.setDaemon(true);

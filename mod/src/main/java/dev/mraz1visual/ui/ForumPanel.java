@@ -191,7 +191,7 @@ public final class ForumPanel implements Panel {
     }
 
     private static void open(String url) {
-        net.minecraft.util.Util.getPlatform().openUri(url);
+        dev.mraz1visual.compat.Platform.openUri(url);
     }
 
     @Override

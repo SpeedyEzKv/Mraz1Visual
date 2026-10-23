@@ -28,6 +28,13 @@ public final class Sdf {
     /** Режимы шейдера (младшие 3 бита UV2.y). */
     public static final int FILL = 0, RING = 1, SHADOW = 2, GLASS = 3;
 
+    /** Шейдер фигур: в 26.3 — вариант с новым порядком DynamicTransforms и явными location. */
+    //? if >=26.3 {
+    /*private static final String SHADER = "core/sdf_rect_v3";
+    *///?} else {
+    private static final String SHADER = "core/sdf_rect";
+    //?}
+
     /** Позиция, цвет, локальная точка (UV0), полуразмеры (UV1, ×4), радиус и параметр (UV2, ×4). */
     //? if >=26.2 {
     /*// 26.2: формат собирается из GpuFormat (те же типы, что у ванильных UV1/UV2 — по два short)
@@ -48,15 +55,19 @@ public final class Sdf {
             .build();
     //?}
 
-    //? if >=26.2 {
+    //? if >=26.3 {
+    /*public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.GLOBALS_SNIPPET)
+            .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.PROJECTION)
+            .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.DYNAMIC_TRANSFORMS)
+    *///?} elif >=26.2 {
     /*public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.GLOBALS_SNIPPET)
             .withBindGroupLayout(net.minecraft.client.renderer.BindGroupLayouts.MATRICES_PROJECTION)
     *///?} else {
     public static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
     //?}
             .withLocation(Identifier.fromNamespaceAndPath("mraz1visual", "pipeline/sdf_rect"))
-            .withVertexShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath("mraz1visual", "core/sdf_rect"))
+            .withVertexShader(Identifier.fromNamespaceAndPath("mraz1visual", SHADER))
+            .withFragmentShader(Identifier.fromNamespaceAndPath("mraz1visual", SHADER))
             //? if >=26.2 {
             /*.withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(java.util.Optional.empty())

@@ -14,6 +14,13 @@ public final class Mc {
     /** Полная яркость в упакованных координатах света (блок 15, небо 15). */
     public static final int FULL_BRIGHT = 0xF000F0;
 
+    /** Формат RGBA8 для своих текстур (в 26.2 — GpuFormat, в 26.3 — пакет renderpearl). */
+    //? if >=26.2 {
+    /*public static final com.mojang.blaze3d.GpuFormat RGBA8 = com.mojang.blaze3d.GpuFormat.RGBA8_UNORM;
+    *///?} else {
+    public static final com.mojang.blaze3d.textures.TextureFormat RGBA8 = com.mojang.blaze3d.textures.TextureFormat.RGBA8;
+    //?}
+
     /** Буфер глубины перевёрнут (reversed-Z: дальше = 0) — так с 26.2. */
     //? if >=26.2 {
     /*public static final boolean REVERSED_Z = true;
@@ -51,6 +58,15 @@ public final class Mc {
         /*return net.minecraft.util.LightCoordsUtil.getLightCoords(level, pos);
         *///?} else {
         return net.minecraft.client.renderer.LevelRenderer.getLightColor(level, pos);
+        //?}
+    }
+
+    /** Взмах основной рукой (только анимация у себя). */
+    public static void swing(net.minecraft.world.entity.player.Player p) {
+        //? if >=26.3 {
+        /*p.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);
+        *///?} else {
+        p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
         //?}
     }
 

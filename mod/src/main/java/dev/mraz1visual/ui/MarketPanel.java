@@ -1,8 +1,8 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.market.Modrinth;
 import dev.mraz1visual.ui.widget.Widget;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -253,8 +253,8 @@ public final class MarketPanel implements Panel {
     @Override
     public boolean key(int key, boolean ctrl) {
         switch (key) {
-            case GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> focused = false;
-            case GLFW.GLFW_KEY_BACKSPACE -> {
+            case InputConstants.KEY_ESCAPE, InputConstants.KEY_RETURN, InputConstants.KEY_NUMPADENTER -> focused = false;
+            case InputConstants.KEY_BACKSPACE -> {
                 if (!query.isEmpty()) {
                     query.setLength(query.length() - 1);
                     typedAt = System.currentTimeMillis();

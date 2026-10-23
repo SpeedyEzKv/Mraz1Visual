@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui.menu;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.ui.widget.CycleWidget;
 import dev.mraz1visual.ui.widget.TextInput;
@@ -9,7 +10,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 
@@ -95,19 +95,19 @@ public final class Mraz1VisualAddServerScreen extends MenuBase {
     @Override
     public boolean keyPressed(KeyEvent e) {
         int key = e.key();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+        if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             submit();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_TAB) {
+        if (key == InputConstants.KEY_TAB) {
             form.nextField();
             return true;
         }
-        return form.key(key, (e.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
+        return form.key(key, (e.modifiers() & InputConstants.MOD_CONTROL) != 0, minecraft.keyboardHandler::getClipboard);
     }
 
     @Override

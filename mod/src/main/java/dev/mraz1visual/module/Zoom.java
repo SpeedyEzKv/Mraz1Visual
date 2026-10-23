@@ -1,5 +1,6 @@
 package dev.mraz1visual.module;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.input.Keys;
@@ -7,13 +8,12 @@ import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.KeySetting;
 import dev.mraz1visual.setting.SliderSetting;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 /** Приближение по удержанию клавиши, как подзорная труба. */
 public final class Zoom extends Module {
     private static Zoom instance;
 
-    final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", GLFW.GLFW_KEY_C));
+    final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", InputConstants.KEY_C));
     final SliderSetting factor = add(new SliderSetting("factor", "Приближение", 4, 1.5, 10, 0.5, "×"));
     final BoolSetting smoothCam = add(new BoolSetting("smooth", "Плавная камера при зуме", true));
 

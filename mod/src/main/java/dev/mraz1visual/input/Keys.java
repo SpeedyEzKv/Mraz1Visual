@@ -2,7 +2,6 @@ package dev.mraz1visual.input;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Единственное место, где мод опрашивает клавиатуру.
@@ -13,12 +12,20 @@ public final class Keys {
 
     public static boolean isDown(int key) {
         if (key < 0) return false;
+        //? if >=26.3 {
+        /*return InputConstants.isKeyDown(key);
+        *///?} else {
         return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), key);
+        //?}
     }
 
     public static String name(int key) {
         try {
+            //? if >=26.3 {
+            /*return InputConstants.Type.KEYBOARD.getOrCreate(key).getDisplayName().getString();
+            *///?} else {
             return InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
+            //?}
         } catch (Throwable t) {
             return "#" + key;
         }
@@ -26,6 +33,6 @@ public final class Keys {
 
     /** Клавиши, которые сбрасывают бинд при назначении. */
     public static boolean isUnbindKey(int key) {
-        return key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_DELETE;
+        return key == InputConstants.KEY_ESCAPE || key == InputConstants.KEY_BACKSPACE || key == InputConstants.KEY_DELETE;
     }
 }

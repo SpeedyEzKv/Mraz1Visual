@@ -1,5 +1,6 @@
 package dev.mraz1visual.ui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.mraz1visual.Mraz1Visual;
 import dev.mraz1visual.config.ConfigManager;
 import dev.mraz1visual.config.ConfigManager.ProfileInfo;
@@ -7,7 +8,6 @@ import dev.mraz1visual.core.Category;
 import dev.mraz1visual.core.Module;
 import dev.mraz1visual.ui.widget.TextInput;
 import dev.mraz1visual.ui.widget.Widget;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -354,11 +354,11 @@ final class ProfilesPanel {
 
     boolean keyPressed(int key, boolean ctrl, Supplier<String> clipboard) {
         if (!renaming) return false;
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+        if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             commitRename();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (key == InputConstants.KEY_ESCAPE) {
             renaming = false;
             return true;
         }
