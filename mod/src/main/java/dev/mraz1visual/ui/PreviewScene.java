@@ -63,7 +63,7 @@ public final class PreviewScene {
     }
 
     // звёзды и кирпичи — один раз, детерминированно
-    private static final int STARS = 46;
+    private static final int STARS = 14;
     private static final float[] SX = new float[STARS], SY = new float[STARS], SP = new float[STARS];
 
     static {
@@ -76,6 +76,39 @@ public final class PreviewScene {
             seed = seed * 6364136223846793005L + 1442695040888963407L;
             SP[i] = ((seed >>> 33) & 0xFFFF) / 65535f * 6.28f;
         }
+    }
+
+    // ── запечённая стена: 4 копии ряда по ширине, чтобы хватило на баннер с параллаксом ──
+    private static final int WALL_W = 96, WALL_H = 42;
+    private static final net.minecraft.resources.Identifier WALL_ID = net.minecraft.resources.Identifier.fromNamespaceAndPath("mraz1visual", "preview/wall");
+    private static boolean wallReady;
+
+    private static net.minecraft.resources.Identifier wall() {
+        if (!wallReady) {
+            wallReady = true;
+            int tw = WALL_W * 4;
+            com.mojang.blaze3d.platform.NativeImage img = new com.mojang.blaze3d.platform.NativeImage(tw, WALL_H, false);
+            int bh = 6, bw = 14;
+            for (int y = 0; y < WALL_H; y++) {
+                int row = y / bh, ry = y % bh;
+                for (int x = 0; x < tw; x++) {
+                    int off = (row & 1) == 0 ? 0 : bw / 2;
+                    int rx = (x + off) % bw, brick = (x + off) / bw;
+                    boolean mortar = ry == 0 || rx == 0;
+                    int c;
+                    if (mortar) c = 0xFF2A1E22;
+                    else {
+                        int shade = ((brick % WALL_W) * 31 + row * 17) & 7;
+                        c = Colors.lerp(0xFF4A2E2C, 0xFF5E3833, shade / 7f);
+                        if (ry == 1) c = Colors.lerp(c, 0xFF7A4A42, 0.35f); // кромка сверху светлее
+                    }
+                    img.setPixel(x, y, c);
+                }
+            }
+            net.minecraft.client.Minecraft.getInstance().getTextureManager().register(WALL_ID,
+                    new net.minecraft.client.renderer.texture.DynamicTexture(() -> "mraz1visual preview wall", img));
+        }
+        return WALL_ID;
     }
 
     private float t;
@@ -123,16 +156,13 @@ public final class PreviewScene {
         // ── стена из кирпича ──
         float p2x = px * 9, p2y = py * 4 + breathe * 0.6f;
         int wallTop = Math.round(y + h * 0.40f + p2y), wallBot = Math.round(y + h * 0.80f + p2y);
-        d.rect(x, wallTop, w, wallBot - wallTop, 0xFF2A1E22);
-        int bh = Math.max(6, (wallBot - wallTop) / 7), bw = bh * 2 + 2;
-        for (int row = 0, by = wallTop + 1; by < wallBot - 1; row++, by += bh) {
-            int off = (row & 1) == 0 ? 0 : bw / 2;
-            for (int bx = x - bw + off + Math.round(p2x) % bw; bx < x + w; bx += bw) {
-                int shade = ((bx * 31 + row * 17) & 7);
-                int c = Colors.lerp(0xFF4A2E2C, 0xFF5E3833, shade / 7f);
-                d.rect(bx + 1, by + 1, bw - 2, bh - 2, c);
-            }
-        }
+        // кирпичи запечены в одну текстуру: один элемент GUI вместо сотен прямоугольников
+        int wallH = wallBot - wallTop;
+        float texW = WALL_W * (wallH / (float) WALL_H);
+        float u0 = (-p2x / texW * WALL_W) % WALL_W;
+        if (u0 < 0) u0 += WALL_W;
+        d.g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, wall(), x, wallTop, u0, 0f, w, wallH,
+                Math.round(w / texW * WALL_W), WALL_H, WALL_W * 4, WALL_H, 0xFFFFFFFF);
         // фонари: тёплый свет мерцает
         for (int i = 0; i < 2; i++) {
             float lx = x + w * (i == 0 ? 0.14f : 0.9f) + p2x, ly = wallTop + (wallBot - wallTop) * 0.22f;
