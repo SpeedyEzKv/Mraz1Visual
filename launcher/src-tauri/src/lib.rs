@@ -51,6 +51,20 @@ struct LauncherInfo {
     has_mraz1visual: bool,
     /// Ссылка на новый установщик лаунчера, если он вышел.
     launcher_update: Option<String>,
+    /// Версии Minecraft на выбор: (версия, статус recommended/new/beta).
+    versions: Vec<(String, String)>,
+    selected: String,
+    sodium: bool,
+    iris: bool,
+}
+
+/// Выбранная версия: из настроек, если она есть в manifest, иначе рекомендуемая.
+fn selected_version(m: &Manifest, s: &Settings) -> String {
+    let choices = m.choices();
+    if !s.mc_version.is_empty() && choices.iter().any(|(v, _)| v == &s.mc_version) {
+        return s.mc_version.clone();
+    }
+    m.recommended()
 }
 
 struct EmitProgress(AppHandle);
@@ -99,6 +113,10 @@ async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
         has_mraz1visual: install::has_mraz1visual(&state.paths),
         launcher_update: (!m.launcher_url.is_empty() && manifest::newer(&m.launcher_version, env!("CARGO_PKG_VERSION")))
             .then(|| m.launcher_url.clone()),
+        versions: m.choices(),
+        selected: selected_version(&m, &s),
+        sodium: s.sodium,
+        iris: s.iris,
     })
 }
 
@@ -108,6 +126,16 @@ fn set_settings(state: State<'_, AppState>, ram_mb: u64, close_on_launch: bool) 
     let mut s = state.settings.lock().unwrap();
     s.ram_mb = ram_mb.clamp(1024, total.saturating_sub(1024).max(2048));
     s.close_on_launch = close_on_launch;
+    s.save(&state.paths.settings_file()).map_err(|e| e.to_string())
+}
+
+/// Выбор версии Minecraft и дополнений (Sodium, Iris).
+#[tauri::command]
+fn set_profile(state: State<'_, AppState>, mc_version: String, sodium: bool, iris: bool) -> Result<(), String> {
+    let mut s = state.settings.lock().unwrap();
+    s.mc_version = mc_version;
+    s.sodium = sodium;
+    s.iris = iris && sodium;
     s.save(&state.paths.settings_file()).map_err(|e| e.to_string())
 }
 
@@ -148,8 +176,16 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
         }
     };
     let progress = EmitProgress(app.clone());
-    let installed = install::install(&state.paths, &manifest, &progress).await?;
-    if !install::has_mraz1visual(&state.paths) {
+    // профиль выбранной версии: свои моды и миры, общий конфиг клиента
+    let (mc, sodium, iris) = {
+        let s = state.settings.lock().unwrap();
+        (selected_version(&manifest, &s), s.sodium, s.iris)
+    };
+    let manifest = manifest.resolve(&mc, sodium, iris);
+    let paths = state.paths.for_version(&mc);
+    let installed = install::install(&paths, &manifest, &progress).await?;
+    install::sync_config(&state.paths.main_game(), &paths.game());
+    if !install::has_mraz1visual(&paths) {
         anyhow::bail!("В папке mods нет mraz1visual.jar. Собери мод (gradlew build) и положи jar в папку игры → game/mods, либо укажи GitHub-репозиторий в лаунчере.");
     }
 
@@ -167,7 +203,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
         extra.push(format!("-Dmraz1visual.media.port={}", m.port));
         extra.push(format!("-Dmraz1visual.media.token={}", m.token));
     }
-    let mut cmd = launch::build_command(&state.paths, &installed, ram, &account, &extra)?;
+    let mut cmd = launch::build_command(&paths, &installed, ram, &account, &extra)?;
     launch::ensure_logs(&state.paths)?;
     let mut child = cmd.spawn()?;
     discord::clear();
@@ -178,6 +214,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     let log_path = launch::log_path(&state.paths);
     let app2 = app.clone();
     let app_handle = app.clone();
+    let (game_dir, main_game) = (paths.game(), state.paths.main_game());
 
     // stderr читаем отдельно и параллельно, иначе переполненный канал подвесит игру
     if let Some(err) = stderr {
@@ -215,6 +252,8 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
             }
         }
         let code = child.wait().await.ok().and_then(|s| s.code()).unwrap_or(-1);
+        // настройки, изменённые в этой версии, — обратно в общий конфиг
+        install::sync_config(&game_dir, &main_game);
         discord::launcher();
         let state = app_handle.state::<AppState>();
         state.busy.store(false, Ordering::SeqCst);
@@ -232,37 +271,39 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
 }
 
 fn mc_version(state: &State<'_, AppState>) -> String {
-    state.manifest.lock().unwrap().as_ref().map(|m| m.minecraft.clone()).unwrap_or_else(|| "1.21.11".into())
+    let m = state.manifest.lock().unwrap().clone();
+    let s = state.settings.lock().unwrap().clone();
+    m.map(|m| selected_version(&m, &s)).unwrap_or_else(|| "1.21.11".into())
 }
 
 #[tauri::command]
 async fn market_search(state: State<'_, AppState>, kind: String, query: String, sort: String, offset: u32) -> Result<Vec<market::Hit>, String> {
     let k = market::Kind::parse(&kind).map_err(|e| e.to_string())?;
-    market::search(&state.paths, &mc_version(&state), k, &query, &sort, offset).await.map_err(|e| format!("{e:#}"))
+    market::search(&state.paths.for_version(&mc_version(&state)), &mc_version(&state), k, &query, &sort, offset).await.map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
 async fn market_install(state: State<'_, AppState>, kind: String, project: String) -> Result<String, String> {
     let k = market::Kind::parse(&kind).map_err(|e| e.to_string())?;
-    market::install(&state.paths, &mc_version(&state), k, &project).await.map_err(|e| format!("{e:#}"))
+    market::install(&state.paths.for_version(&mc_version(&state)), &mc_version(&state), k, &project).await.map_err(|e| format!("{e:#}"))
 }
 
 #[tauri::command]
 fn market_uninstall(state: State<'_, AppState>, kind: String, project: String) -> Result<(), String> {
     let k = market::Kind::parse(&kind).map_err(|e| e.to_string())?;
-    market::uninstall(&state.paths, k, &project).map_err(|e| e.to_string())
+    market::uninstall(&state.paths.for_version(&mc_version(&state)), k, &project).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn market_local(state: State<'_, AppState>, kind: String) -> Result<Vec<market::LocalItem>, String> {
     let k = market::Kind::parse(&kind).map_err(|e| e.to_string())?;
-    Ok(market::list_local(&state.paths, k))
+    Ok(market::list_local(&state.paths.for_version(&mc_version(&state)), k))
 }
 
 #[tauri::command]
 fn market_delete_local(state: State<'_, AppState>, kind: String, file: String) -> Result<(), String> {
     let k = market::Kind::parse(&kind).map_err(|e| e.to_string())?;
-    market::delete_local(&state.paths, k, &file).map_err(|e| e.to_string())
+    market::delete_local(&state.paths.for_version(&mc_version(&state)), k, &file).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -277,7 +318,7 @@ pub fn run() {
             busy: AtomicBool::new(false),
             media: tokio::sync::OnceCell::new(),
         })
-        .invoke_handler(tauri::generate_handler![info, set_settings, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
+        .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
         .run(tauri::generate_context!())
         .expect("error while running Mraz1Visual launcher");
 }

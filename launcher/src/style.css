@@ -263,3 +263,14 @@ input[type=range]::-webkit-slider-thumb { width: 22px; height: 15px; border-radi
 .card:hover { transform: translateY(-1px); }
 .btn { border-radius: 999px; }
 .links button.update { color: var(--accent); }
+
+/* выбор версии Minecraft */
+.versions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; max-width: 520px; }
+.ver { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10); color: var(--muted); font-family: Bold; font-size: 13px; transition: background .2s, color .2s, border-color .2s; }
+.ver:hover { color: var(--text); background: rgba(255,255,255,.10); }
+.ver.on { color: var(--text); background: rgba(90,200,250,.18); border-color: rgba(90,200,250,.45); }
+.vb { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.10); }
+.vb.recommended { background: rgba(48,209,88,.22); color: #b9f5c8; }
+.vb.new { background: rgba(90,200,250,.22); color: #c4ecff; }
+.vb.beta { background: rgba(255,159,10,.22); color: #ffd9a1; }
