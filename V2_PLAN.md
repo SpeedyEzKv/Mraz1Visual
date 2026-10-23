@@ -12,7 +12,7 @@
 ## 2. Мультиверсия
 - [x] Stonecutter 0.9.8 + loom-back-compat, 1.21.11 зелёная
 - [x] 26.1.2: замены и `//? if`, compat-слой
-- [ ] 26.2, 26.3 — отложено: рендер переписан (VERSIONS.md, «карта изменений»)
+- [x] 26.2, 26.3 — порт по карте в VERSIONS.md, стенд на обеих версиях
 - [x] CI-матрица (`build.yml` на ветки/PR), release.yml собирает все версии, manifest: версия → файл → sha256 → loader → fabric api
 
 ## 3. GUI по референсу (iOS 26 / Liquid Glass)
