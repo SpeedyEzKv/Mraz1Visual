@@ -26,6 +26,8 @@ public final class Icons {
             Map.entry("name_tags", TAG),
             Map.entry("target_esp", TARGET),
             Map.entry("postfx", SUN),
+            Map.entry("staff_wheel", SHIELD),
+            Map.entry("phrase_wheel", CHAT),
             Map.entry("trajectories", ARC),
             Map.entry("hit_effects", STAR),
             Map.entry("hit_sounds", NOTE),

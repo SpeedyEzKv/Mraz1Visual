@@ -131,6 +131,8 @@ public final class Modules {
         m.register(new AutoAccept());
         m.register(new AutoReconnect());
         m.register(new ItemScroller());
+        m.register(new Wheels.Staff());
+        m.register(new Wheels.Phrase());
         m.register(new Desktop());
         m.register(new AutoCommand());
         m.register(new StreamerMode());

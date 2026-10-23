@@ -26,6 +26,9 @@ public final class MarketPanel implements Panel {
             {"entityculling", "MOD", "Не рисует сущности за стенами — больше FPS."},
             {"lithium", "MOD", "Оптимизация логики игры (одиночная игра)."},
             {"modmenu", "MOD", "Список модов и их настройки."},
+            {"simple-voice-chat", "MOD", "Голосовой чат (нужен и на сервере)."},
+            {"replaymod", "MOD", "Запись и просмотр повторов."},
+            {"xaeros-minimap", "MOD", "Миникарта."},
     };
     private static final int CARD_H = 64, GAP = 8;
 
