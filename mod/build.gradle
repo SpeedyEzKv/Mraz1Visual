@@ -48,6 +48,10 @@ dependencies {
     if (project.findProperty('dev_sodium') == 'true') {
         modLocalRuntime "maven.modrinth:sodium:${property('deps.sodium')}"
         modLocalRuntime "maven.modrinth:iris:${property('deps.iris')}"
+        // вложенные библиотеки Iris (в dev-клиенте Loom их не распаковывает) — нужны, чтобы грузились шейдерпаки
+        localRuntime "org.anarres:jcpp:1.4.14"
+        localRuntime "org.antlr:antlr4-runtime:4.13.1"
+        localRuntime "io.github.douira:glsl-transformer:3.0.0-pre3"
     }
 }
 

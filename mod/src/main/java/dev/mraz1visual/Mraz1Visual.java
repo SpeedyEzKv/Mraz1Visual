@@ -33,6 +33,7 @@ public final class Mraz1Visual implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         migrateOldConfig();
+        dev.mraz1visual.render.post.ShaderPackInstaller.install();
         MODULES.init();
         CONFIG = new ConfigManager(MODULES);
         CONFIG.load();
