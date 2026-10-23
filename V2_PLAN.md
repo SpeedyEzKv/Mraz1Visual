@@ -41,4 +41,4 @@
 - [ ] Forum (GitHub Discussions, Device Flow)
 
 ## 10. Финал
-- [ ] Замеры FPS 1.21.11 и 26.3, `screenshots/v2/`, MORNING_REPORT.md, PR v2-multiversion → main (не мержить)
+- [x] Замеры FPS 1.21.11 и 26.1.2 (новейшая собранная), `screenshots/v2/`, MORNING_REPORT.md, PR v2-multiversion → main (не мержить)
