@@ -56,6 +56,10 @@ struct LauncherInfo {
     selected: String,
     sodium: bool,
     iris: bool,
+    optimize: bool,
+    gc: String,
+    /// Моды профиля «Оптимизация» (для подсказки в настройках).
+    optimization_mods: Vec<&'static str>,
 }
 
 /// Выбранная версия: из настроек, если она есть в manifest, иначе рекомендуемая.
@@ -117,6 +121,9 @@ async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
         selected: selected_version(&m, &s),
         sodium: s.sodium,
         iris: s.iris,
+        optimize: s.optimize,
+        gc: s.gc.clone(),
+        optimization_mods: manifest::OPTIMIZATION.iter().map(|(_, n)| *n).collect(),
     })
 }
 
@@ -136,6 +143,15 @@ fn set_profile(state: State<'_, AppState>, mc_version: String, sodium: bool, iri
     s.mc_version = mc_version;
     s.sodium = sodium;
     s.iris = iris && sodium;
+    s.save(&state.paths.settings_file()).map_err(|e| e.to_string())
+}
+
+/// Профиль «Оптимизация» и сборщик мусора.
+#[tauri::command]
+fn set_perf(state: State<'_, AppState>, optimize: bool, gc: String) -> Result<(), String> {
+    let mut s = state.settings.lock().unwrap();
+    s.optimize = optimize;
+    s.gc = if gc == "zgc" { gc } else { "g1".into() };
     s.save(&state.paths.settings_file()).map_err(|e| e.to_string())
 }
 
@@ -177,11 +193,14 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     };
     let progress = EmitProgress(app.clone());
     // профиль выбранной версии: свои моды и миры, общий конфиг клиента
-    let (mc, sodium, iris) = {
+    let (mc, sodium, iris, optimize) = {
         let s = state.settings.lock().unwrap();
-        (selected_version(&manifest, &s), s.sodium, s.iris)
+        (selected_version(&manifest, &s), s.sodium, s.iris, s.optimize)
     };
-    let manifest = manifest.resolve(&mc, sodium, iris);
+    let mut manifest = manifest.resolve(&mc, sodium, iris);
+    if optimize {
+        manifest = manifest.with_optimization();
+    }
     let paths = state.paths.for_version(&mc);
     let installed = install::install(&paths, &manifest, &progress).await?;
     install::sync_config(&state.paths.main_game(), &paths.game());
@@ -189,9 +208,9 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
         anyhow::bail!("В папке mods нет mraz1visual.jar. Собери мод (gradlew build) и положи jar в папку игры → game/mods, либо укажи GitHub-репозиторий в лаунчере.");
     }
 
-    let (ram, close) = {
+    let (ram, close, gc) = {
         let s = state.settings.lock().unwrap();
-        (s.ram_mb, s.close_on_launch)
+        (s.ram_mb, s.close_on_launch, s.gc.clone())
     };
     let account = launch::current_account(&state.paths);
     // мост «Сейчас играет»: порт и токен уходят в игру системными свойствами
@@ -206,7 +225,8 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
         extra.push(format!("-Dmraz1visual.media.port={}", m.port));
         extra.push(format!("-Dmraz1visual.media.token={}", m.token));
     }
-    let mut cmd = launch::build_command(&paths, &installed, ram, &account, &extra)?;
+    let jvm = launch::JvmOptions { ram_mb: ram, java: manifest.java, zgc: gc == "zgc" };
+    let mut cmd = launch::build_command(&paths, &installed, &jvm, &account, &extra)?;
     launch::ensure_logs(&state.paths)?;
     let mut child = cmd.spawn()?;
     discord::clear();
@@ -321,7 +341,7 @@ pub fn run() {
             busy: AtomicBool::new(false),
             media: tokio::sync::OnceCell::new(),
         })
-        .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
+        .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, set_perf, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
         .run(tauri::generate_context!())
         .expect("error while running Mraz1Visual launcher");
 }

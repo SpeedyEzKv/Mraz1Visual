@@ -15,6 +15,13 @@ public final class FrameStats extends Module implements HudLayer {
     private static final int N = 240;
     final EnumSetting corner = add(new EnumSetting("corner", "Угол", 0, "tl", "Слева сверху", "tr", "Справа сверху", "bl", "Слева снизу", "br", "Справа снизу"));
     final EnumSetting scale = add(new EnumSetting("scale", "Шкала графика", 1, "16", "16 мс", "33", "33 мс", "66", "66 мс"));
+    final dev.mraz1visual.setting.ActionSetting benchButton = add(new dev.mraz1visual.setting.ActionSetting("bench", "Бенчмарк: средний FPS и 1% low за 30 с", "Запустить ›", this::startBench));
+
+    // бенчмарк: все кадры за 30 секунд; буфер выделяется один раз при старте
+    private static final long BENCH_NS = 30_000_000_000L;
+    private float[] bench;
+    private int benchN;
+    private long benchStart;
 
     private final float[] ms = new float[N], sorted = new float[N];
     private int head;
@@ -32,12 +39,44 @@ public final class FrameStats extends Module implements HudLayer {
         java.util.Arrays.fill(ms, 0);
     }
 
+    private void startBench() {
+        if (bench == null) bench = new float[60_000];
+        benchN = 0;
+        benchStart = System.nanoTime();
+        setEnabled(true);
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        if (mc.screen != null) mc.setScreen(null);
+        dev.mraz1visual.compat.Mc.message(net.minecraft.network.chat.Component.literal("§7" + dev.mraz1visual.ui.Lang.get("mraz1visual.bench.start")), false);
+    }
+
+    private void benchFrame(long now, float frameMs) {
+        if (benchStart == 0) return;
+        if (benchN < bench.length) bench[benchN++] = frameMs;
+        if (now - benchStart < BENCH_NS) return;
+        benchStart = 0;
+        if (benchN < 10) return;
+        double sum = 0;
+        for (int i = 0; i < benchN; i++) sum += bench[i];
+        java.util.Arrays.sort(bench, 0, benchN);
+        String avg = Long.toString(Math.round(1000.0 * benchN / sum));
+        dev.mraz1visual.compat.Mc.message(net.minecraft.network.chat.Component.literal("§b" + dev.mraz1visual.ui.Lang.get("mraz1visual.bench.result", avg, low(0.01), low(0.001))), false);
+    }
+
+    /** FPS самой медленной доли кадров (bench уже отсортирован по возрастанию времени кадра). */
+    private String low(double part) {
+        int n = Math.max(1, (int) (benchN * part));
+        double s = 0;
+        for (int i = benchN - n; i < benchN; i++) s += bench[i];
+        return Long.toString(Math.round(1000.0 * n / s));
+    }
+
     @Override
     public void renderHud(GuiGraphics g, float partialTick) {
         long now = System.nanoTime();
         if (last != 0) {
             head = (head + 1) % N;
             ms[head] = (now - last) / 1e6f;
+            benchFrame(now, ms[head]);
         }
         last = now;
 

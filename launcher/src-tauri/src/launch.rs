@@ -47,7 +47,36 @@ fn local_account(name: &str) -> Account {
     Account { name: name.into(), uuid, token: "0".into(), kind: "legacy".into(), xuid: String::new() }
 }
 
-pub fn build_command(paths: &Paths, inst: &Installed, ram_mb: u64, account: &Account, extra_jvm: &[String]) -> Result<tokio::process::Command> {
+/// Память и сборщик мусора для запуска.
+pub struct JvmOptions {
+    pub ram_mb: u64,
+    /// Мажорная версия Java, под которую собрана выбранная версия игры (21, 25).
+    pub java: u32,
+    pub zgc: bool,
+}
+
+/// Флаги памяти и GC. Проверены на Java 21 и 25/26: ни одного «неизвестного» флага (с ним JVM не стартует).
+pub fn gc_args(o: &JvmOptions) -> Vec<String> {
+    let mut a = vec![format!("-Xmx{}M", o.ram_mb), format!("-Xms{}M", (o.ram_mb / 2).clamp(512, 2048))];
+    if o.zgc && o.java >= 21 {
+        a.push("-XX:+UseZGC".into());
+        // в 21 поколенческий ZGC включается флагом, с 23 он единственный, а флаг в 24+ уже ошибка запуска
+        if o.java < 23 {
+            a.push("-XX:+ZGenerational".into());
+        }
+    } else {
+        // G1 под клиент: короткие паузы (меньше фризов), побольше молодое поколение — в игре много короткоживущих объектов
+        a.extend(["-XX:+UseG1GC", "-XX:MaxGCPauseMillis=37", "-XX:+UnlockExperimentalVMOptions", "-XX:G1NewSizePercent=20",
+            "-XX:G1ReservePercent=20", "-XX:G1HeapRegionSize=16M", "-XX:+UseStringDeduplication"].map(String::from));
+        if o.java < 26 {
+            a.push("-XX:+ParallelRefProcEnabled".into());
+        }
+    }
+    a.push("-XX:+DisableExplicitGC".into());
+    a
+}
+
+pub fn build_command(paths: &Paths, inst: &Installed, jvm: &JvmOptions, account: &Account, extra_jvm: &[String]) -> Result<tokio::process::Command> {
     let vjson: Value = serde_json::from_str(&std::fs::read_to_string(&inst.version_json)?)?;
     let fabric: Value = serde_json::from_str(&std::fs::read_to_string(&inst.fabric_profile)?)?;
 
@@ -81,11 +110,7 @@ pub fn build_command(paths: &Paths, inst: &Installed, ram_mb: u64, account: &Acc
     vars.insert("user_properties", "{}".into());
 
     let mut args: Vec<String> = Vec::new();
-    args.push(format!("-Xmx{ram_mb}M"));
-    args.push("-Xms512M".into());
-    args.push("-XX:+UseG1GC".into());
-    args.push("-XX:+ParallelRefProcEnabled".into());
-    args.push("-XX:MaxGCPauseMillis=200".into());
+    args.extend(gc_args(jvm));
     args.extend(extra_jvm.iter().cloned());
     push_args(&mut args, &vjson["arguments"]["jvm"], &vars);
     push_args(&mut args, &fabric["arguments"]["jvm"], &vars);

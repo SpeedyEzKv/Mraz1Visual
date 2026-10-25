@@ -13,11 +13,15 @@ pub struct Settings {
     /// Ставить Sodium и Iris (по галочке).
     pub sodium: bool,
     pub iris: bool,
+    /// Профиль «Оптимизация»: Lithium, FerriteCore, ImmediatelyFast и др. с Modrinth под версию.
+    pub optimize: bool,
+    /// Сборщик мусора: "g1" (по умолчанию) или "zgc" (Java 21+).
+    pub gc: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { ram_mb: 4096, close_on_launch: false, mc_version: String::new(), sodium: true, iris: true }
+        Self { ram_mb: 4096, close_on_launch: false, mc_version: String::new(), sodium: true, iris: true, optimize: false, gc: "g1".into() }
     }
 }
 

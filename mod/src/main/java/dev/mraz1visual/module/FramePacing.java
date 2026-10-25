@@ -26,6 +26,8 @@ public final class FramePacing extends Module {
     final EnumSetting gameFps = add(new EnumSetting("game_fps", "Ровный FPS в игре", 0,
             "off", "Выкл (как в настройках)", "monitor", "Частота монитора", "monitor2", "2× монитор", "120", "120", "144", "144", "240", "240"));
     final BoolSetting precise = add(new BoolSetting("precise", "Точный ограничитель (ровное время кадра)", true));
+    final EnumSetting backgroundFps = add(new EnumSetting("background_fps", "FPS, когда окно не в фокусе", 1,
+            "off", "Как обычно", "30", "30", "15", "15", "5", "5"));
 
     private static int monitorHz = 60;
     private static long hzCheckedAt;
@@ -78,6 +80,8 @@ public final class FramePacing extends Module {
                 && reason != FramerateLimitTracker.FramerateThrottleReason.OUT_OF_LEVEL_MENU) return vanilla;
         Minecraft mc = Minecraft.getInstance();
         int user = mc.options.framerateLimit().get();
+        // окно за другим окном (Discord, браузер): игра видна, но кадры никто не смотрит
+        if (!mc.isWindowActive() && !f.backgroundFps.getId().equals("off")) return Math.min(vanilla, choice(f.backgroundFps.getId(), vanilla));
         if (mc.screen != null) return Math.min(UNLIMITED, choice(f.menuFps.getId(), user));
         if (f.gameFps.getId().equals("off")) return vanilla;
         int cap = choice(f.gameFps.getId(), user);

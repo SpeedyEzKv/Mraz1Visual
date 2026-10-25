@@ -6,6 +6,24 @@ use serde::{Deserialize, Serialize};
 /// Репозиторий с релизами Mraz1Visual: "владелец/репозиторий". Поменяй на свой.
 pub const GITHUB_REPO: &str = "SpeedyEzKv/Mraz1Visual";
 
+/// Версия мода «свежая под эту игру» — ищется на Modrinth при установке.
+pub const LATEST: &str = "latest";
+
+/// Профиль «Оптимизация»: (slug на Modrinth, название). Лицензии проверены — все разрешают ставить мод с Modrinth
+/// (качаем у них, в свой jar не вшиваем): Sodium — Polyform Shield, Lithium/ImmediatelyFast/ModernFix — LGPL-3.0,
+/// FerriteCore/Dynamic FPS — MIT, More Culling — GPL-3.0, Entity Culling — tr7zw Protective (запрещено перезаливать, не ставить).
+/// Нет сборки под версию игры (ModernFix для Fabric 1.21.11/26.x) — мод просто пропускается.
+pub const OPTIMIZATION: &[(&str, &str)] = &[
+    ("sodium", "Sodium"),
+    ("lithium", "Lithium"),
+    ("ferrite-core", "FerriteCore"),
+    ("immediatelyfast", "ImmediatelyFast"),
+    ("entityculling", "Entity Culling"),
+    ("modernfix", "ModernFix"),
+    ("dynamic-fps", "Dynamic FPS"),
+    ("moreculling", "More Culling"),
+];
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Manifest {
     pub client_version: String,
@@ -221,6 +239,18 @@ impl Manifest {
         mods.push(jar);
         out.mods = mods;
         out
+    }
+
+    /// Добавить моды профиля «Оптимизация» (версия — свежая под эту игру, ищется при установке).
+    /// То, что уже есть в наборе (Sodium по галочке), не дублируется.
+    pub fn with_optimization(mut self) -> Manifest {
+        for (slug, _) in OPTIMIZATION {
+            let have = self.mods.iter().any(|e| e.modrinth.as_ref().map(|(s, _)| s == slug).unwrap_or(false));
+            if !have {
+                self.mods.push(ModEntry { modrinth: Some(((*slug).into(), LATEST.into())), url: None, file: None, sha1: None, sha256: None });
+            }
+        }
+        self
     }
 
     /// manifest.json из последнего релиза; при любой ошибке — встроенный.

@@ -347,10 +347,18 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     std::fs::create_dir_all(paths.mods())?;
     let mut jobs = Vec::new();
     let mut files = Vec::new();
+    // id проектов Modrinth из набора — чтобы «Оптимизация» не поставила их второй раз
+    let mut pinned: HashSet<String> = HashSet::new();
     for entry in &m.mods {
+        if entry.modrinth.as_ref().map(|(_, v)| v == crate::manifest::LATEST).unwrap_or(false) {
+            continue;
+        }
         let (url, file, sha1) = if let Some((slug, ver)) = &entry.modrinth {
             let v = net::get_json(client, &format!("https://api.modrinth.com/v2/project/{slug}/version/{ver}")).await
                 .with_context(|| format!("Modrinth {slug} {ver}"))?;
+            if let Some(pid) = v["project_id"].as_str() {
+                pinned.insert(pid.to_string());
+            }
             let f = v["files"]
                 .as_array()
                 .and_then(|a| a.iter().find(|f| f["primary"].as_bool() == Some(true)).or(a.first()))
@@ -406,6 +414,37 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
         jobs.push(job);
         files.push(file);
     }
+    // моды «свежая версия под игру» (профиль «Оптимизация») + их обязательные зависимости
+    let mut latest: Vec<String> = m.mods.iter().filter_map(|e| e.modrinth.as_ref()).filter(|(_, v)| v == crate::manifest::LATEST).map(|(s, _)| s.clone()).collect();
+    let mut seen: HashSet<String> = pinned.clone();
+    seen.insert(FABRIC_API_ID.into());
+    let mut i = 0;
+    while i < latest.len() {
+        let slug = latest[i].clone();
+        i += 1;
+        let Some(v) = latest_fabric(client, &slug, &m.minecraft).await else { continue };
+        // уже стоит из набора (Sodium по галочке) или пришёл зависимостью другого мода
+        if let Some(pid) = v["project_id"].as_str() {
+            if pinned.contains(pid) || (!seen.insert(pid.to_string()) && pid != slug) { continue; }
+        }
+        if let Some(deps) = v["dependencies"].as_array() {
+            for d in deps {
+                if d["dependency_type"].as_str() != Some("required") { continue; }
+                if let Some(pid) = d["project_id"].as_str() {
+                    if seen.insert(pid.to_string()) { latest.push(pid.to_string()); }
+                }
+            }
+        }
+        if let Some(f) = v["files"].as_array().and_then(|a| a.iter().find(|f| f["primary"].as_bool() == Some(true)).or(a.first())) {
+            if let (Ok(url), Ok(file)) = (str_of(f, "url"), str_of(f, "filename")) {
+                // тот же мод уже лежит другой версией (поставлен руками) — не ставим второй копией
+                if !has_other_copy(paths, &file, &slug) {
+                    jobs.push(Job { url, path: paths.mods().join(&file), sha1: f["hashes"]["sha1"].as_str().map(String::from), size: None });
+                    files.push(file);
+                }
+            }
+        }
+    }
     net::fetch_all(client, jobs, 4, |d, t| report(progress, Stage::Mods, d, t)).await?;
 
     // удалить наши старые версии, которых больше нет в списке; чужие моды не трогаем
@@ -420,6 +459,27 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     std::fs::write(&managed_path, serde_json::to_vec_pretty(&Managed { files })?)?;
     report(progress, Stage::Mods, 1, 1);
     Ok(())
+}
+
+/// id Fabric API на Modrinth — он уже стоит из manifest.
+const FABRIC_API_ID: &str = "P7dR8mSH";
+
+/// Свежая релизная (или бета, если релиза нет) версия мода для Fabric под эту игру; нет — None.
+async fn latest_fabric(client: &reqwest::Client, project: &str, mc: &str) -> Option<Value> {
+    let url = format!("https://api.modrinth.com/v2/project/{project}/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%22{mc}%22%5D");
+    let list = net::get_json(client, &url).await.ok()?;
+    let a = list.as_array()?;
+    a.iter().find(|v| v["version_type"].as_str() == Some("release")).or(a.first()).cloned()
+}
+
+/// В mods уже есть этот мод другим файлом (по началу имени: «lithium-…»), кроме нашего же файла.
+fn has_other_copy(paths: &Paths, file: &str, slug: &str) -> bool {
+    let key = slug.to_lowercase().replace('-', "");
+    let Ok(rd) = std::fs::read_dir(paths.mods()) else { return false };
+    rd.flatten().any(|e| {
+        let n = e.file_name().to_string_lossy().to_lowercase();
+        n != file.to_lowercase() && n.ends_with(".jar") && n.replace(['-', '_'], "").starts_with(&key)
+    })
 }
 
 /// Jar нашего клиента: новое имя mraz1visual*.jar или старое umbra*.jar.

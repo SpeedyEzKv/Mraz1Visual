@@ -110,6 +110,9 @@ function renderInfo() {
   document.querySelectorAll("#sodiumSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.sodium));
   document.querySelectorAll("#irisSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === (info.iris && info.sodium)));
   document.querySelectorAll("#closeSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.close_on_launch));
+  document.querySelectorAll("#optSeg button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "1") === info.optimize));
+  document.querySelectorAll("#gcSeg button").forEach((b) => b.classList.toggle("on", b.dataset.v === (info.gc || "g1")));
+  if (info.optimization_mods) $("optHint").textContent = info.optimization_mods.join(", ") + " — с Modrinth под выбранную версию";
   idleStatus();
 }
 // ── версии Minecraft: бейджи «Рекомендуется / Новая / Бета» ──
@@ -330,6 +333,20 @@ document.querySelectorAll("#closeSeg button").forEach((b) => (b.onclick = () => 
   info.close_on_launch = b.dataset.v === "1";
   renderInfo();
   saveSettings();
+}));
+
+async function savePerf() {
+  await invoke("set_perf", { optimize: info.optimize, gc: info.gc || "g1" });
+}
+document.querySelectorAll("#optSeg button").forEach((b) => (b.onclick = () => {
+  info.optimize = b.dataset.v === "1";
+  renderInfo();
+  savePerf();
+}));
+document.querySelectorAll("#gcSeg button").forEach((b) => (b.onclick = () => {
+  info.gc = b.dataset.v;
+  renderInfo();
+  savePerf();
 }));
 
 listen("progress", (e) => {
