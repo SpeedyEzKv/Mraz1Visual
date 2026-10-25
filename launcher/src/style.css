@@ -132,11 +132,11 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px;
 .nav2 { margin-top: 18px; }
 
 /* ── маркет ──────────────────────────── */
-#market { position: absolute; left: 36px; right: 36px; top: 70px; bottom: 28px; z-index: 20;
+#market, #mods { position: absolute; left: 36px; right: 36px; top: 70px; bottom: 28px; z-index: 20;
   background: rgba(10,10,16,.92); border: 1px solid rgba(255,255,255,.07); border-radius: 14px;
   backdrop-filter: blur(14px); display: flex; flex-direction: column; padding: 18px 22px;
   opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity .3s, transform .3s; }
-#market.open { opacity: 1; transform: none; pointer-events: auto; }
+#market.open, #mods.open { opacity: 1; transform: none; pointer-events: auto; }
 .m-head { display: flex; align-items: center; gap: 26px; }
 .m-title { font-family: Head; font-size: 20px; color: var(--lav); letter-spacing: .03em; }
 .m-tabs, .m-src, .m-sort { display: flex; gap: 4px; background: rgba(255,255,255,.04); border-radius: 8px; padding: 3px; }
@@ -199,7 +199,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px;
 #app.intro #tap { opacity: 1; }
 
 /* в режиме заставки меню спрятано, видео чистое */
-#app.intro .view, #app.intro #status, #app.intro #disc, #app.intro #market, #app.intro .right #account { opacity: 0 !important; pointer-events: none !important; }
+#app.intro .view, #app.intro #status, #app.intro #disc, #app.intro #market, #app.intro #mods, #app.intro .right #account { opacity: 0 !important; pointer-events: none !important; }
 #app.intro #shade { opacity: .35; }
 #shade { transition: opacity 1s; }
 #app.intro { cursor: pointer; }
@@ -252,7 +252,7 @@ input[type=range] { height: 4px; background: rgba(255,255,255,.14); border-radiu
 input[type=range]::-webkit-slider-thumb { width: 22px; height: 15px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
 
 /* маркет — то же стекло */
-#market { border-radius: 22px; border: 0; background: linear-gradient(180deg, var(--glass-hi), rgba(255,255,255,0) 40%), rgba(12,13,20,.82);
+#market, #mods { border-radius: 22px; border: 0; background: linear-gradient(180deg, var(--glass-hi), rgba(255,255,255,0) 40%), rgba(12,13,20,.82);
   box-shadow: inset 0 1px 0 var(--edge-top), inset 0 -1px 0 var(--edge-bottom), 0 30px 70px rgba(0,0,0,.45);
   transition: opacity .35s var(--ease), transform .35s var(--ease); }
 .m-tabs, .m-src, .m-sort { border-radius: 999px; }
@@ -274,3 +274,26 @@ input[type=range]::-webkit-slider-thumb { width: 22px; height: 15px; border-radi
 .vb.recommended { background: rgba(48,209,88,.22); color: #b9f5c8; }
 .vb.new { background: rgba(90,200,250,.22); color: #c4ecff; }
 .vb.beta { background: rgba(255,159,10,.22); color: #ffd9a1; }
+
+/* ── моды выбранной версии ───────────── */
+.navrow { display: flex; align-items: baseline; gap: 14px; }
+.navmini { font-size: 12px; color: var(--muted); transition: color .2s; }
+.navmini:hover { color: var(--text); }
+#mods .m-title span { font-family: Text; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.m-hint { font-size: 12px; color: var(--muted); flex: 1; }
+.mods-body .local.mod { gap: 12px; }
+.mods-body .mod.off .mi { opacity: .5; }
+.mi { flex: 1; min-width: 0; }
+.mi .mn { font-size: 13px; color: var(--text); }
+.mi small.own { color: var(--accent); }
+.mf { font-size: 11px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mw { font-size: 11px; color: #ffb36b; margin-top: 3px; }
+.toggle { position: relative; width: 38px; height: 22px; border-radius: 11px; background: rgba(255,255,255,.12); transition: background .25s var(--ease, ease); flex: none; }
+.toggle::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .3s var(--ease, cubic-bezier(.2,.8,.2,1)); }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { transform: translateX(16px); }
+.toggle:disabled { opacity: .4; cursor: default; }
+.drop { position: absolute; inset: 10px; border: 2px dashed var(--accent); border-radius: 16px; display: grid; place-items: center;
+  font-family: Head; font-size: 16px; color: var(--accent); background: rgba(10,10,16,.75); opacity: 0; pointer-events: none; transition: opacity .2s; }
+.drop.on { opacity: 1; }

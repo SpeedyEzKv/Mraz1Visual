@@ -62,6 +62,7 @@ public final class ClientScreen extends Screen implements Host {
         STAFF("Staff", Icons.SHIELD, Category.STAFF),
         COSMETICS("Cosmetics", Icons.HAT, Category.COSMETICS, Category.SWORDS, Category.WINGS, Category.PETS),
         MARKET("Market", Icons.GEM),
+        MODS("Mods", Icons.LAYERS),
         FORUM("Forum", Icons.CHAT),
         MUSIC("Music", Icons.NOTE, Category.MUSIC),
         CONFIGS("Configs", Icons.SLIDERS),
@@ -78,7 +79,7 @@ public final class ClientScreen extends Screen implements Host {
             this.cats = cats;
         }
 
-        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, FORUM, MUSIC, CONFIGS};
+        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
     }
 
     private final ModuleManager mm = Mraz1Visual.MODULES;
@@ -156,6 +157,7 @@ public final class ClientScreen extends Screen implements Host {
     public ClientScreen() {
         super(Component.literal("Mraz1Visual"));
         panels.put(Tab.MARKET, new MarketPanel());
+        panels.put(Tab.MODS, new ModsPanel());
         panels.put(Tab.COSMETICS, wardrobe);
         panels.put(Tab.FORUM, new ForumPanel());
     }

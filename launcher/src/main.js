@@ -306,6 +306,61 @@ $("mQuery").oninput = () => {
 $("toMarket").onclick = () => { $("market").classList.add("open"); marketLoad(); };
 $("mClose").onclick = () => $("market").classList.remove("open");
 
+// ── моды выбранной версии ────────────────────────────────────
+async function modsLoad() {
+  const body = $("modsBody");
+  let view;
+  try { view = await invoke("mods_list"); } catch (e) { body.textContent = String(e); return; }
+  $("modsVer").textContent = "· Minecraft " + view.minecraft;
+  body.innerHTML = "";
+  if (!view.items.length) body.appendChild(el("div", "m-empty", "В папке mods пусто. Перетащи сюда .jar или поставь мод из Маркета."));
+  view.items.forEach((m) => {
+    const row = el("div", "local mod" + (m.enabled ? "" : " off"));
+    const name = el("span", "mn", m.name);
+    if (m.version) name.appendChild(el("small", null, m.version));
+    if (m.managed) name.appendChild(el("small", "own", "ставит лаунчер"));
+    const info = el("div", "mi");
+    info.append(name, el("div", "mf", m.file));
+    if (m.warning) info.appendChild(el("div", "mw", "⚠ " + m.warning));
+    const tg = el("button", "toggle" + (m.enabled ? " on" : ""));
+    tg.title = m.enabled ? "Выключить" : "Включить";
+    tg.disabled = m.managed;
+    tg.onclick = async () => { await invoke("mods_toggle", { file: m.file, enabled: !m.enabled }); modsLoad(); };
+    const del = el("button", "btn ghost", "Удалить");
+    del.disabled = m.managed;
+    del.onclick = async () => {
+      // второй клик за 3 секунды — подтверждение
+      if (!del.dataset.sure) {
+        del.dataset.sure = "1";
+        del.textContent = "Точно?";
+        setTimeout(() => { delete del.dataset.sure; del.textContent = "Удалить"; }, 3000);
+        return;
+      }
+      await invoke("mods_delete", { file: m.file });
+      modsLoad();
+    };
+    row.append(info, tg, del);
+    body.appendChild(row);
+  });
+}
+const modsPanel = () => $("mods").classList.contains("open");
+$("toMods").onclick = () => invoke("open_mods_folder").catch((e) => status("Не открылась папка", String(e), true));
+$("modsFolder").onclick = () => invoke("open_mods_folder");
+$("modsList").onclick = () => { $("mods").classList.add("open"); modsLoad(); };
+$("modsClose").onclick = () => $("mods").classList.remove("open");
+try {
+  window.__TAURI__.webview.getCurrentWebview().onDragDropEvent(async (e) => {
+    const t = e.payload.type;
+    if (!modsPanel()) return;
+    $("modsDrop").classList.toggle("on", t === "enter" || t === "over");
+    if (t === "drop") {
+      const added = await invoke("mods_add", { files: e.payload.paths || [] }).catch(() => []);
+      status(added.length ? "Добавлено: " + added.join(", ") : "Нужны файлы .jar");
+      modsLoad();
+    }
+  });
+} catch (e) { /* без перетаскивания — остаётся кнопка «Открыть папку» */ }
+
 // ── старт ────────────────────────────────────────────────────
 window.addEventListener("resize", layout);
 document.addEventListener("contextmenu", (e) => e.preventDefault());

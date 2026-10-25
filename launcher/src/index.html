@@ -35,6 +35,10 @@
     <div class="versions" id="versions"></div>
     <button class="nav" id="toSettings">НАСТРОЙКИ</button>
     <button class="nav nav2" id="toMarket">МАРКЕТ</button>
+    <div class="navrow">
+      <button class="nav nav2" id="toMods" title="Открыть папку mods выбранной версии">МОДЫ</button>
+      <button class="navmini" id="modsList" title="Список модов">список ›</button>
+    </div>
     <section class="news">
       <div class="news-title">ЧТО НОВОГО <span id="newsVer"></span></div>
       <ul id="changelog"></ul>
@@ -104,6 +108,18 @@
       </div>
     </div>
     <div class="m-body" id="mBody"></div>
+  </section>
+
+  <!-- моды выбранной версии -->
+  <section id="mods">
+    <div class="m-head">
+      <div class="m-title">МОДЫ <span id="modsVer"></span></div>
+      <button class="btn ghost" id="modsFolder">Открыть папку</button>
+      <span class="m-hint">Перетащи .jar сюда, чтобы установить</span>
+      <button class="win" id="modsClose" title="Закрыть">✕</button>
+    </div>
+    <div class="m-body mods-body" id="modsBody"></div>
+    <div class="drop" id="modsDrop">Отпусти, чтобы добавить в mods</div>
   </section>
 
   <div id="status"><div id="statusMain"></div><div id="statusSub"></div></div>

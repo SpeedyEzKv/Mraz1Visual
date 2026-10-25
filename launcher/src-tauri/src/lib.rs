@@ -6,6 +6,7 @@ mod manifest;
 mod market;
 mod discord;
 mod media;
+mod mods;
 mod net;
 mod paths;
 mod settings;
@@ -329,6 +330,49 @@ fn market_delete_local(state: State<'_, AppState>, kind: String, file: String) -
     market::delete_local(&state.paths.for_version(&mc_version(&state)), k, &file).map_err(|e| e.to_string())
 }
 
+/// Папка игры выбранной версии и её Fabric Loader (для проверки модов).
+fn selected_profile(state: &State<'_, AppState>) -> (Paths, String, String) {
+    let mc = mc_version(state);
+    let loader = state.manifest.lock().unwrap().as_ref().map(|m| m.resolve(&mc, false, false).fabric_loader).unwrap_or_default();
+    (state.paths.for_version(&mc), mc, loader)
+}
+
+/// Кнопка «Моды»: папка mods выбранной версии в проводнике (нет — создаётся).
+#[tauri::command]
+fn open_mods_folder(state: State<'_, AppState>) -> Result<(), String> {
+    let (paths, _, _) = selected_profile(&state);
+    std::fs::create_dir_all(paths.mods()).map_err(|e| e.to_string())?;
+    open::that(paths.mods()).map_err(|e| e.to_string())
+}
+
+#[derive(Serialize)]
+struct ModsView {
+    minecraft: String,
+    folder: String,
+    items: Vec<mods::ModInfo>,
+}
+
+#[tauri::command]
+fn mods_list(state: State<'_, AppState>) -> ModsView {
+    let (paths, mc, loader) = selected_profile(&state);
+    ModsView { items: mods::list(&paths, &mc, &loader), folder: paths.mods().to_string_lossy().to_string(), minecraft: mc }
+}
+
+#[tauri::command]
+fn mods_toggle(state: State<'_, AppState>, file: String, enabled: bool) -> Result<(), String> {
+    mods::set_enabled(&selected_profile(&state).0, &file, enabled).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn mods_delete(state: State<'_, AppState>, file: String) -> Result<(), String> {
+    mods::delete(&selected_profile(&state).0, &file).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn mods_add(state: State<'_, AppState>, files: Vec<String>) -> Result<Vec<String>, String> {
+    mods::add(&selected_profile(&state).0, &files).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let paths = Paths::new();
@@ -341,7 +385,8 @@ pub fn run() {
             busy: AtomicBool::new(false),
             media: tokio::sync::OnceCell::new(),
         })
-        .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, set_perf, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local])
+        .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, set_perf, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local,
+            open_mods_folder, mods_list, mods_toggle, mods_delete, mods_add])
         .run(tauri::generate_context!())
         .expect("error while running Mraz1Visual launcher");
 }
