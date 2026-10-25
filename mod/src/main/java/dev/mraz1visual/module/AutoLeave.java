@@ -24,12 +24,15 @@ public final class AutoLeave extends Module {
     final EnumSetting action = add(new EnumSetting("action", "Действие", 0,
         "disconnect", "Выйти с сервера", "hub", "/hub", "spawn", "/spawn"));
     final BoolSetting disableAfter = add(new BoolSetting("disable_after", "Выключиться после срабатывания", true));
+    /** Panic Disconnect: мгновенный выход по клавише, без условий. */
+    final dev.mraz1visual.setting.KeySetting panic = add(new dev.mraz1visual.setting.KeySetting("panic", "Panic: выйти по клавише", dev.mraz1visual.setting.KeySetting.NONE));
+    private boolean panicWas;
 
     /** Когда последний раз сработал — Auto Reconnect не переподключается после этого. */
     static long lastLeaveAt;
 
     public AutoLeave() {
-        super("auto_leave", "Auto Leave", "Выходит с сервера, когда мало HP или рядом чужой игрок.", Category.PLAYER);
+        super("auto_leave", "Panic Disconnect", "Выход с сервера по клавише, при малом HP или когда рядом чужой игрок.", Category.PVP);
     }
 
     public static boolean leftRecently() {
@@ -42,9 +45,12 @@ public final class AutoLeave extends Module {
         if (p == null || mc.level == null || mc.getConnection() == null || !p.isAlive()) return;
 
         String reason = null;
-        if (onHealth.get() && p.getHealth() <= health.get()) {
+        boolean pd = mc.screen == null && dev.mraz1visual.input.Keys.isDown(panic.get());
+        if (pd && !panicWas) reason = "клавиша паники";
+        panicWas = pd;
+        if (reason == null && onHealth.get() && p.getHealth() <= health.get()) {
             reason = "мало здоровья (" + Math.round(p.getHealth()) + " HP)";
-        } else if (onPlayer.get()) {
+        } else if (reason == null && onPlayer.get()) {
             double r = radius.get();
             for (Player o : mc.level.players()) {
                 if (o == p || !o.isAlive()) continue;

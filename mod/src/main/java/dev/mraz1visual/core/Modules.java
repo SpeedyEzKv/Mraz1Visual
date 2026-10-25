@@ -25,6 +25,11 @@ public final class Modules {
         m.register(new AutoLeave());
         m.register(new ElytraSwap());
 
+        // ── PvP (всё выключено по умолчанию) ─────────────────
+        m.register(new Trajectories());
+        m.register(new NoInteract());
+        m.register(new KeyPearl());
+
         // ── Visuals ──────────────────────────────────────────
         m.register(new Hud());
         m.register(new NameTags());

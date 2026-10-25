@@ -25,7 +25,7 @@ public final class ElytraSwap extends Module {
     private static Item[] chestplates;
 
     public ElytraSwap() {
-        super("elytra_swap", "Elytra Swap", "Нагрудник ⇄ элитры по клавише.", Category.PLAYER);
+        super("elytra_swap", "Elytra Swap", "Нагрудник ⇄ элитры по клавише.", Category.PVP);
     }
 
     private static Item[] chestplates() {

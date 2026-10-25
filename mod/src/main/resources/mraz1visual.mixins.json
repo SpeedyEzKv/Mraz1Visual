@@ -29,7 +29,8 @@
     "CameraZoomMixin",
     "ChatComponentMixin",
     "SoundInstanceMixin",
-    "LoadingOverlayMixin"
+    "LoadingOverlayMixin",
+    "MultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

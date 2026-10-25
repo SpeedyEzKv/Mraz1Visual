@@ -29,6 +29,8 @@ public final class Icons {
             Map.entry("staff_wheel", SHIELD),
             Map.entry("phrase_wheel", CHAT),
             Map.entry("trajectories", ARC),
+            Map.entry("key_pearl", PEARL),
+            Map.entry("no_interact", HAND),
             Map.entry("hit_effects", STAR),
             Map.entry("hit_sounds", NOTE),
             Map.entry("motion_blur", BLUR),
@@ -105,6 +107,8 @@ public final class Icons {
     public static int forCategory(dev.mraz1visual.core.Category c) {
         return switch (c) {
             case PLAYER -> PLAYER;
+            case PVP -> SWORD;
+            case HUD -> HUD;
             case VISUALS -> EYE;
             case COSMETICS -> HAT;
             case SWORDS -> SWORD;

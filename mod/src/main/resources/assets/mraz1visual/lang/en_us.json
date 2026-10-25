@@ -1,3 +1,14 @@
 {
-  "mraz1visual.screen.title": "Mraz1Visual"
+  "mraz1visual.screen.title": "Mraz1Visual",
+  "mraz1visual.pvp.warning": "Combat automation can get you banned\non servers (including FunTime).\nUse at your own risk.",
+  "mraz1visual.hud.editor.title": "HUD Editor",
+  "mraz1visual.hud.editor.hint": "Drag elements · wheel — scale · Shift — no snapping · RMB — reset · Esc — done",
+  "mraz1visual.hud.editor.open": "Open editor",
+  "mraz1visual.hud.editor.grid": "Grid",
+  "mraz1visual.mods.title": "Mods",
+  "mraz1visual.mods.open_folder": "Open mods folder",
+  "mraz1visual.mods.count": "Mods loaded: %s",
+  "mraz1visual.mods.empty": "No Fabric mods found",
+  "mraz1visual.bench.start": "Benchmark: 30 seconds, don't touch the mouse…",
+  "mraz1visual.bench.result": "Benchmark: average FPS %s · 1%% low %s · 0.1%% low %s"
 }

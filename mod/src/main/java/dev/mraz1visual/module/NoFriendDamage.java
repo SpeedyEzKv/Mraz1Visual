@@ -7,7 +7,7 @@ import dev.mraz1visual.render.FriendGuard;
 /** Удар по другу (Misc → Friends) просто не отправляется. */
 public final class NoFriendDamage extends Module {
     public NoFriendDamage() {
-        super("no_friend_damage", "No Friend Damage", "Не даёт случайно ударить друга из списка Friends.", Category.PLAYER);
+        super("no_friend_damage", "No Friend Damage", "Не даёт случайно ударить друга из списка Friends.", Category.PVP);
     }
 
     @Override

@@ -54,6 +54,8 @@ public final class ClientScreen extends Screen implements Host {
     /** Вкладки верхней панели. Порядок здесь = порядок в окне. */
     enum Tab {
         PLAYER("Player", Icons.PLAYER, Category.PLAYER),
+        PVP("PvP", Icons.SWORD, Category.PVP),
+        HUD("HUD", Icons.HUD, Category.HUD),
         VISUALS("Visuals", Icons.EYE, Category.VISUALS, Category.SKY),
         SHADERS("Shaders", Icons.SUN, Category.SHADERS),
         MISC("Misc", Icons.GRID, Category.MISC, Category.PERFORMANCE),
@@ -76,7 +78,7 @@ public final class ClientScreen extends Screen implements Host {
             this.cats = cats;
         }
 
-        static final Tab[] BAR = {PLAYER, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, FORUM, MUSIC, CONFIGS};
+        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, FORUM, MUSIC, CONFIGS};
     }
 
     private final ModuleManager mm = Mraz1Visual.MODULES;
@@ -400,13 +402,20 @@ public final class ClientScreen extends Screen implements Host {
         layoutList();
     }
 
+    private static final String[] PVP_WARN = Lang.lines("mraz1visual.pvp.warning");
+
+    /** Высота плашки-предупреждения над списком (только вкладка PvP без поиска). */
+    private int warnH() {
+        return tab == Tab.PVP && search.isEmpty() ? PVP_WARN.length * 9 + 14 : 0;
+    }
+
     private void layoutList() {
         int y = 0;
         for (int i = 0; i < rows.size() && i < rowY.length; i++) {
             rowY[i] = y;
             y += rows.get(i) instanceof String ? HEAD : ROW;
         }
-        int listH = bodyH() - 30;
+        int listH = bodyH() - 30 - warnH();
         listMax = Math.max(0, y - listH + 6);
         listTarget = Math.min(listTarget, listMax);
     }
@@ -414,7 +423,7 @@ public final class ClientScreen extends Screen implements Host {
     private void scrollListTo(Module m) {
         int i = rows.indexOf(m);
         if (i < 0 || i >= rowY.length) return;
-        int listH = bodyH() - 30;
+        int listH = bodyH() - 30 - warnH();
         if (rowY[i] < listTarget) listTarget = rowY[i];
         else if (rowY[i] + ROW > listTarget + listH) listTarget = Math.min(listMax, rowY[i] + ROW - listH);
     }
@@ -736,6 +745,14 @@ public final class ClientScreen extends Screen implements Host {
         d.text(title, Fonts.Kind.BOLD, x + 12, y + 9, Theme.TEXT);
         if (all > 0) d.textRight(on + " / " + all, x + w - 12, y + 9, Theme.TEXT_MUTED);
         int ly = y + 26, lh = h - 30;
+        if (warnH() > 0) {
+            // плашка вкладки PvP: предупреждение о бане
+            int bh = warnH() - 4;
+            d.round(x + 8, ly, w - 16, bh, 8, Theme.isLight() ? 0x30FF8A3D : 0x38FF8A3D);
+            for (int i = 0; i < PVP_WARN.length; i++) d.textScaled(PVP_WARN[i], Fonts.Kind.TEXT, x + 14, ly + 6 + i * 9, 0.72f, Theme.isLight() ? 0xFF9A4A10 : 0xFFFFC08A);
+            ly += warnH();
+            lh -= warnH();
+        }
         if (rows.isEmpty() || rows.size() == 1 && rows.get(0) instanceof String) {
             String t = !search.isEmpty() ? "Ничего не найдено" : tab.cats.length > 0 ? tab.cats[0].emptyText : "";
             d.textCenter(Draw.ellipsize(t, w - 20), x + w / 2, ly + lh / 2 - 4, Theme.TEXT_MUTED);
@@ -990,7 +1007,7 @@ public final class ClientScreen extends Screen implements Host {
             return true;
         }
         // список
-        int lx = listX(), ly = bodyY() + 26, lh = bodyH() - 30;
+        int lx = listX(), ly = bodyY() + 26 + warnH(), lh = bodyH() - 30 - warnH();
         if (Widget.hit(mx, my, lx, ly, LIST_W, lh)) {
             double ry = my - ly + listScroll;
             for (int i = 0; i < rows.size() && i < rowY.length; i++) {

@@ -1,3 +1,14 @@
 {
-  "mraz1visual.screen.title": "Mraz1Visual"
+  "mraz1visual.screen.title": "Mraz1Visual",
+  "mraz1visual.pvp.warning": "Автоматизация боя может приводить к бану\nна серверах (в т. ч. FunTime).\nИспользуешь на свой риск.",
+  "mraz1visual.hud.editor.title": "Редактор HUD",
+  "mraz1visual.hud.editor.hint": "Тяни элементы мышью · колесо — масштаб · Shift — без привязки · ПКМ — сброс · Esc — готово",
+  "mraz1visual.hud.editor.open": "Открыть редактор",
+  "mraz1visual.hud.editor.grid": "Сетка",
+  "mraz1visual.mods.title": "Моды",
+  "mraz1visual.mods.open_folder": "Открыть папку модов",
+  "mraz1visual.mods.count": "Загружено модов: %s",
+  "mraz1visual.mods.empty": "Fabric-моды не найдены",
+  "mraz1visual.bench.start": "Бенчмарк: 30 секунд, не трогай мышь…",
+  "mraz1visual.bench.result": "Бенчмарк: средний FPS %s · 1%% low %s · 0.1%% low %s"
 }
