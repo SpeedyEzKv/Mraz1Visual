@@ -22,7 +22,7 @@ public final class ItemCounterHud extends Module implements HudLayer {
     private static final String[] NUM = new String[1000];
     private static final int CELL = 20, PAD = 4;
 
-    final HudPos pos = hudPos(1.0, 0.55);
+    final HudPos pos = hudPos(1.0, 0.75);
     final BoolSetting totems = add(new BoolSetting("totems", "Тотемы", true).group("Предметы"));
     final BoolSetting crystals = add(new BoolSetting("crystals", "Кристаллы Энда", true).group("Предметы"));
     final BoolSetting pearls = add(new BoolSetting("pearls", "Эндер-жемчуг", true).group("Предметы"));

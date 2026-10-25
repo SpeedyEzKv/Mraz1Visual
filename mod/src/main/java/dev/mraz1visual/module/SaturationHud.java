@@ -7,7 +7,7 @@ public final class SaturationHud extends TextHud {
     private int last = -1;
 
     public SaturationHud() {
-        super("hud_saturation", "Saturation", "Скрытое насыщение — пока оно есть, голод не тратится.", 0.0, 0.76);
+        super("hud_saturation", "Saturation", "Скрытое насыщение — пока оно есть, голод не тратится.", 1.0, 0.54);
         labels[0] = "Насыщение";
     }
 

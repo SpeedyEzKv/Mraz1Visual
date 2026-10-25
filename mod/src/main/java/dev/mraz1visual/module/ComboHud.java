@@ -13,7 +13,7 @@ public final class ComboHud extends TextHud implements AttackListener {
     private Entity target;
 
     public ComboHud() {
-        super("hud_combo", "Combo Counter", "Удары подряд по цели, пока тебя не ударили.", 0.0, 0.52);
+        super("hud_combo", "Combo Counter", "Удары подряд по цели, пока тебя не ударили.", 1.0, 0.22);
         labels[0] = "Комбо";
     }
 

@@ -60,3 +60,27 @@ jobs:
         with:
           name: mraz1visual-mc${{ matrix.mc }}
           path: mod/build/libs/all/*.jar
+
+  # Лаунчер: тесты Rust (разбор версий модов) и установщик .exe — артефакт для проверки ветки
+  launcher:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: launcher
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: launcher/src-tauri
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+      - run: npm install
+      - run: npx tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-setup
+          path: launcher/src-tauri/target/release/bundle/nsis/*-setup.exe

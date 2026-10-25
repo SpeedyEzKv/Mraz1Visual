@@ -12,7 +12,7 @@ public final class ReachHud extends TextHud implements AttackListener {
     private boolean shown;
 
     public ReachHud() {
-        super("hud_reach", "Reach Display", "Дистанция последнего удара.", 0.0, 0.58);
+        super("hud_reach", "Reach Display", "Дистанция последнего удара.", 1.0, 0.30);
         labels[0] = "Дистанция";
         values[0] = "—";
     }

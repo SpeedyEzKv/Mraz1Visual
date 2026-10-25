@@ -30,6 +30,8 @@ public final class ModsPanel implements Panel {
             String id = m.getId();
             // сама игра, Java и вложенные библиотеки — не моды, которые ставил игрок
             if (id.equals("minecraft") || id.equals("java") || c.getContainingMod().isPresent()) continue;
+            // модули Fabric API (в dev-клиенте лежат отдельно) — это один мод «Fabric API»
+            if (id.startsWith("fabric-") && !id.equals("fabric-api")) continue;
             if (m.getType().equals("builtin")) continue;
             mods.add(new Entry(m.getName(), m.getVersion().getFriendlyString(), id, m.getDescription().replace('\n', ' ')));
         }

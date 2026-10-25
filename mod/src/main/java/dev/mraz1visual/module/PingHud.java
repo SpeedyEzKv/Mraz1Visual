@@ -9,7 +9,7 @@ public final class PingHud extends TextHud {
     private boolean has;
 
     public PingHud() {
-        super("hud_ping", "Ping", "Задержка до сервера.", 0.0, 0.28);
+        super("hud_ping", "Ping", "Задержка до сервера.", 1.0, 0.06);
         labels[0] = "Пинг";
     }
 

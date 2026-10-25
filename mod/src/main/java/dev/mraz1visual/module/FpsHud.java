@@ -7,7 +7,7 @@ public final class FpsHud extends TextHud {
     private final IntText fps = new IntText("");
 
     public FpsHud() {
-        super("hud_fps", "FPS", "Кадры в секунду.", 0.0, 0.10);
+        super("hud_fps", "FPS", "Кадры в секунду.", 0.0, 0.06);
         labels[0] = "FPS";
     }
 

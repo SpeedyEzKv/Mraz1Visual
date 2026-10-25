@@ -8,7 +8,7 @@ public final class PackHud extends TextHud {
     private boolean has;
 
     public PackHud() {
-        super("hud_pack", "Pack Display", "Какой ресурспак сейчас включён.", 0.0, 0.64);
+        super("hud_pack", "Pack Display", "Какой ресурспак сейчас включён.", 1.0, 0.38);
         labels[0] = "Пак";
     }
 

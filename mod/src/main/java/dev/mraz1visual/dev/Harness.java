@@ -219,6 +219,7 @@ public final class Harness {
             }
             case "inventory" -> mc.setScreen(new InventoryScreen(mc.player));
             case "close" -> mc.setScreen(null);
+            case "hudedit" -> dev.mraz1visual.module.HudEditor.open();
             case "swing" -> dev.mraz1visual.compat.Mc.swing(mc.player);
             case "key" -> {
                 boolean on = a[2].equals("on");

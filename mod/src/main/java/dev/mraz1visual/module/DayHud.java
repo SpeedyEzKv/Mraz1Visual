@@ -7,7 +7,7 @@ public final class DayHud extends TextHud {
     private final IntText day = new IntText("");
 
     public DayHud() {
-        super("hud_day", "Day Counter", "Сколько игровых дней прошло.", 0.0, 0.70);
+        super("hud_day", "Day Counter", "Сколько игровых дней прошло.", 1.0, 0.46);
         labels[0] = "День";
     }
 

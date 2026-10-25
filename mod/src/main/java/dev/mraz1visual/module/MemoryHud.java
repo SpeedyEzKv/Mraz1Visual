@@ -8,7 +8,7 @@ public final class MemoryHud extends TextHud {
     private int lastPct = -1;
 
     public MemoryHud() {
-        super("hud_memory", "Memory Usage", "Сколько памяти занимает игра.", 0.0, 0.46);
+        super("hud_memory", "Memory Usage", "Сколько памяти занимает игра.", 0.0, 0.50);
         labels[0] = "Память";
     }
 

@@ -35,6 +35,15 @@ public final class ClientSettings extends Module {
             "dark", "Тёмная", "light", "Светлая")
             .group("Окно"));
 
+    public final EnumSetting tabsLayout = add(new EnumSetting("tabs_layout", "Вкладки", 0,
+            "side", "Слева (боковая панель)", "top", "Сверху")
+            .group("Окно"));
+
+    public final EnumSetting language = add(new EnumSetting("language", "Язык интерфейса", 0,
+            "ru_ru", "Русский", "en_us", "English (частично)")
+            .group("Окно")
+            .onChange(() -> dev.mraz1visual.ui.Lang.setLanguage(ClientSettings.this.language.getId())));
+
     public final BoolSetting vanillaFont = add(new BoolSetting("vanilla_font", "Шрифт Minecraft (без сглаживания)", false)
             .group("Окно")
             .onChange(dev.mraz1visual.ui.Fonts::clearWidths));

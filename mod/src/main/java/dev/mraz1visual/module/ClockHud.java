@@ -13,7 +13,7 @@ public final class ClockHud extends TextHud {
     private boolean lastH12, lastSeconds;
 
     public ClockHud() {
-        super("hud_clock", "Clock", "Текущее время.", 0.0, 0.40);
+        super("hud_clock", "Clock", "Текущее время.", 0.0, 0.42);
         labels[0] = "Время";
     }
 

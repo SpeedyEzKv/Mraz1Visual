@@ -12,7 +12,7 @@ public final class CpsHud extends TextHud {
     private boolean lWas, rWas;
 
     public CpsHud() {
-        super("hud_cps", "CPS", "Клики в секунду левой и правой кнопкой.", 0.0, 0.16);
+        super("hud_cps", "CPS", "Клики в секунду левой и правой кнопкой.", 0.0, 0.14);
         labels[0] = "CPS";
     }
 

@@ -79,6 +79,23 @@ public final class ClientScreen extends Screen implements Host {
             this.cats = cats;
         }
 
+        /** Подпись в боковой панели — по-русски. */
+        String sideLabel() {
+            return switch (this) {
+                case PLAYER -> "Игрок";
+                case VISUALS -> "Визуалы";
+                case SHADERS -> "Шейдеры";
+                case MISC -> "FPS и разное";
+                case COSMETICS -> "Косметика";
+                case MARKET -> "Маркет";
+                case MODS -> Lang.get("mraz1visual.mods.title");
+                case FORUM -> "Форум";
+                case MUSIC -> "Музыка";
+                case CONFIGS -> "Конфиги";
+                default -> label;
+            };
+        }
+
         static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
     }
 
@@ -139,7 +156,8 @@ public final class ClientScreen extends Screen implements Host {
     private long lastNanos;
     private float openT, contentT = 1f;
     private boolean closing;
-    private final Spring dropX = Spring.ui(-1), dropW = Spring.ui(0), listDrop = Spring.ui(-1);
+    private final Spring dropX = Spring.ui(-1), dropW = Spring.ui(0), listDrop = Spring.ui(-1), sideDrop = Spring.ui(-1);
+    private static final int SIDE_W = 128;
     private float togT, bannerHover, searchGlow;
     private final float[] tabHover = new float[Tab.BAR.length];
     private final float[] iconHover = new float[4];
@@ -178,6 +196,7 @@ public final class ClientScreen extends Screen implements Host {
     @Override
     protected void init() {
         d.font = this.font;
+        Lang.setLanguage(cs.language.getId());
         if (!restored) {
             restored = true;
             restore();
@@ -303,7 +322,17 @@ public final class ClientScreen extends Screen implements Host {
 
     private int bodyY() { return wy + TOP_H + 6; }
     private int bodyH() { return wh - TOP_H - 6 - PAD; }
-    private int listX() { return wx + PAD; }
+    private int listX() { return contentX(); }
+    /** Левый край содержимого: правее боковой панели вкладок, если она включена. */
+    private int contentX() { return wx + PAD + (side() ? SIDE_W + GAP : 0); }
+    private int contentW() { return wx + ww - PAD - contentX(); }
+    private boolean side() { return cs.tabsLayout.getId().equals("side"); }
+    private int sideRow() { return Math.max(18, Math.min(28, (bodyH() - 16) / Tab.BAR.length)); }
+
+    private int sideIndex(double my) {
+        int i = (int) Math.floor((my - bodyY() - 8) / sideRow());
+        return i >= 0 && i < Tab.BAR.length ? i : -1;
+    }
     private int detailX() { return listX() + LIST_W + GAP; }
     private int detailW() { return wx + ww - PAD - detailX(); }
     private int bannerH() { return Math.max(118, Math.min(196, Math.round(bodyH() * 0.42f))); }
@@ -595,7 +624,7 @@ public final class ClientScreen extends Screen implements Host {
         drawTopBar(mx, my, dt, now);
         Panel panel = panel();
         if (tab == Tab.CONFIGS && search.isEmpty()) drawConfigs(mx, my, dt);
-        else if (panel != null && search.isEmpty()) panel.render(d, mx, my, dt, wx + PAD, bodyY(), ww - 2 * PAD, bodyH());
+        else if (panel != null && search.isEmpty()) panel.render(d, mx, my, dt, contentX(), bodyY(), contentW(), bodyH());
         else {
             drawList(mx, my, dt);
             drawDetail(mx, my, dt);
@@ -638,6 +667,39 @@ public final class ClientScreen extends Screen implements Host {
         d.text("Mraz1Visual", Fonts.Kind.BOLD, lx + 32, ly + 4, Theme.TEXT);
         d.text("v2", lx + 32, ly + 15, Theme.TEXT_MUTED);
 
+        if (side()) drawSide(mx, my, dt);
+        else drawTabRail(mx, my, dt);
+        drawSearchAndIcons(mx, my, dt, now);
+    }
+
+    /** Боковая панель вкладок: иконка и подпись, «капля» перетекает к выбранной. */
+    private void drawSide(double mx, double my, float dt) {
+        int x = wx + PAD, y = bodyY(), w = SIDE_W, h = bodyH(), row = sideRow();
+        glassPanel(x, y, w, h, CARD_R, Theme.GLASS_PANEL, 0.9f);
+        int ai = -1;
+        for (int i = 0; i < Tab.BAR.length; i++) if (Tab.BAR[i] == tab && search.isEmpty()) ai = i;
+        if (ai >= 0) {
+            float target = y + 8 + ai * row;
+            if (sideDrop.value < 0) sideDrop.snap(target);
+            sideDrop.target = target;
+            float sy = sideDrop.update(dt);
+            float stretch = Math.min(10f, Math.abs(sideDrop.velocity) * 0.02f);
+            d.glass(x + 6, Math.round(sy - stretch / 2 + 1), w - 12, Math.round(row - 2 + stretch), 10,
+                    Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0x60 : 0x3C), 1.35f);
+        } else sideDrop.snap(-1);
+        for (int i = 0; i < Tab.BAR.length; i++) {
+            Tab t = Tab.BAR[i];
+            int ry = y + 8 + i * row;
+            boolean on = i == ai, hov = Widget.hit(mx, my, x + 6, ry, w - 12, row);
+            tabHover[i] = Anim.to(tabHover[i], hov ? 1 : 0, dt);
+            if (hov && !on) d.round(x + 6, ry + 1, w - 12, row - 2, 10, Theme.HOVER);
+            int c = on ? (Theme.isLight() ? Theme.TEXT : 0xFFFFFFFF) : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, tabHover[i]);
+            d.icon(t.icon, x + 16, ry + (row - 10) / 2, 10, c);
+            d.text(Draw.ellipsize(t.sideLabel(), w - 44), on ? Fonts.Kind.BOLD : Fonts.Kind.TEXT, x + 34, Draw.textY(ry, row), c);
+        }
+    }
+
+    private void drawTabRail(double mx, double my, float dt) {
         // полоса вкладок — стеклянная капсула; вкладки плавно раздвигаются под подпись активной
         int ty = wy + (TOP_H - 30) / 2, th = 30;
         for (int i = 0; i < Tab.BAR.length; i++) {
@@ -681,7 +743,9 @@ public final class ClientScreen extends Screen implements Host {
                 d.icon(t.icon, tx + (tw - 10) / 2, ty + (th - 10) / 2, 10, c);
             }
         }
+    }
 
+    private void drawSearchAndIcons(double mx, double my, float dt, long now) {
         // поиск
         int sx = searchX(), sy = searchY(), sw = SEARCH_W, sh = 24;
         boolean hov = Widget.hit(mx, my, sx, sy, sw, sh);
@@ -912,7 +976,7 @@ public final class ClientScreen extends Screen implements Host {
     // ── конфиги ──────────────────────────────────────────────
 
     private void drawConfigs(double mx, double my, float dt) {
-        int x = wx + PAD, y = bodyY(), w = ww - 2 * PAD, h = bodyH();
+        int x = contentX(), y = bodyY(), w = contentW(), h = bodyH();
         glassPanel(x, y, w, h, CARD_R, Theme.GLASS_PANEL, 0.9f);
         int lw = 180;
         profiles.renderSidebar(d, mx, my, dt, x + 8, y + 8, lw, h - 16);
@@ -971,9 +1035,14 @@ public final class ClientScreen extends Screen implements Host {
             return true;
         }
         // шапка
+        if (side() && Widget.hit(mx, my, wx + PAD, bodyY(), SIDE_W, bodyH())) {
+            int i = sideIndex(my);
+            if (i >= 0) selectTab(Tab.BAR[i]);
+            return true;
+        }
         if (my < wy + TOP_H) {
             searchFocused = false;
-            for (int i = 0; i < Tab.BAR.length; i++) {
+            for (int i = 0; i < Tab.BAR.length && !side(); i++) {
                 if (Widget.hit(mx, my, Math.round(tabAX[i]), wy + (TOP_H - 30) / 2, Math.round(tabAW[i]), 30)) {
                     selectTab(Tab.BAR[i]);
                     return true;
@@ -999,7 +1068,7 @@ public final class ClientScreen extends Screen implements Host {
         Panel panel = panel();
         if (search.isEmpty() && tab == Tab.CONFIGS) {
             if (b != 0) return true;
-            int x = wx + PAD, y = bodyY(), lw = 180;
+            int x = contentX(), y = bodyY(), lw = 180;
             if (Widget.hit(mx, my, x + 8, y + 8, lw, bodyH() - 16)) profiles.clickSidebar(mx, my, x + 8, y + 8, lw, doubleClick);
             else profiles.clickContent(mx, my, x + lw + 16, y);
             return true;

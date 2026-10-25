@@ -10,7 +10,7 @@ public final class ServerHud extends TextHud {
     private boolean has;
 
     public ServerHud() {
-        super("hud_server", "Server Address", "Адрес сервера, на котором ты играешь.", 0.0, 0.34);
+        super("hud_server", "Server Address", "Адрес сервера, на котором ты играешь.", 1.0, 0.14);
         labels[0] = "Сервер";
     }
 
