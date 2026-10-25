@@ -19,7 +19,8 @@ public final class Keystrokes extends Module implements HudLayer {
         for (int i = 0; i < CPS.length; i++) CPS[i] = i + " CPS";
     }
 
-    final EnumSetting corner = add(new EnumSetting("corner", "Угол", 0, "bl", "Слева снизу", "tl", "Слева сверху", "tr", "Справа сверху"));
+    final EnumSetting corner = add(new EnumSetting("corner", "Угол", 0, "bl", "Слева снизу", "tl", "Слева сверху", "tr", "Справа сверху", "free", "Свободно (редактор HUD)"));
+    final dev.mraz1visual.render.HudPos pos = hudPos(0.0, 1.0).activeWhen(() -> corner.getId().equals("free"), () -> corner.set(3));
 
     private final float[] anim = new float[7];
     private final long[] lmb = new long[64], rmb = new long[64];
@@ -28,7 +29,7 @@ public final class Keystrokes extends Module implements HudLayer {
     private long last;
 
     public Keystrokes() {
-        super("keystrokes", "Keystrokes", "WASD, пробел и клики с CPS на экране.", Category.VISUALS);
+        super("keystrokes", "Keystrokes", "WASD, пробел и клики с CPS на экране.", Category.HUD);
     }
 
     @Override
@@ -47,11 +48,14 @@ public final class Keystrokes extends Module implements HudLayer {
 
         int s = 22, gap = 2, total = s * 3 + gap * 2, hgt = s * 2 + gap + 14 + gap + 18;
         int x, y;
+        boolean free = pos.active();
         switch (corner.getId()) {
+            case "free" -> { pos.begin(g, total, hgt); x = 0; y = 0; }
             case "tl" -> { x = 6; y = 6; }
             case "tr" -> { x = g.guiWidth() - total - 6; y = 30; }
             default -> { x = 6; y = g.guiHeight() - hgt - 6; }
         }
+        if (!free) pos.track(x, y, total, hgt);
         key(g, mc, 0, "W", mc.options.keyUp, x + s + gap, y, s, s, dt);
         key(g, mc, 1, "A", mc.options.keyLeft, x, y + s + gap, s, s, dt);
         key(g, mc, 2, "S", mc.options.keyDown, x + s + gap, y + s + gap, s, s, dt);
@@ -62,6 +66,7 @@ public final class Keystrokes extends Module implements HudLayer {
         int half = (total - gap) / 2;
         key(g, mc, 5, CPS[Math.min(CPS.length - 1, count(lmb, ms))], mc.options.keyAttack, x, yy, half, 18, dt);
         key(g, mc, 6, CPS[Math.min(CPS.length - 1, count(rmb, ms))], mc.options.keyUse, x + half + gap, yy, half, 18, dt);
+        if (free) pos.end(g);
     }
 
     private static int count(long[] buf, long now) {

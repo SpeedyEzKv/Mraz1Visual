@@ -42,6 +42,15 @@ public abstract class Module {
         return setting;
     }
 
+    /** Место на экране для редактора HUD; fx, fy — 0..1 от левого верхнего до правого нижнего края. */
+    protected final dev.mraz1visual.render.HudPos hudPos(double fx, double fy) {
+        dev.mraz1visual.render.HudPos p = new dev.mraz1visual.render.HudPos(this, fx, fy);
+        add(p.x);
+        add(p.y);
+        add(p.scale);
+        return p;
+    }
+
     public final List<Setting<?>> settings() { return settingsView; }
 
     public final boolean isEnabled() { return enabled; }

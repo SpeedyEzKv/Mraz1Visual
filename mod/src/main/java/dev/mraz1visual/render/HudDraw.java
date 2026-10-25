@@ -23,6 +23,7 @@ public final class HudDraw {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null) return;
         float pt = delta.getGameTimeDeltaPartialTick(true);
+        dev.mraz1visual.render.HudPos.nextFrame();
         for (HudLayer l : layers) {
             try {
                 l.renderHud(g, pt);

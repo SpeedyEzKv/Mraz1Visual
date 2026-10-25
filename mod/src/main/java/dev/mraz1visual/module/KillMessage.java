@@ -17,7 +17,7 @@ public final class KillMessage extends Module implements AttackListener {
     private long lastHitAt;
 
     public KillMessage() {
-        super("kill_message", "Kill Message", "Сообщение в чат после убийства (config/mraz1visual/kill-messages.txt).", Category.MISC);
+        super("kill_message", "Auto GG", "Фраза в чат после убийства — свои фразы в config/mraz1visual/kill-messages.txt.", Category.MISC);
     }
 
     @Override

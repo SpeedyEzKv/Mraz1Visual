@@ -14,6 +14,7 @@ public final class Modules {
 
         // ── Игрок ────────────────────────────────────────────
         m.register(new AutoSprint());
+        m.register(new ToggleSneak());
         m.register(new HotbarSwap());
         m.register(new NoFriendDamage());
         m.register(new FakePlayer());
@@ -32,11 +33,29 @@ public final class Modules {
 
         // ── Visuals ──────────────────────────────────────────
         m.register(new Hud());
+
+        // HUD: редактор и элементы со своим местом на экране
+        m.register(new HudEditor());
+        m.register(new FpsHud());
+        m.register(new CpsHud());
+        m.register(new CoordsHud());
+        m.register(new PingHud());
+        m.register(new ServerHud());
+        m.register(new ClockHud());
+        m.register(new MemoryHud());
+        m.register(new ComboHud());
+        m.register(new ReachHud());
+        m.register(new PackHud());
+        m.register(new DayHud());
+        m.register(new SaturationHud());
+        m.register(new ItemCounterHud());
+
         m.register(new NameTags());
         m.register(new TargetEsp());
         m.register(new HitEffects());
         m.register(new HitSounds());
         m.register(new MotionBlur());
+        m.register(new ParticleMultiplier());
         m.register(new PostFxModule());
         m.register(new AspectRatio());
         m.register(new FullBright());

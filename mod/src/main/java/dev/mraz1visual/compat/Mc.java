@@ -90,6 +90,15 @@ public final class Mc {
         //?}
     }
 
+    /** Время мира в тиках с начала (для счётчика дней). В 26.x — игровое время. */
+    public static long totalDayTime(net.minecraft.client.multiplayer.ClientLevel level) {
+        //? if >=26.1 {
+        /*return level.getGameTime();
+        *///?} else {
+        return level.getDayTime();
+        //?}
+    }
+
     /** Время суток в тиках (0 — рассвет, 6000 — полдень). В 26.x время идёт через «часы мира» — берём игровое. */
     public static long dayTime(net.minecraft.client.multiplayer.ClientLevel level) {
         //? if >=26.1 {

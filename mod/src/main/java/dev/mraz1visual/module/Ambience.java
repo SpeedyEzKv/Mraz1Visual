@@ -12,6 +12,8 @@ public final class Ambience extends Module {
     final SliderSetting hour = add(new SliderSetting("hour", "Час", 18, 0, 23.5, 0.5, ":00")
             .format(v -> String.format("%02d:%02d", (int) v, (int) Math.round((v - (int) v) * 60))));
     final BoolSetting clear = add(new BoolSetting("clear", "Без дождя", true));
+    final dev.mraz1visual.setting.EnumSetting weather = add(new dev.mraz1visual.setting.EnumSetting("weather", "Погода", 0,
+            "legacy", "По настройке «Без дождя»", "clear", "Ясно", "rain", "Дождь / снег", "thunder", "Гроза"));
 
     public Ambience() {
         super("ambience", "Ambience", "Время суток и погода только для тебя.", Category.SKY);
@@ -27,9 +29,16 @@ public final class Ambience extends Module {
             //? if <26.1
             mc.level.getLevelData().setDayTime(ticks);
         }
-        if (clear.get()) {
+        String w = weather.getId();
+        if (w.equals("clear") || w.equals("legacy") && clear.get()) {
             mc.level.setRainLevel(0f);
             mc.level.setThunderLevel(0f);
+        } else if (w.equals("rain")) {
+            mc.level.setRainLevel(1f);
+            mc.level.setThunderLevel(0f);
+        } else if (w.equals("thunder")) {
+            mc.level.setRainLevel(1f);
+            mc.level.setThunderLevel(1f);
         }
     }
 }

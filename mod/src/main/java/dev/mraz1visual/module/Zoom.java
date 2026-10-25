@@ -16,6 +16,9 @@ public final class Zoom extends Module {
     final KeySetting key = add(new KeySetting("key", "Клавиша (держать)", InputConstants.KEY_C));
     final SliderSetting factor = add(new SliderSetting("factor", "Приближение", 4, 1.5, 10, 0.5, "×"));
     final BoolSetting smoothCam = add(new BoolSetting("smooth", "Плавная камера при зуме", true));
+    final BoolSetting wheel = add(new BoolSetting("wheel", "Колесо мыши меняет приближение", true));
+    /** Множитель от колеса мыши; сбрасывается, когда отпускаешь клавишу. */
+    private float wheelMul = 1f;
 
     private boolean held;
     private float current = 1f;
@@ -40,7 +43,16 @@ public final class Zoom extends Module {
                     mc.options.smoothCamera = smoothWas;
                 }
             }
+            if (!now) wheelMul = 1f;
         }
+    }
+
+    /** Из миксина MouseHandler.onScroll: true — прокрутка ушла в зум. */
+    public static boolean scroll(double dy) {
+        Zoom z = instance;
+        if (z == null || !z.isEnabled() || !z.held || !z.wheel.get() || dy == 0 || Minecraft.getInstance().screen != null) return false;
+        z.wheelMul = Math.max(0.25f, Math.min(4f, z.wheelMul * (dy > 0 ? 1.15f : 1f / 1.15f)));
+        return true;
     }
 
     @Override
@@ -57,7 +69,7 @@ public final class Zoom extends Module {
         long now = System.nanoTime();
         float dt = z.last == 0 ? 0 : Math.min(0.1f, (now - z.last) / 1e9f);
         z.last = now;
-        float target = z.held ? z.factor.getF() : 1f;
+        float target = z.held ? Math.max(1f, z.factor.getF() * z.wheelMul) : 1f;
         z.current += (target - z.current) * (1f - (float) Math.exp(-14f * dt));
         return fov / z.current;
     }
