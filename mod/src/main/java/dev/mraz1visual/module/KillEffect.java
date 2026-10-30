@@ -68,7 +68,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
     private long lastAt;
 
     public KillEffect() {
-        super("kill_effect", "Kill FX", "Цель растворяется в свет, душа уходит вверх — когда ты её добиваешь.", Category.VISUALS);
+        super("kill_effect", "Kill FX", "Цель растворяется в свет, душа уходит вверх — когда ты её добиваешь.", Category.COMBAT);
         instance = this;
     }
 

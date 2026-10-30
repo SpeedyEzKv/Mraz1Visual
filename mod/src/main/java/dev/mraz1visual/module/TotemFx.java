@@ -44,7 +44,7 @@ public final class TotemFx extends Module implements WorldLayer {
     private static TotemFx instance;
 
     public TotemFx() {
-        super("totem_fx", "Totem FX", "Красивая вспышка, кольца и искры, когда срабатывает тотем.", Category.VISUALS);
+        super("totem_fx", "Totem FX", "Красивая вспышка, кольца и искры, когда срабатывает тотем.", Category.COMBAT);
         instance = this;
     }
 

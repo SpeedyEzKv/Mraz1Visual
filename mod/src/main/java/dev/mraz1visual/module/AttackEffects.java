@@ -37,7 +37,7 @@ public final class AttackEffects extends Module implements AttackListener, World
     private final Random rnd = new Random();
 
     public AttackEffects() {
-        super("attack_effects", "Attack Effects", "Вспышка, лучи и волна в точке удара.", Category.VISUALS);
+        super("attack_effects", "Attack Effects", "Вспышка, лучи и волна в точке удара.", Category.COMBAT);
     }
 
     @Override

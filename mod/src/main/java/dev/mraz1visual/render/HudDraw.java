@@ -24,6 +24,15 @@ public final class HudDraw {
         if (mc.options.hideGui || mc.player == null) return;
         float pt = delta.getGameTimeDeltaPartialTick(true);
         dev.mraz1visual.render.HudPos.nextFrame();
+        float hs = dev.mraz1visual.module.UiAnimations.hudScale(mc);
+        boolean anim = hs < 0.999f;
+        if (anim) {
+            float cx = g.guiWidth() / 2f, cy = g.guiHeight() / 2f;
+            g.pose().pushMatrix();
+            g.pose().translate(cx, cy);
+            g.pose().scale(hs, hs);
+            g.pose().translate(-cx, -cy);
+        }
         for (HudLayer l : layers) {
             try {
                 l.renderHud(g, pt);
@@ -31,5 +40,6 @@ public final class HudDraw {
                 ModuleManager.LOG.error("HUD layer {} failed", l.getClass().getSimpleName(), t);
             }
         }
+        if (anim) g.pose().popMatrix();
     }
 }

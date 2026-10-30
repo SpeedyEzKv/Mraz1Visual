@@ -25,7 +25,7 @@ public final class CritIndicator extends Module implements HudLayer {
     private long last;
 
     public CritIndicator() {
-        super("crit_indicator", "Crit Indicator", "Подсказка у прицела, когда удар будет критом.", Category.VISUALS);
+        super("crit_indicator", "Crit Indicator", "Подсказка у прицела, когда удар будет критом.", Category.COMBAT);
     }
 
     static boolean critReady(LocalPlayer p) {

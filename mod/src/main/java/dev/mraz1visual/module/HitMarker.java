@@ -18,7 +18,7 @@ public final class HitMarker extends Module implements AttackListener, HudLayer 
     private boolean crit;
 
     public HitMarker() {
-        super("hit_marker", "Hit Marker", "Крестик у прицела при ударе.", Category.VISUALS);
+        super("hit_marker", "Hit Marker", "Крестик у прицела при ударе.", Category.COMBAT);
     }
 
     @Override

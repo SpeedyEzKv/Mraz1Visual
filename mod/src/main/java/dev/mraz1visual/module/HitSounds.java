@@ -19,7 +19,7 @@ public final class HitSounds extends Module implements AttackListener {
     final SliderSetting pitch = add(new SliderSetting("pitch", "Тон", 1.0, 0.5, 2.0, 0.05, "×"));
 
     public HitSounds() {
-        super("hit_sounds", "Hit Sounds", "Свой звук при каждом твоём ударе.", Category.VISUALS);
+        super("hit_sounds", "Hit Sounds", "Свой звук при каждом твоём ударе.", Category.COMBAT);
     }
 
     private SoundEvent event() {

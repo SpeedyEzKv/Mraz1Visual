@@ -27,6 +27,7 @@ public final class UiAnimations extends Module {
     final BoolSetting chat = add(new BoolSetting("chat", "Чат выезжает снизу", true));
     final BoolSetting tab = add(new BoolSetting("tab", "Tab раскрывается", true));
     final BoolSetting menus = add(new BoolSetting("menus", "Окна клиента (оверлей, стол, браузер)", true));
+    final BoolSetting hud = add(new BoolSetting("hud", "HUD появляется после меню и входа в мир", true));
     final SliderSetting duration = add(new SliderSetting("duration", "Длительность", 0.22, 0.1, 0.6, 0.02, " с"));
 
     private static Screen lastScreen;
@@ -107,12 +108,26 @@ public final class UiAnimations extends Module {
         if (kind == SLIDE) {
             g.pose().translate(0, (1f - easeOut(t)) * 16f);
         } else {
-            float sc = 0.9f + 0.1f * easeBack(t);
+            float sc = 0.95f + 0.05f * easeOut(t);
             float cx = s.width / 2f, cy = s.height / 2f;
             g.pose().translate(cx, cy);
             g.pose().scale(sc, sc);
             g.pose().translate(-cx, -cy);
         }
+    }
+
+    private static boolean hadScreen = true;
+    private static long hudStart;
+
+    /** Масштаб HUD-слоя клиента: после закрытия экрана или входа в мир — 0.95 → 1 с ease-out. */
+    public static float hudScale(Minecraft mc) {
+        UiAnimations u = instance;
+        boolean screen = mc.screen != null || mc.level == null;
+        if (hadScreen && !screen) hudStart = System.nanoTime();
+        hadScreen = screen;
+        if (u == null || !u.isEnabled() || !u.hud.get()) return 1f;
+        float t = u.progress(hudStart);
+        return t >= 1f ? 1f : 0.95f + 0.05f * easeOut(t);
     }
 
     private static void pop(GuiGraphics g) {

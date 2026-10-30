@@ -28,7 +28,7 @@ public final class MotionBlur extends Module implements HudLayer {
     private boolean hasPrev;
 
     public MotionBlur() {
-        super("motion_blur", "Motion Blur", "Плавный шлейф при повороте камеры.", Category.VISUALS);
+        super("motion_blur", "Motion Blur", "Плавный шлейф при повороте камеры.", Category.SKY);
     }
 
     @Override

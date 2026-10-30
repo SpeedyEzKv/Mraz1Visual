@@ -30,7 +30,7 @@ public final class DamageNumbers extends Module implements WorldLayer {
     private final Random rnd = new Random();
 
     public DamageNumbers() {
-        super("damage_numbers", "Damage Numbers", "Цифры урона и лечения над целями.", Category.VISUALS);
+        super("damage_numbers", "Damage Numbers", "Цифры урона и лечения над целями.", Category.COMBAT);
     }
 
     @Override

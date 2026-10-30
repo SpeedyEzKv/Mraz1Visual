@@ -24,7 +24,7 @@ public final class HitBubbles extends Module implements AttackListener, WorldLay
     private final Random rnd = new Random();
 
     public HitBubbles() {
-        super("hit_bubbles", "Hit Bubbles", "Расходящиеся кольца на месте удара.", Category.VISUALS);
+        super("hit_bubbles", "Hit Bubbles", "Расходящиеся кольца на месте удара.", Category.COMBAT);
     }
 
     @Override

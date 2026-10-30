@@ -59,7 +59,7 @@ public final class ClientSettings extends Module {
 
     /** Один акцент на весь интерфейс; «Свой» — цвет ниже. */
     public final EnumSetting accentPreset = add(new EnumSetting("accent_preset", "Акцент", 0,
-            "sky", "Голубой", "violet", "Фиолетовый", "mint", "Мятный", "pink", "Розовый", "amber", "Янтарный", "graphite", "Графит", "custom", "Свой")
+            "mraz", "Mraz1 (фиолет → голубой)", "sky", "Голубой", "violet", "Фиолетовый", "mint", "Мятный", "pink", "Розовый", "amber", "Янтарный", "graphite", "Графит", "custom", "Свой")
             .group("Цвет")
             .onChange(this::applyAccent));
 
@@ -119,6 +119,7 @@ public final class ClientSettings extends Module {
 
     public void applyAccent() {
         Theme.setAccent(switch (accentPreset.getId()) {
+            case "mraz" -> 0xFF8B6CFF;
             case "violet" -> 0xFFA88BFF;
             case "mint" -> 0xFF5FE3C0;
             case "pink" -> 0xFFFF7DB4;

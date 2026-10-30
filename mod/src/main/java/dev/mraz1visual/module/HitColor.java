@@ -15,7 +15,7 @@ public final class HitColor extends Module {
     private int applied = VANILLA;
 
     public HitColor() {
-        super("hit_color", "Hit Color", "Свой цвет вспышки при уроне.", Category.VISUALS);
+        super("hit_color", "Hit Color", "Свой цвет вспышки при уроне.", Category.COMBAT);
     }
 
     @Override

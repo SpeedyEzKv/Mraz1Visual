@@ -39,7 +39,7 @@ public final class JumpCircle extends Module implements WorldLayer {
     private boolean wasOnGround = true;
 
     public JumpCircle() {
-        super("jump_circle", "Jump Circle", "Мягкое светящееся кольцо под ногами при прыжке.", Category.VISUALS);
+        super("jump_circle", "Jump Circle", "Мягкое светящееся кольцо под ногами при прыжке.", Category.COMBAT);
     }
 
     private int col(float t, float a) {

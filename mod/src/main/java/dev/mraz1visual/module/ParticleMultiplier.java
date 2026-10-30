@@ -25,7 +25,7 @@ public final class ParticleMultiplier extends Module implements AttackListener {
     private long seed = 0x9E3779B97F4A7C15L;
 
     public ParticleMultiplier() {
-        super("particle_multiplier", "Particle Multiplier", "Больше искр при ударе, меньше прочих частиц.", Category.VISUALS);
+        super("particle_multiplier", "Particle Multiplier", "Больше искр при ударе, меньше прочих частиц.", Category.COMBAT);
         instance = this;
     }
 

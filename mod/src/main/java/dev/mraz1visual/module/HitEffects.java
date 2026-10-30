@@ -31,7 +31,7 @@ public final class HitEffects extends Module implements AttackListener, dev.mraz
     private final RandomSource rnd = RandomSource.create();
 
     public HitEffects() {
-        super("hit_effects", "Hit FX", "Волна, искры и пульс маркера при каждом твоём ударе.", Category.VISUALS);
+        super("hit_effects", "Hit FX", "Волна, искры и пульс маркера при каждом твоём ударе.", Category.COMBAT);
     }
 
     @Override

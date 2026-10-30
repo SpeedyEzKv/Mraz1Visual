@@ -49,7 +49,7 @@ import java.util.Map;
 public final class Mraz1VisualScreen extends Screen implements Host {
     private static final String BRAND = "MRAZ1VISUAL";
     private static final int SEARCH_MAX = 32;
-    private static final Category[] MODULE_TABS = {Category.VISUALS, Category.SWORDS, Category.WINGS, Category.COSMETICS, Category.PETS, Category.SKY, Category.MUSIC, Category.PERFORMANCE, Category.PLAYER, Category.PVP, Category.HUD, Category.MISC};
+    private static final Category[] MODULE_TABS = {Category.VISUALS, Category.SWORDS, Category.WINGS, Category.COSMETICS, Category.PETS, Category.SKY, Category.MUSIC, Category.PERFORMANCE, Category.PLAYER, Category.PVP, Category.HUD, Category.COMBAT, Category.MISC};
     private static final int NAV_H = 26, NAV_STEP = 28, HINT_H = 0, CARD_HEAD = 40, CARD_R = Theme.RADIUS_CARD, COL_GAP = 10, CARD_GAP = 10;
     private static final int TILE = 20, ICON = 9;
     private static final Path FAV_FILE = dev.mraz1visual.util.TextFiles.DIR.resolve("favorites.txt");

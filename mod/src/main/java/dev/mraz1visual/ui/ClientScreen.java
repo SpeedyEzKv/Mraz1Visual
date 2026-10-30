@@ -56,7 +56,9 @@ public final class ClientScreen extends Screen implements Host {
         PLAYER("Player", Icons.PLAYER, Category.PLAYER),
         PVP("PvP", Icons.SWORD, Category.PVP),
         HUD("HUD", Icons.HUD, Category.HUD),
-        VISUALS("Visuals", Icons.EYE, Category.VISUALS, Category.SKY),
+        VISUALS("Visuals", Icons.EYE, Category.VISUALS),
+        WORLD("World", Icons.CLOUD, Category.SKY),
+        COMBAT("Combat FX", Icons.STAR, Category.COMBAT),
         SHADERS("Shaders", Icons.SUN, Category.SHADERS),
         MISC("Misc", Icons.GRID, Category.MISC, Category.PERFORMANCE),
         STAFF("Staff", Icons.SHIELD, Category.STAFF),
@@ -84,6 +86,8 @@ public final class ClientScreen extends Screen implements Host {
             return switch (this) {
                 case PLAYER -> "Игрок";
                 case VISUALS -> "Визуалы";
+                case WORLD -> "Мир";
+                case COMBAT -> "Боевые эффекты";
                 case SHADERS -> "Шейдеры";
                 case MISC -> "FPS и разное";
                 case COSMETICS -> "Косметика";
@@ -96,7 +100,7 @@ public final class ClientScreen extends Screen implements Host {
             };
         }
 
-        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, SHADERS, MISC, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
+        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, WORLD, COMBAT, SHADERS, MISC, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
     }
 
     private final ModuleManager mm = Mraz1Visual.MODULES;
