@@ -32,13 +32,16 @@ public final class HudStyle {
         Sdf.fill(g, x, y, w, h, h / 2, Colors.withAlpha(0xFFFFFF, Math.round(0x22 * alpha)));
         float fw = w * Math.max(0, Math.min(1, f));
         if (fw < 0.5f) return;
-        // заливка — несколько сегментов с переходом цвета: дёшево и без своего шейдера
-        int n = Math.max(1, Math.min(8, Math.round(fw / 10)));
-        float sw = fw / n;
+        // капсула цвета начала, поверх — прямые сегменты градиента между скруглёнными краями
+        Sdf.fill(g, x, y, fw, h, h / 2, Colors.mulAlpha(Colors.lerp(from, to, f), alpha));
+        Sdf.fill(g, x, y, Math.min(fw, h), h, h / 2, Colors.mulAlpha(from, alpha));
+        float inner = fw - h;
+        if (inner <= 0) return;
+        int n = Math.max(1, Math.min(10, Math.round(inner / 8)));
+        float sw = inner / n;
         for (int i = 0; i < n; i++) {
             int c = Colors.mulAlpha(Colors.lerp(from, to, (i + 0.5f) / n * f), alpha);
-            float r = i == 0 || i == n - 1 ? h / 2 : 0;
-            Sdf.fill(g, x + i * sw - (i > 0 ? 0.5f : 0), y, sw + (i > 0 ? 0.5f : 0), h, n == 1 ? h / 2 : r, c);
+            g.fill(Math.round(x + h / 2 + i * sw), Math.round(y), Math.round(x + h / 2 + (i + 1) * sw), Math.round(y + h), c);
         }
     }
 }

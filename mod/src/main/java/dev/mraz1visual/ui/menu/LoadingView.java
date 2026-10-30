@@ -98,21 +98,30 @@ public final class LoadingView {
         }
     }
 
-    private static final String[] PCT = new String[101];
+    /** Цифры 3×5 точек: во время первой загрузки шрифтов и текстовых шейдеров ещё нет — рисуем прямоугольниками. */
+    private static final int[] DIGITS = {0x7B6F, 0x2C97, 0x73E7, 0x73CF, 0x5BC9, 0x79CF, 0x79EF, 0x7249, 0x7BEF, 0x7BCF};
 
-    /** Процент справа под полосой. Шрифт может быть ещё не готов — тогда ничего не рисуем. */
+    /** Процент справа под полосой. */
     private static void percent(GuiGraphics g, int p, int right, int y, float alpha) {
-        try {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.font == null) return;
-            p = Math.max(0, Math.min(100, p));
-            String s = PCT[p];
-            if (s == null) PCT[p] = s = p + "%";
-            int a = Math.round(220 * alpha);
-            if (a < 8) return;
-            g.drawString(mc.font, s, right - mc.font.width(s), y, a << 24 | 0xC9C6F5, false);
-        } catch (Throwable ignored) {
+        p = Math.max(0, Math.min(100, p));
+        int a = Math.round(220 * alpha);
+        if (a < 8) return;
+        int c = a << 24 | 0xC9C6F5, px = 1;
+        int digits = p >= 100 ? 3 : p >= 10 ? 2 : 1;
+        int x = right - (digits * 4 + 6) * px;
+        for (int i = digits - 1; i >= 0; i--) {
+            int d = (int) (p / Math.pow(10, i)) % 10, bits = DIGITS[d];
+            for (int r = 0; r < 5; r++) {
+                for (int col = 0; col < 3; col++) {
+                    if ((bits >> (14 - r * 3 - col) & 1) != 0) g.fill(x + col * px, y + r * px, x + (col + 1) * px, y + (r + 1) * px, c);
+                }
+            }
+            x += 4 * px;
         }
+        // знак процента: две точки и диагональ
+        g.fill(x, y, x + 1, y + 1, c);
+        g.fill(x + 4, y + 4, x + 5, y + 5, c);
+        for (int k = 0; k < 5; k++) g.fill(x + 4 - k, y + k, x + 5 - k, y + k + 1, c);
     }
 
     /** Подпись под полосой (название этапа). Шрифт может быть ещё не готов — тогда ничего не рисуем. */

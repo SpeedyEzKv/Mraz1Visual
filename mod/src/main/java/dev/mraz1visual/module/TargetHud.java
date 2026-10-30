@@ -178,7 +178,7 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         update(mc, now, dt);
 
         boolean pill = style.getId().equals("pill");
-        int w = pill ? 150 : 150, h = pill ? 22 : 54;
+        int w = pill ? 150 : 162, h = pill ? 22 : 54;
         int chips = chipsHeight(ms);
         float k = scale.getF();
         int sw = g.guiWidth(), sh = g.guiHeight();
@@ -277,8 +277,8 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         hpBar(g, tx + tw + 5, 20, w - tx - tw - 13, 5);
         // 4 ячейки брони: иконка и прочность (зелёный > 50, жёлтый > 25, иначе красный)
         for (int i = 0; i < 4; i++) {
-            int cx = 6 + i * 35, cy = 37;
-            Sdf.fill(g, cx, cy, 33, 13, 4, Colors.mulAlpha(0x14FFFFFF, alpha));
+            int cx = 6 + i * 38, cy = 37;
+            Sdf.fill(g, cx, cy, 36, 13, 4, Colors.mulAlpha(0x14FFFFFF, alpha));
             if (armorPct[i] < 0) continue;
             g.pose().pushMatrix();
             g.pose().translate(cx + 1, cy + 0.5f);
@@ -286,7 +286,7 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
             g.renderItem(armorStack[i], 0, 0);
             g.pose().popMatrix();
             int c = armorPct[i] > 50 ? HudStyle.GREEN : armorPct[i] > 25 ? HudStyle.YELLOW : HudStyle.RED;
-            Fonts.draw(g, armorText[i], Fonts.Kind.BOLD, cx + 14, cy + 3, Colors.mulAlpha(c, alpha));
+            Fonts.draw(g, armorText[i], Fonts.Kind.BOLD, cx + 14, cy + 3.5f, 0.78f, Colors.mulAlpha(c, alpha));
         }
     }
 

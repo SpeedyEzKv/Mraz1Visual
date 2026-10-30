@@ -115,7 +115,7 @@ public final class Snow extends Module implements WorldLayer {
         int n = count();
         for (int i = 0; i < n; i++) {
             double y = fp[i] + (fy[i] - fp[i]) * pt;
-            d.billboardDot(fx[i], y, fz[i], 0.03 + (i % 3) * 0.008, c, 6);
+            d.billboardDot(fx[i], y, fz[i], 0.04 + (i % 3) * 0.01, c, 6);
         }
         if (!onBlocks.get()) return;
         double ppx = mc.player.getX(), ppz = mc.player.getZ();
