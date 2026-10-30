@@ -90,6 +90,15 @@ public final class Mc {
         //?}
     }
 
+    /** Полосы боссов (в 26.2+ HUD — mc.gui.hud). */
+    public static net.minecraft.client.gui.components.BossHealthOverlay bossOverlay(Minecraft mc) {
+        //? if >=26.2 {
+        /*return mc.gui.hud.getBossOverlay();
+        *///?} else {
+        return mc.gui.getBossOverlay();
+        //?}
+    }
+
     /** Значок эффекта для HUD (в 26.2+ HUD — класс Hud). */
     public static net.minecraft.resources.Identifier effectSprite(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect) {
         //? if >=26.2 {

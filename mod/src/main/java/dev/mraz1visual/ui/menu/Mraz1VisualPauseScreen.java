@@ -64,6 +64,11 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
      * и спросит про неотправленную жалобу. Так поведение точно совпадает с игрой.
      */
     private void quit() {
+        if (dev.mraz1visual.module.PvpSafe.confirmQuit(this::quitNow)) return;
+        quitNow();
+    }
+
+    private void quitNow() {
         try {
             PauseScreen vanilla = new PauseScreen(true);
             vanilla.init(width, height);

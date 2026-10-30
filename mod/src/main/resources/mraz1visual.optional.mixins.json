@@ -6,6 +6,9 @@
   "client": [
     "ChatComponentAccessor",
     "MouseHandlerMixin",
+    "BossHealthOverlayAccessor",
+    "ChatScreenAccessor",
+    "WindowCloseMixin",
     "ParticleAddMixin",
     "AvatarRendererMixin",
     "AbstractTextureAccessor",

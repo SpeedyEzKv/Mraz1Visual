@@ -165,6 +165,9 @@ public final class Modules {
         m.register(new Desktop());
         m.register(new AutoCommand());
         m.register(new StreamerMode());
+        m.register(new PvpSafe());
+        m.register(new AutoGps());
+        m.register(new HideAnarchy());
         m.register(new ChatTweaks());
         m.register(new NoSounds());
         m.register(new UiSounds());

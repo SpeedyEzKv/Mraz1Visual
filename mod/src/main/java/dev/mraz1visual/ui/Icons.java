@@ -120,6 +120,7 @@ public final class Icons {
             case STAFF -> SHIELD;
             case PERFORMANCE -> GAUGE;
             case MISC -> GRID;
+            case FUNPUK -> GEM;
             case MUSIC -> NOTE;
             case CONFIGS -> SLIDERS;
             case CLIENT -> GEAR;

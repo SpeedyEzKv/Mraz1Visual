@@ -24,14 +24,22 @@ import java.util.Set;
  */
 public final class ItemScroller extends Module {
     private static ItemScroller instance;
-    final BoolSetting drag = add(new BoolSetting("drag", "Shift + провести ЛКМ по слотам", true));
+    final BoolSetting drag = add(new BoolSetting("drag", "Зажать клавишу и провести ЛКМ по слотам", true));
     final BoolSetting wheel = add(new BoolSetting("wheel", "Колесо над слотом — перенести стак", true));
     final BoolSetting wheelShift = add(new BoolSetting("wheel_shift", "Колесо только с Shift", false));
+    final dev.mraz1visual.setting.KeySetting dragKey = add(new dev.mraz1visual.setting.KeySetting("drag_key", "Клавиша протягивания", InputConstants.KEY_RSHIFT));
+    final dev.mraz1visual.setting.SliderSetting delay = add(new dev.mraz1visual.setting.SliderSetting("delay", "Задержка между кликами", 50, 0, 300, 5, " мс")
+            .hint("Без задержки сервер может кикнуть за спам кликами."));
+
+    /** Слоты, по которым провели, — переносятся по очереди с задержкой. */
+    private final java.util.ArrayDeque<Integer> queue = new java.util.ArrayDeque<>();
+    private long lastClick;
 
     private final Set<Integer> visited = new HashSet<>();
 
     public ItemScroller() {
-        super("item_scroller", "Item Scroller", "Перекладывание предметов протягиванием мыши и колесом.", Category.MISC);
+        super("item_scroller", "Item Scroller", "RShift + провести мышью по слотам — быстрый перенос; задержка против кика.", Category.MISC);
+        markNew();
         instance = this;
     }
 
@@ -71,13 +79,24 @@ public final class ItemScroller extends Module {
     }
 
     private void dragFrame(Minecraft mc, AbstractContainerScreen<?> cs) {
-        if (!drag.get() || mc.screen != cs || !shift() || !mc.mouseHandler.isLeftPressed()) {
+        // очередь отрабатывает и после отпускания мыши — с задержкой, чтобы не кикнуло
+        long now = System.currentTimeMillis();
+        if (!queue.isEmpty() && now - lastClick >= delay.get()) {
+            int idx = queue.poll();
+            if (idx >= 0 && idx < cs.getMenu().slots.size() && cs.getMenu().getCarried().isEmpty()) {
+                Slot s = cs.getMenu().slots.get(idx);
+                if (s.hasItem()) quickMove(mc, cs, s);
+            }
+            lastClick = now;
+        }
+        boolean held = Keys.isDown(dragKey.get()) || shift() && dragKey.get() == InputConstants.KEY_RSHIFT;
+        if (!drag.get() || mc.screen != cs || !held || !mc.mouseHandler.isLeftPressed()) {
             visited.clear();
             return;
         }
         if (!cs.getMenu().getCarried().isEmpty()) return;
         Slot slot = ((ContainerScreenAccessor) cs).mraz1visual$hoveredSlot();
         if (slot == null || !visited.add(slot.index)) return;
-        if (slot.hasItem()) quickMove(mc, cs, slot);
+        if (slot.hasItem()) queue.add(slot.index);
     }
 }

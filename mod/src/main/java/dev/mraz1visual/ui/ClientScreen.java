@@ -66,6 +66,7 @@ public final class ClientScreen extends Screen implements Host {
         MARKET("Market", Icons.GEM),
         MODS("Mods", Icons.LAYERS),
         FORUM("Forum", Icons.CHAT),
+        FUNPUK("FunPuk", Icons.GEM, Category.FUNPUK),
         MUSIC("Music", Icons.NOTE, Category.MUSIC),
         CONFIGS("Configs", Icons.SLIDERS),
         /** Настройки клиента — открываются шестерёнкой справа, в полосе вкладок их нет. */
@@ -100,7 +101,7 @@ public final class ClientScreen extends Screen implements Host {
             };
         }
 
-        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, WORLD, COMBAT, SHADERS, MISC, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
+        static final Tab[] BAR = {PLAYER, PVP, HUD, VISUALS, WORLD, COMBAT, SHADERS, MISC, FUNPUK, STAFF, COSMETICS, MARKET, MODS, FORUM, MUSIC, CONFIGS};
     }
 
     private final ModuleManager mm = Mraz1Visual.MODULES;
@@ -471,6 +472,7 @@ public final class ClientScreen extends Screen implements Host {
         if (!sel.alwaysOn()) bindChip = new BindWidget(sel.bind, this, false);
         Group g = null;
         for (Setting<?> s : sel.settings()) {
+            if (s instanceof dev.mraz1visual.setting.TextSetting) continue; // правится своей кнопкой
             String title = s.group() == null || s.group().isEmpty() ? "Основное" : s.group();
             if (g == null || !g.title.equals(title)) {
                 g = null;
