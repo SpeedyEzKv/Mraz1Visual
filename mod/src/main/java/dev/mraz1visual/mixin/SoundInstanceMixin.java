@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 public abstract class SoundInstanceMixin {
     @ModifyReturnValue(method = "getVolume", at = @At("RETURN"), require = 0)
     private float mraz1visual$mute(float v) {
-        return NoSounds.muted(((AbstractSoundInstance) (Object) this).getIdentifier().getPath()) ? 0f : v;
+        String path = ((AbstractSoundInstance) (Object) this).getIdentifier().getPath();
+        return NoSounds.muted(path) ? 0f : v * dev.mraz1visual.module.Rain.volume(path);
     }
 }

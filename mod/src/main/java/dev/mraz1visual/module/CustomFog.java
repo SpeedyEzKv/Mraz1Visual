@@ -9,14 +9,17 @@ import org.joml.Vector4f;
 /** Свой цвет тумана и горизонта: атмосфера заката, ночи или неона. */
 public final class CustomFog extends Module {
     private static CustomFog instance;
-    final ColorSetting color = add(new ColorSetting("color", "Цвет тумана", 0xFF8A6FD8));
+    final dev.mraz1visual.setting.EnumSetting preset = add(new dev.mraz1visual.setting.EnumSetting("preset", "Пресет", 0,
+            "custom", "Свой", "sunset", "Закат", "night", "Ночь", "violet", "Фиолет").onChange(this::applyPreset));
+    final ColorSetting color = add(new ColorSetting("color", "Цвет тумана (горизонт)", 0xFF8A6FD8));
     final SliderSetting mix = add(new SliderSetting("mix", "Сила", 0.7, 0.1, 1, 0.05, ""));
-    final ColorSetting sky = add(new ColorSetting("sky", "Цвет неба", 0xFF3B2A7A));
+    final ColorSetting sky = add(new ColorSetting("sky", "Цвет неба (верх)", 0xFF3B2A7A));
     final SliderSetting skyMix = add(new SliderSetting("sky_mix", "Сила для неба", 0.6, 0, 1, 0.05, ""));
 
     public CustomFog() {
-        super("custom_fog", "Custom Fog", "Свой цвет тумана и неба.", Category.SKY);
+        super("custom_fog", "CustomWorld", "Небо градиентом из двух цветов (верх и горизонт), цвет тумана, пресеты.", Category.SKY);
         instance = this;
+        markNew();
     }
 
     /** Из миксина FogRenderer: смешивает цвет тумана со своим. */
@@ -38,6 +41,16 @@ public final class CustomFog extends Module {
         int r = Math.round(lerp((rgb >> 16 & 255), (c >> 16 & 255), k)), g = Math.round(lerp((rgb >> 8 & 255), (c >> 8 & 255), k)),
                 b = Math.round(lerp(rgb & 255, c & 255, k));
         return (rgb & 0xFF000000) | r << 16 | g << 8 | b;
+    }
+
+    /** Пресет переписывает цвета; потом их можно подправить вручную. */
+    private void applyPreset() {
+        switch (preset.getId()) {
+            case "sunset" -> { sky.set(0xFF3A2A6E); color.set(0xFFFF8A5B); }
+            case "night" -> { sky.set(0xFF070B1E); color.set(0xFF1C2448); }
+            case "violet" -> { sky.set(0xFF2B1B5E); color.set(0xFF8B6CFF); }
+            default -> { }
+        }
     }
 
     private static float lerp(float a, float b, float k) {

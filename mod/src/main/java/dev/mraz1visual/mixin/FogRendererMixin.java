@@ -19,13 +19,13 @@ public abstract class FogRendererMixin {
     @org.spongepowered.asm.mixin.injection.Inject(method = "computeFogColor", at = @At("TAIL"), require = 0)
     private void mraz1visual$fogColor(net.minecraft.client.Camera camera, float pt, net.minecraft.client.multiplayer.ClientLevel level, int distance, float darken,
                                       Vector4f out, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
-        Vector4f r = CustomSky.fog(CustomFog.fog(out));
+        Vector4f r = CustomSky.fog(CustomFog.fog(dev.mraz1visual.module.Twilight.fog(dev.mraz1visual.module.Snow.fog(out))));
         if (r != out) out.set(r);
     }
     *///?} else {
     @ModifyReturnValue(method = "computeFogColor", at = @At("RETURN"), require = 0)
     private Vector4f mraz1visual$fogColor(Vector4f color) {
-        return CustomSky.fog(CustomFog.fog(color));
+        return CustomSky.fog(CustomFog.fog(dev.mraz1visual.module.Twilight.fog(dev.mraz1visual.module.Snow.fog(color))));
     }
     //?}
 }

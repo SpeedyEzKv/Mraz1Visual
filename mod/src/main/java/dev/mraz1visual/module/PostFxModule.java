@@ -78,19 +78,35 @@ public final class PostFxModule extends Module {
     /** Кадр мира готов: заполнить параметры и наложить эффекты. Вызывается из GameRendererPostMixin. */
     public static void afterLevel(float partialTick) {
         PostFxModule m = instance;
-        if (m == null || !m.isEnabled() || PostFx.failed() || IrisCompat.shaderPackInUse()) return;
+        boolean sat = Saturation.active();
+        if (m == null || !m.isEnabled() && !sat || PostFx.failed() || IrisCompat.shaderPackInUse()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
-        m.fill(mc);
+        if (m.isEnabled()) m.fill(mc);
+        else neutral(PostFx.P);
+        if (sat) PostFx.P.saturation *= Saturation.strength();
         PostFx.apply(0.05f, Mc.depthFar(mc));
     }
 
     /** Перед рукой: сохранить глубину мира для эффектов. */
     public static void beforeHand() {
         PostFxModule m = instance;
-        if (m == null || !m.isEnabled() || PostFx.failed() || IrisCompat.shaderPackInUse()) return;
+        if (m == null || !m.isEnabled() && !Saturation.active() || PostFx.failed() || IrisCompat.shaderPackInUse()) return;
         if (Minecraft.getInstance().level == null) return;
         PostFx.captureDepth();
+    }
+
+    /** Все эффекты выключены — для Saturation без PostFX: меняется только насыщенность. */
+    private static void neutral(PostFx.Params p) {
+        p.liftR = p.liftG = p.liftB = 0;
+        p.gammaR = p.gammaG = p.gammaB = 1;
+        p.gainR = p.gainG = p.gainB = 1;
+        p.saturation = p.contrast = p.exposure = 1;
+        p.bloom = p.vignette = p.grain = p.ca = p.ao = p.fog = p.rays = p.dof = p.water = 0;
+        p.aoSamples = 0;
+        p.tonemap = 0;
+        p.skyKeep = 1;
+        p.sunVis = 0;
     }
 
     private void fill(Minecraft mc) {

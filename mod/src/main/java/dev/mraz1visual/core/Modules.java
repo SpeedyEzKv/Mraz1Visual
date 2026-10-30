@@ -108,6 +108,10 @@ public final class Modules {
         m.register(new JumpParticles());
         m.register(new HitColor());
         m.register(new CustomFog());
+        m.register(new Snow());
+        m.register(new Twilight());
+        m.register(new Saturation());
+        m.register(new Rain());
         m.register(new ShieldIndicator());
         m.register(new Hotbar());
         m.register(new Notifications());

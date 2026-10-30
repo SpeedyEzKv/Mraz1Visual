@@ -21,7 +21,8 @@ public final class MotionBlur extends Module implements HudLayer {
             Identifier.fromNamespaceAndPath("mraz1visual", "motion_blur/a"),
             Identifier.fromNamespaceAndPath("mraz1visual", "motion_blur/b")};
 
-    final SliderSetting strength = add(new SliderSetting("strength", "Сила", 0.5, 0.1, 0.9, 0.05, ""));
+    final SliderSetting strength = add(new SliderSetting("strength", "Сила", 0.45, 0, 1, 0.05, ""));
+    private long lastNs;
 
     private final DynamicTexture[] tex = new DynamicTexture[2];
     private int texW, texH, front;
@@ -29,6 +30,7 @@ public final class MotionBlur extends Module implements HudLayer {
 
     public MotionBlur() {
         super("motion_blur", "Motion Blur", "Плавный шлейф при повороте камеры.", Category.SKY);
+        markNew();
     }
 
     @Override
@@ -64,7 +66,12 @@ public final class MotionBlur extends Module implements HudLayer {
         int back = 1 - front;
         // прошлый кадр — поверх текущего (рисуется позже, когда GUI выводится на экран)
         if (hasPrev) {
-            int a = Math.round(strength.getF() * 255);
+            // сила задана для 60 FPS: на низком FPS прошлый кадр гаснет быстрее, иначе шлейф тянется
+            long now = System.nanoTime();
+            float dt = lastNs == 0 ? 1f / 60 : Math.min(0.25f, (now - lastNs) / 1e9f);
+            lastNs = now;
+            float s = (float) Math.pow(Math.min(0.95f, strength.getF()), dt * 60f);
+            int a = Math.round(s * 255);
             // кадр в текстуре перевёрнут: v идёт снизу вверх
             g.blit(RenderPipelines.GUI_TEXTURED, IDS[front], 0, 0, 0f, (float) h, g.guiWidth(), g.guiHeight(), w, -h, w, h, a << 24 | 0xFFFFFF);
         }

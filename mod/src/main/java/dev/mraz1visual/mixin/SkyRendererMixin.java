@@ -14,14 +14,14 @@ public abstract class SkyRendererMixin {
     @ModifyVariable(method = "renderSkyDisc", at = @At("HEAD"), argsOnly = true, require = 0)
     private org.joml.Vector3fc mraz1visual$sky(org.joml.Vector3fc c) {
         int argb = 0xFF000000 | Math.round(c.x() * 255) << 16 | Math.round(c.y() * 255) << 8 | Math.round(c.z() * 255);
-        int r = CustomFog.sky(argb);
+        int r = CustomFog.sky(dev.mraz1visual.module.Twilight.sky(argb));
         if (r == argb) return c;
         return new org.joml.Vector3f((r >> 16 & 255) / 255f, (r >> 8 & 255) / 255f, (r & 255) / 255f);
     }
     *///?} else {
     @ModifyVariable(method = "renderSkyDisc", at = @At("HEAD"), argsOnly = true, require = 0)
     private int mraz1visual$sky(int color) {
-        return CustomFog.sky(color);
+        return CustomFog.sky(dev.mraz1visual.module.Twilight.sky(color));
     }
     //?}
 }
