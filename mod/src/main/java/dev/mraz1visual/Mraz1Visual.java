@@ -59,6 +59,7 @@ public final class Mraz1Visual implements ClientModInitializer {
         dev.mraz1visual.module.ItemHighlighter.register();
         dev.mraz1visual.ui.menu.LoadingScreens.register();
         dev.mraz1visual.module.Hotbar.register();
+        dev.mraz1visual.render.VanillaHudHooks.register();
         dev.mraz1visual.music.MediaClient.start();
         dev.mraz1visual.render.FriendGuard.register();
         dev.mraz1visual.dev.Harness.init();

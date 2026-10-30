@@ -90,6 +90,15 @@ public final class Mc {
         //?}
     }
 
+    /** Значок эффекта для HUD (в 26.2+ HUD — класс Hud). */
+    public static net.minecraft.resources.Identifier effectSprite(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect) {
+        //? if >=26.2 {
+        /*return net.minecraft.client.gui.Hud.getMobEffectSprite(effect);
+        *///?} else {
+        return net.minecraft.client.gui.Gui.getMobEffectSprite(effect);
+        //?}
+    }
+
     /** Время мира в тиках с начала (для счётчика дней). В 26.x — игровое время. */
     public static long totalDayTime(net.minecraft.client.multiplayer.ClientLevel level) {
         //? if >=26.1 {

@@ -19,6 +19,7 @@ public abstract class ParticleEngineMixin {
         if (p != ParticleTypes.TOTEM_OF_UNDYING) return;
         // тотем сработал (у своего игрока событие идёт мимо LivingEntity.handleEntityEvent — ловим здесь)
         if (e instanceof net.minecraft.world.entity.LivingEntity le) TotemFx.onPop(le);
+        if (e == net.minecraft.client.Minecraft.getInstance().player) dev.mraz1visual.module.Notifications.totemPopped();
         if (TotemFx.replacesVanilla()) ci.cancel();
     }
 }

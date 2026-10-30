@@ -49,6 +49,7 @@ public final class Modules {
         m.register(new DayHud());
         m.register(new SaturationHud());
         m.register(new ItemCounterHud());
+        m.register(new HealthBars());
 
         m.register(new NameTags());
         m.register(new TargetEsp());

@@ -24,6 +24,8 @@ public abstract class Module {
     private final List<Setting<?>> settings = new ArrayList<>();
     private final List<Setting<?>> settingsView = Collections.unmodifiableList(settings);
     private boolean enabled;
+    /** Бейдж NEW в списке модулей. */
+    private boolean fresh;
     ModuleManager manager;
 
     protected Module(String id, String name, String description, Category category) {
@@ -50,6 +52,11 @@ public abstract class Module {
         add(p.scale);
         return p;
     }
+
+    /** Модуль из последнего обновления — в меню с бейджем NEW. */
+    protected final void markNew() { fresh = true; }
+
+    public final boolean isNew() { return fresh; }
 
     public final List<Setting<?>> settings() { return settingsView; }
 

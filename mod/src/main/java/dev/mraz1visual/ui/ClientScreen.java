@@ -854,8 +854,16 @@ public final class ClientScreen extends Screen implements Host {
             int tile = 18, tx = x + 12, ty = ry + (ROW - tile) / 2;
             d.round(tx, ty, tile, tile, 6, en ? Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0xD0 : 0x60) : Theme.isLight() ? 0x10000000 : 0x14FFFFFF);
             d.icon(Icons.forModule(m.id, Icons.forCategory(m.category)), tx + 4, ty + 4, 10, en ? 0xFFFFFFFF : Theme.TEXT_DIM);
-            int nameW = w - 12 - 24 - 34;
-            d.text(Draw.ellipsize(m.name, nameW), m == sel ? Fonts.Kind.BOLD : Fonts.Kind.TEXT, x + 36, Draw.textY(ry, ROW), m == sel || en ? Theme.TEXT : Theme.TEXT_DIM);
+            int nameW = w - 12 - 24 - 34 - (m.isNew() ? 26 : 0);
+            String shown = Draw.ellipsize(m.name, nameW);
+            d.text(shown, m == sel ? Fonts.Kind.BOLD : Fonts.Kind.TEXT, x + 36, Draw.textY(ry, ROW), m == sel || en ? Theme.TEXT : Theme.TEXT_DIM);
+            if (m.isNew()) {
+                // бейдж NEW: градиентная капсула #8B6CFF → #4FD1FF
+                int bx = x + 36 + d.width(shown, m == sel ? Fonts.Kind.BOLD : Fonts.Kind.TEXT) + 5, by = ry + (ROW - 10) / 2;
+                d.round(bx, by, 22, 10, 5, dev.mraz1visual.render.HudStyle.GRAD_A);
+                d.round(bx + 8, by, 14, 10, 5, Colors.withAlpha(dev.mraz1visual.render.HudStyle.GRAD_B, 0xC0));
+                d.textScaled("NEW", Fonts.Kind.BOLD, bx + 4, by + 2, 0.62f, 0xFFFFFFFF);
+            }
             // мини-переключатель справа
             if (!m.alwaysOn()) {
                 int sx = x + w - 34, sy = ry + (ROW - 12) / 2;

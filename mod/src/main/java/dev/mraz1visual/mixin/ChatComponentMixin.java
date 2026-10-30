@@ -31,6 +31,7 @@ public abstract class ChatComponentMixin {
     //?}
         at = @At("HEAD"), argsOnly = true, ordinal = 0, require = 0)
     private Component mraz1visual$decorate(Component message) {
+        dev.mraz1visual.module.Notifications.chat(message);
         return ChatTweaks.decorate(message, (ChatComponent) (Object) this);
     }
 }

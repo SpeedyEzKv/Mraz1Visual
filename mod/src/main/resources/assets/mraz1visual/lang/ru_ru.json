@@ -5,6 +5,7 @@
   "mraz1visual.hud.editor.hint": "Тяни элементы мышью · колесо — масштаб · Shift — без привязки · ПКМ — сброс · Esc — готово",
   "mraz1visual.hud.editor.open": "Открыть редактор",
   "mraz1visual.hud.editor.grid": "Сетка",
+  "mraz1visual.hud.editor.reset": "Сбросить",
   "mraz1visual.mods.title": "Моды",
   "mraz1visual.mods.open_folder": "Открыть папку модов",
   "mraz1visual.mods.count": "Загружено модов: %s",

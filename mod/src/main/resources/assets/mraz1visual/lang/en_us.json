@@ -5,6 +5,7 @@
   "mraz1visual.hud.editor.hint": "Drag elements · wheel — scale · Shift — no snapping · RMB — reset · Esc — done",
   "mraz1visual.hud.editor.open": "Open editor",
   "mraz1visual.hud.editor.grid": "Grid",
+  "mraz1visual.hud.editor.reset": "Reset",
   "mraz1visual.mods.title": "Mods",
   "mraz1visual.mods.open_folder": "Open mods folder",
   "mraz1visual.mods.count": "Mods loaded: %s",

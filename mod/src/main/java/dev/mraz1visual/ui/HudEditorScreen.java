@@ -66,6 +66,12 @@ public final class HudEditorScreen extends Screen {
             if (guideX >= 0) g.fill(guideX, 0, guideX + 1, height, Theme.accent() | 0xFF000000);
             if (guideY >= 0) g.fill(0, guideY, width, guideY + 1, Theme.accent() | 0xFF000000);
         }
+        // кнопка «Сбросить»: все элементы на места по умолчанию
+        boolean rh = resetHit(mouseX, mouseY);
+        g.fill(width / 2 - RESET_W / 2, 6, width / 2 + RESET_W / 2, 22, rh ? 0xE0FF5A6E : 0xC00C0C12);
+        String rs = Lang.get("mraz1visual.hud.editor.reset");
+        Fonts.draw(g, rs, Fonts.Kind.BOLD, width / 2f - Fonts.width(rs, Fonts.Kind.BOLD) / 2f, 10, 0xFFFFFFFF);
+
         String hint = Lang.get("mraz1visual.hud.editor.hint");
         int hw = Fonts.width(hint, Fonts.Kind.TEXT);
         g.fill(width / 2 - hw / 2 - 8, height - 22, width / 2 + hw / 2 + 8, height - 6, 0xC00C0C12);
@@ -88,8 +94,22 @@ public final class HudEditorScreen extends Screen {
         return found;
     }
 
+    private static final int RESET_W = 90;
+
+    private boolean resetHit(double mx, double my) {
+        return mx >= width / 2.0 - RESET_W / 2.0 && mx < width / 2.0 + RESET_W / 2.0 && my >= 6 && my < 22;
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
+        if (e.button() == 0 && resetHit(e.x(), e.y())) {
+            for (HudPos h : HudPos.all()) {
+                h.x.reset();
+                h.y.reset();
+                h.scale.reset();
+            }
+            return true;
+        }
         HudPos p = pick(e.x(), e.y());
         if (p == null) return super.mouseClicked(e, doubleClick);
         if (e.button() == 1) {
