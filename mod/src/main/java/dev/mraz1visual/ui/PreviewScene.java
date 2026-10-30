@@ -184,7 +184,8 @@ public final class PreviewScene {
         // ── персонажи ──
         float unit = h / 64f;
         float plX = x + w * 0.36f + p3x, tgX = x + w * 0.64f + p3x, feet = ground - 1;
-        switch (kind) {
+        if (m != null && m.id.equals("block_outline")) blockPreview(d, m, x + w * 0.5f + p3x, feet - 22 * unit, 13 * unit);
+        else switch (kind) {
             case COMBAT -> combat(d, m, accent, plX, tgX, feet, unit);
             case MOVE -> move(d, m, accent, x, w, feet, unit, p3x);
             case COSMETIC -> cosmetic(d, m, accent, x + w * 0.5f + p3x, feet, unit);
@@ -260,6 +261,50 @@ public final class PreviewScene {
     private float lastHandX, lastHandY, lastHeadY;
 
     // ── сценарии ─────────────────────────────────────────────
+
+    private static final int[][] CUBE_EDGES = {{0, 1}, {1, 3}, {3, 2}, {2, 0}, {4, 5}, {5, 7}, {7, 6}, {6, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+    private final float[] cubeX = new float[8], cubeY = new float[8];
+
+    /** Живое превью Block Outline: изометрический кубик, рамка — выбранным стилем, цветом и толщиной. */
+    private void blockPreview(Draw d, Module m, float cx, float cy, float s) {
+        String style = "edges";
+        int edge = 0xFFE6E4FF;
+        float width = 2, speed = 1;
+        for (Setting<?> st : m.settings()) {
+            if (st instanceof dev.mraz1visual.setting.EnumSetting e && st.id.equals("style")) style = e.getId();
+            if (st instanceof ColorSetting c && st.id.equals("edge")) edge = c.get() | 0xFF000000;
+            if (st instanceof dev.mraz1visual.setting.SliderSetting sl && st.id.equals("width")) width = sl.getF();
+            if (st instanceof dev.mraz1visual.setting.SliderSetting sl && st.id.equals("gradient_speed")) speed = sl.getF();
+        }
+        float rot = t * 0.6f;
+        // 8 вершин куба, вращение вокруг вертикали и изометрическая проекция
+        float[] px = cubeX, py = cubeY;
+        for (int i = 0; i < 8; i++) {
+            float vx = (i & 1) == 0 ? -1 : 1, vy = (i & 2) == 0 ? -1 : 1, vz = (i & 4) == 0 ? -1 : 1;
+            float rx = vx * (float) Math.cos(rot) - vz * (float) Math.sin(rot), rz = vx * (float) Math.sin(rot) + vz * (float) Math.cos(rot);
+            px[i] = cx + rx * s;
+            py[i] = cy - vy * s * 0.95f + rz * s * 0.45f;
+        }
+        // сам блок — тёмный камень
+        for (int k = 0; k < 10; k++) {
+            float f = k / 9f;
+            d.line(px[2] + (px[6] - px[2]) * f, py[2] + (py[6] - py[2]) * f, px[3] + (px[7] - px[3]) * f, py[3] + (py[7] - py[3]) * f, s * 0.22f, 0x30FFFFFF);
+        }
+        if (style.equals("fill") || style.equals("glass")) {
+            for (int k = 0; k < 14; k++) {
+                float f = k / 13f;
+                d.line(px[0] + (px[2] - px[0]) * f, py[0] + (py[2] - py[0]) * f, px[1] + (px[3] - px[1]) * f, py[1] + (py[3] - py[1]) * f, s * 0.16f, Colors.withAlpha(edge, 0x22));
+            }
+        }
+        if (style.equals("glow")) d.shadow(Math.round(cx - s * 1.6f), Math.round(cy - s * 1.6f), Math.round(s * 3.2f), Math.round(s * 3.2f), Math.round(s), s, Colors.withAlpha(edge, 0x70));
+        float tw = 0.5f + width * 0.35f;
+        for (int e = 0; e < CUBE_EDGES.length; e++) {
+            int a = CUBE_EDGES[e][0], b = CUBE_EDGES[e][1];
+            int c = style.equals("gradient") ? dev.mraz1visual.render.HudStyle.grad((float) (0.5 + 0.5 * Math.sin(t * speed * 2 + e * 0.52))) : edge;
+            if (style.equals("glow")) d.line(px[a], py[a], px[b], py[b], tw * 3, Colors.withAlpha(c, 0x40));
+            d.line(px[a], py[a], px[b], py[b], tw, c);
+        }
+    }
 
     private void combat(Draw d, Module m, int c, float plX, float tgX, float feet, float u) {
         float period = 1.6f, ph = (t % period) / period;

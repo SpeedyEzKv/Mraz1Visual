@@ -25,7 +25,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * при смене блока рамка плавно «перетекает» с лёгким пульсом, прогресс ломания заполняет блок изнутри.
  */
 public final class BlockOutline extends Module implements WorldLayer {
-    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "glass", "Стекло", "edges", "Только рёбра", "fill", "Заливка"));
+    final EnumSetting style = add(new EnumSetting("style", "Стиль", 0, "glass", "Стекло", "edges", "Линия", "fill", "Заливка", "glow", "Шейдер (свечение)", "gradient", "Градиент"));
+    final SliderSetting gradientSpeed = add(new SliderSetting("gradient_speed", "Скорость градиента", 1, 0.2, 4, 0.1, "×"));
     final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 6, Palette.OPTIONS));
     final ColorSetting fill = add(new ColorSetting("fill", "Свой: заливка", 0x22B8B4F2));
     final ColorSetting edge = add(new ColorSetting("edge", "Свой: контур", 0xC0E6E4FF));
@@ -41,7 +42,14 @@ public final class BlockOutline extends Module implements WorldLayer {
     private float pulse, shownProgress, alpha;
 
     public BlockOutline() {
-        super("block_outline", "Block Overlay", "Тонкая рамка блока с градиентом, плавным переходом и прогрессом ломания.", Category.VISUALS);
+        super("block_outline", "Block Outline", "Рамка блока: линия, свечение, заливка или переливающийся градиент.", Category.VISUALS);
+        markNew();
+    }
+
+    /** Цвет ребра k для градиентного стиля. */
+    private int gc(double phase, int k, float a) {
+        float u = (float) (0.5 + 0.5 * Math.sin(phase + k * 0.52));
+        return Colors.mulAlpha(dev.mraz1visual.render.HudStyle.grad(u), a * opacity.getF() / 100f);
     }
 
     private int col(float t, float a) {
@@ -95,6 +103,23 @@ public final class BlockOutline extends Module implements WorldLayer {
             d.line(x2, y1, z2, x2, y2, z2, t, mid); d.line(x1, y1, z2, x1, y2, z2, t, mid);
             d.line(x1, y1, z1, x2, y1, z1, t, bottom); d.line(x2, y1, z1, x2, y1, z2, t, bottom);
             d.line(x2, y1, z2, x1, y1, z2, t, bottom); d.line(x1, y1, z2, x1, y1, z1, t, bottom);
+            if (st.equals("gradient")) {
+                // переливающийся контур: каждое ребро — свой участок градиента, волна бежит по кругу
+                double ph = Fx.time() * gradientSpeed.get() * 2;
+                d.line(x1, y2, z1, x2, y2, z1, t * 1.4, gc(ph, 0, A)); d.line(x2, y2, z1, x2, y2, z2, t * 1.4, gc(ph, 1, A));
+                d.line(x2, y2, z2, x1, y2, z2, t * 1.4, gc(ph, 2, A)); d.line(x1, y2, z2, x1, y2, z1, t * 1.4, gc(ph, 3, A));
+                d.line(x1, y1, z1, x1, y2, z1, t * 1.4, gc(ph, 4, A)); d.line(x2, y1, z1, x2, y2, z1, t * 1.4, gc(ph, 5, A));
+                d.line(x2, y1, z2, x2, y2, z2, t * 1.4, gc(ph, 6, A)); d.line(x1, y1, z2, x1, y2, z2, t * 1.4, gc(ph, 7, A));
+                d.line(x1, y1, z1, x2, y1, z1, t * 1.4, gc(ph, 8, A)); d.line(x2, y1, z1, x2, y1, z2, t * 1.4, gc(ph, 9, A));
+                d.line(x2, y1, z2, x1, y1, z2, t * 1.4, gc(ph, 10, A)); d.line(x1, y1, z2, x1, y1, z1, t * 1.4, gc(ph, 11, A));
+            }
+            if (st.equals("glow")) {
+                // «шейдер»: мягкое свечение рёбер в проходе свечения
+                d.glowBegin();
+                d.edges(x1, y1, z1, x2, y2, z2, t * 7, col(0.3f, A * 0.45f));
+                d.edges(x1, y1, z1, x2, y2, z2, t * 3, col(0.2f, A * 0.6f));
+                d.glowEnd();
+            }
             if (st.equals("glass")) {
                 d.glowBegin();
                 d.edges(x1, y1, z1, x2, y2, z2, t * 5, col(0.4f, A * (0.12f + 0.2f * pulse)));

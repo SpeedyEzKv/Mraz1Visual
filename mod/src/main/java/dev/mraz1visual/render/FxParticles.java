@@ -8,7 +8,7 @@ import dev.mraz1visual.ui.Colors;
  * аллокаций в кадре; рисуются в два прохода (обычный и свечение), пока есть живые. Лимит зависит от качества.
  */
 public final class FxParticles {
-    public static final byte DOT = 0, SPARK = 1, STAR = 2, RING = 3;
+    public static final byte DOT = 0, SPARK = 1, STAR = 2, RING = 3, DIAMOND = 4;
     private static final int MAX = 3000;
     private static final double[] x = new double[MAX], y = new double[MAX], z = new double[MAX];
     private static final double[] vx = new double[MAX], vy = new double[MAX], vz = new double[MAX];
@@ -110,6 +110,11 @@ public final class FxParticles {
                     for (int k = 0; k < 4; k++) d.billboardRay(x[i], y[i], z[i], spin[i] + k * Math.PI / 2, 0, r * 2.2, r * 0.45, c);
                     d.billboardDot(x[i], y[i], z[i], r * 0.9, Colors.mulAlpha(c, 0.6f), 8);
                     if (core[i]) d.billboardDot(x[i], y[i], z[i], r * 0.35, Colors.mulAlpha(0xFFFFFFFF, a), 6);
+                }
+                case DIAMOND -> {
+                    float r = s * (1f - t * 0.4f);
+                    d.billboardDot(x[i], y[i], z[i], r, c, 4);
+                    if (core[i]) d.billboardDot(x[i], y[i], z[i], r * 0.4f, Colors.mulAlpha(0xFFFFFFFF, a), 4);
                 }
                 case RING -> {
                     float e = Ease.outCubic(t);

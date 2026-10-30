@@ -23,7 +23,8 @@ import net.minecraft.core.BlockPos;
 
 /** Эффект на месте цели, которую ты добил: молния, души или ударная волна. Только у тебя. */
 public final class KillEffect extends Module implements AttackListener, WorldLayer {
-    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "ascend", "Растворение и душа", "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Осколки", "all", "Всё сразу"));
+    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "ascend", "Растворение и душа", "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Взрыв частиц", "all", "Всё сразу", "beam", "Световой луч"));
+    final dev.mraz1visual.setting.BoolSetting beamBolt = add(new dev.mraz1visual.setting.BoolSetting("beam_bolt", "Луч + молния", false));
     final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 0, dev.mraz1visual.render.Palette.OPTIONS));
     final ColorSetting color = add(new ColorSetting("color", "Свой цвет", 0xFFB8B4F2));
     final BoolSetting sound = add(new BoolSetting("sound", "Звук", true));
@@ -69,6 +70,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
 
     public KillEffect() {
         super("kill_effect", "Kill FX", "Цель растворяется в свет, душа уходит вверх — когда ты её добиваешь.", Category.COMBAT);
+        markNew();
         instance = this;
     }
 
@@ -206,7 +208,18 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
                 dev.mraz1visual.render.FxDraw.softRing(d, f.x, f.y + 0.045, f.z, r, 0.015, col(0.1f, ra), dev.mraz1visual.render.Fx.segments(64));
                 continue;
             }
-            if (s.equals("lightning") || s.equals("all")) {
+            if (s.equals("beam")) {
+                // световой луч вверх: растёт быстро, держится и тает; ядро белое, ореол — цвет эффекта
+                float grow = dev.mraz1visual.render.Ease.outCubic(Math.min(1f, t * 3f));
+                float a = t < 0.6f ? 1f : Math.max(0, 1f - (t - 0.6f) / 0.4f);
+                double hgt = 40 * grow;
+                d.glowBegin();
+                d.beam(f.x, f.y, f.z, hgt, 0.9 * (1 - t * 0.5), Colors.mulAlpha(c, a * 0.35f));
+                d.beam(f.x, f.y, f.z, hgt, 0.25, Colors.mulAlpha(0xFFFFFFFF, a * 0.9f));
+                dev.mraz1visual.render.FxDraw.haloRing(d, f.x, f.y + 0.04, f.z, 0.5 + t * 1.8, 0.3, Colors.mulAlpha(c, a * 0.4f), dev.mraz1visual.render.Fx.segments(48));
+                d.glowEnd();
+            }
+            if (s.equals("lightning") || s.equals("all") || s.equals("beam") && beamBolt.get()) {
                 float a = dev.mraz1visual.render.Fx.flash(t < 0.35f ? 1f - t / 0.35f * 0.5f : Math.max(0, 0.5f - (t - 0.35f)));
                 if (a > 0) {
                     for (int i = 0; i + 3 < f.bolt.length; i += 3) {
