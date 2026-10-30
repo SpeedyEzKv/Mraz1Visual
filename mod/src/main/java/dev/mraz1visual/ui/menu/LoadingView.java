@@ -69,15 +69,25 @@ public final class LoadingView {
         if (logo()) {
             g.blit(RenderPipelines.GUI_TEXTURED, LOGO, lx, ly, 0f, 0f, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, a << 24 | 0xFFFFFF);
         }
-        // полоса прогресса под логотипом
+        // свечение за логотипом: мягкие слои акцентного цвета
+        for (int i = 0; i < 6; i++) {
+            int gx = Math.round(lw * (0.12f + i * 0.05f)), gy = Math.round(lh * (0.25f + i * 0.08f));
+            g.fill(lx + lw / 2 - gx, ly + lh / 2 - gy, lx + lw / 2 + gx, ly + lh / 2 + gy, Math.round(a * 0.035f) << 24 | 0x8B6CFF);
+        }
+        // полоса прогресса под логотипом: градиент #8B6CFF → #4FD1FF
         int bw = lw, bx = lx, by = h / 2 + 14;
         g.fill(bx, by, bx + bw, by + 2, Math.round(a * 0.18f) << 24 | 0xFFFFFF);
-        int accent = 0xB8B4F2;
+        int accent = 0x8B6CFF;
         if (progress >= 0) {
             shownProgress += (Math.min(1f, progress) - shownProgress) * 0.15f;
             int fw = Math.round(bw * shownProgress);
-            g.fill(bx, by, bx + fw, by + 2, a << 24 | accent);
+            int segs = 24;
+            for (int i = 0; i < segs; i++) {
+                int x0 = bx + fw * i / segs, x1 = bx + fw * (i + 1) / segs;
+                if (x1 > x0) g.fill(x0, by, x1, by + 2, a << 24 | (dev.mraz1visual.ui.Colors.lerp(0xFF8B6CFF, 0xFF4FD1FF, (x0 - bx) / (float) Math.max(1, bw)) & 0xFFFFFF));
+            }
             g.fill(bx + fw - 6, by - 1, bx + fw, by + 3, Math.round(a * 0.9f) << 24 | 0xFFFFFF);
+            percent(g, Math.round(shownProgress * 100), bx + bw, by + 6, alpha);
         } else {
             // бегущий отрезок
             float t = (System.nanoTime() % 1_600_000_000L) / 1.6e9f;
@@ -85,6 +95,23 @@ public final class LoadingView {
             int sx = bx + Math.round((bw + seg) * t) - seg;
             int x0 = Math.max(bx, sx), x1 = Math.min(bx + bw, sx + seg);
             if (x1 > x0) g.fill(x0, by, x1, by + 2, a << 24 | accent);
+        }
+    }
+
+    private static final String[] PCT = new String[101];
+
+    /** Процент справа под полосой. Шрифт может быть ещё не готов — тогда ничего не рисуем. */
+    private static void percent(GuiGraphics g, int p, int right, int y, float alpha) {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.font == null) return;
+            p = Math.max(0, Math.min(100, p));
+            String s = PCT[p];
+            if (s == null) PCT[p] = s = p + "%";
+            int a = Math.round(220 * alpha);
+            if (a < 8) return;
+            g.drawString(mc.font, s, right - mc.font.width(s), y, a << 24 | 0xC9C6F5, false);
+        } catch (Throwable ignored) {
         }
     }
 

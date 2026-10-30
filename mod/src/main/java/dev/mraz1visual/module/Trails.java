@@ -20,8 +20,8 @@ import net.minecraft.client.player.LocalPlayer;
  * Стили: лента света, звёздная пыль, стеклянный шлейф, огоньки. Только твой след и только у тебя на экране.
  */
 public final class Trails extends Module implements WorldLayer {
-    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "light", "Лента света", "stardust", "Звёздная пыль",
-            "glass", "Стеклянный шлейф", "particles", "Огоньки")
+    final EnumSetting style = add(new EnumSetting("style", "Вид", 4, "light", "Лента света", "stardust", "Звёздная пыль",
+            "glass", "Стеклянный шлейф", "particles", "Огоньки", "soft", "Простой мягкий след")
             .alias("ribbon", "light").alias("line", "light").alias("both", "stardust"));
     final EnumSetting when = add(new EnumSetting("when", "Когда", 0, "move", "При движении", "sprint", "Только на бегу", "elytra", "Только на элитрах"));
     final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 0, Palette.OPTIONS));
@@ -87,6 +87,8 @@ public final class Trails extends Module implements WorldLayer {
                 dust(p, pos.x, pos.y + hy, pos.z, dt, a);
             }
             case "particles" -> dust(p, pos.x, pos.y + hy, pos.z, dt, a);
+            // по умолчанию: одна тонкая мягкая лента без свечения и частиц
+            case "soft" -> ribbon.draw(d, fly ? Ribbon.FACING : Ribbon.FLAT, w * 0.5, a * 0.55f, pr, color.get(), color2.get(), pos.x, pos.y + hy, pos.z);
             default -> {
                 // широкое мягкое свечение и тонкая яркая середина; горизонтальная лента видна и сзади
                 int mode = fly ? Ribbon.FACING : Ribbon.FLAT;

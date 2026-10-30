@@ -9,6 +9,7 @@ public final class ItemPhysic extends Module {
 
     public ItemPhysic() {
         super("item_physic", "Item Physic", "Выброшенные предметы лежат на земле плашмя.", Category.VISUALS);
+        markNew();
         instance = this;
     }
 

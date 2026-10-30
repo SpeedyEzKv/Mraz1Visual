@@ -27,7 +27,8 @@ public final class Cape extends Module {
     private static final Identifier TEX = Identifier.fromNamespaceAndPath("mraz1visual", "cosmetics/cape");
 
     final EnumSetting style = add(new EnumSetting("style", "Рисунок", 0,
-            "eclipse", "Затмение", "gradient", "Градиент", "plain", "Однотонный", "file", "Свой файл"));
+            "eclipse", "Затмение", "gradient", "Градиент", "plain", "Однотонный", "file", "Свой файл",
+            "mraz", "Mraz1: фиолет → голубой", "sunset", "Закат", "ocean", "Океан", "aurora", "Сияние"));
     final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFB9A6FF));
 
     private boolean ready;
@@ -86,6 +87,24 @@ public final class Cape extends Module {
                     default -> 0.25f + 0.6f * (1f - (y % 17) / 17f);
                 };
                 img.setPixel(x, y, argb(0xFF, (int) (r * t * 0.6f + 8), (int) (g * t * 0.6f + 8), (int) (b * t * 0.6f + 14)));
+            }
+        }
+        int[] pair = switch (kind) {
+            case "mraz" -> new int[]{0xFF8B6CFF, 0xFF4FD1FF};
+            case "sunset" -> new int[]{0xFFFF8A5B, 0xFFE0457B};
+            case "ocean" -> new int[]{0xFF4FD1FF, 0xFF1B2A6B};
+            case "aurora" -> new int[]{0xFF4ADE80, 0xFF8B6CFF};
+            default -> null;
+        };
+        if (pair != null) {
+            // градиент по диагонали развёртки + светлая кромка сверху (в стиле клиента)
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    float t = Math.min(1f, (y % 17) / 17f * 0.8f + (x % 22) / 22f * 0.2f);
+                    int c = dev.mraz1visual.ui.Colors.lerp(pair[0], pair[1], t);
+                    if (y % 17 == 1) c = dev.mraz1visual.ui.Colors.lerp(c, 0xFFFFFFFF, 0.35f);
+                    img.setPixel(x, y, c | 0xFF000000);
+                }
             }
         }
         if (kind.equals("eclipse")) {
