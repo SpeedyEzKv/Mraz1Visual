@@ -5,7 +5,11 @@ runtime=root/'launcher/portable/data'
 game=root/'.migration/production-smoke/1.21.11'
 game.mkdir(parents=True,exist_ok=True)
 mods=game/'mods';mods.mkdir(exist_ok=True)
-jar=root/'mod/build/libs/all/mraz1visual-0.1.0+mc1.21.11.jar'
+version=re.search(r'^mod_version=(.+)$',(root/'mod/gradle.properties').read_text(),re.M)[1].strip()
+jar=root/f'mod/build/libs/all/mraz1visual-{version}+mc1.21.11.jar'
+# This directory belongs only to the isolated test profile; replace its previous test JAR.
+for previous in mods.glob('mraz1visual-*+mc1.21.11.jar'):
+    if previous.name!=jar.name: previous.unlink()
 shutil.copy2(jar,mods/jar.name)
 for p in (runtime/'game/mods').glob('*.jar'):
     if p.name.startswith(('fabric-api-','sodium-','iris-')):shutil.copy2(p,mods/p.name)

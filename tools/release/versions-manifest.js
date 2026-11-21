@@ -2,7 +2,7 @@
 // node tools/release/versions-manifest.js <папка с jar> <базовый URL релиза>  → JSON в stdout
 // Версии берутся из mod/settings.gradle (что реально собирается), зависимости — из mod/versions/<версия>/gradle.properties.
 const fs = require("fs"), path = require("path"), crypto = require("crypto");
-const [dir, baseUrl] = process.argv.slice(2);
+const [dir, baseUrl, requestedVersion] = process.argv.slice(2);
 const root = path.join(__dirname, "..", "..");
 const settings = fs.readFileSync(path.join(root, "mod", "settings.gradle"), "utf8");
 const built = (settings.match(/^\s*versions\s+(.+)$/m) || [, ""])[1].match(/'([^']+)'/g).map(s => s.slice(1, -1));
@@ -20,7 +20,9 @@ const props = f => Object.fromEntries(fs.readFileSync(f, "utf8").split(/\r?\n/)
 const out = [];
 for (const mc of built) {
   const p = props(path.join(root, "mod", "versions", mc, "gradle.properties"));
-  const file = fs.readdirSync(dir).find(f => f.startsWith("mraz1visual-") && f.endsWith(`+mc${mc}.jar`));
+  const candidates = fs.readdirSync(dir).filter(f => f.startsWith("mraz1visual-") && f.endsWith(`+mc${mc}.jar`));
+  if (!requestedVersion && candidates.length > 1) throw new Error(`Multiple artifacts for ${mc}: specify a mod version`);
+  const file = requestedVersion ? candidates.find(f => f === `mraz1visual-${requestedVersion}+mc${mc}.jar`) : candidates[0];
   if (!file) { console.error(`нет jar для ${mc}`); process.exit(1); }
   const buf = fs.readFileSync(path.join(dir, file));
   out.push({

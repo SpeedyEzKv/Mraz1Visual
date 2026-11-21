@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $artifactDirectory = Join-Path $projectRoot 'mod/build/libs/all'
+$modVersion = ((Get-Content (Join-Path $projectRoot 'mod/gradle.properties') | Where-Object { $_ -match '^mod_version=' }) -split '=', 2)[1].Trim()
 $expected = @{
     '1.21.11' = @('9.0.8+1.21.11-fabric', '17.0.1')
     '26.1.2' = @('9.0.8+26.1.2-fabric', '18.0.2')
@@ -22,7 +23,7 @@ function Get-EntryHash($entry) {
 }
 $sums = @()
 foreach ($version in @('1.21.11', '26.1.2', '26.2', '26.3')) {
-    $file = Join-Path $artifactDirectory "mraz1visual-0.1.0+mc$version.jar"
+    $file = Join-Path $artifactDirectory "mraz1visual-$modVersion+mc$version.jar"
     $archive = [IO.Compression.ZipFile]::OpenRead($file)
     try {
         $names = @($archive.Entries.FullName)

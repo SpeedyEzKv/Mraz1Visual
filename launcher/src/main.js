@@ -84,7 +84,7 @@ function percent(p) {
   el.classList.add("on");
 }
 function idleStatus() {
-  if (!info) return;
+  if (!info || busy) return;
   if (!info.has_mraz1visual && !info.online) status("Mraz1Visual ещё не установлен", "Положи mraz1visual.jar в папку игры → game/mods");
   else status(`Версия ${info.version} · Minecraft ${info.selected || info.minecraft}`, "Нажми «Играть» — потом игра запустится сама");
 }

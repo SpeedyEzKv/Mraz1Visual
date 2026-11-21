@@ -8,8 +8,9 @@ const jars = path.join(root, 'mod/build/libs/all');
 const output = path.join(root, 'launcher/portable');
 const executable = path.join(root, 'launcher/src-tauri/target/release/mraz1visual-launcher.exe');
 if (!fs.existsSync(executable)) throw new Error('Build the launcher with cargo build --release first.');
+const modVersion = /^mod_version=(.+)$/m.exec(fs.readFileSync(path.join(root, 'mod/gradle.properties'), 'utf8'))[1].trim();
 const versions = JSON.parse(execFileSync(process.execPath,
-  [path.join(root, 'tools/release/versions-manifest.js'), jars, 'bundle://mods'], {encoding:'utf8'}));
+  [path.join(root, 'tools/release/versions-manifest.js'), jars, 'bundle://mods', modVersion], {encoding:'utf8'}));
 // Expose only the four versions actually built/tested, not historical compatibility aliases.
 for (const version of versions) version.covers = [version.minecraft];
 fs.mkdirSync(path.join(output, 'mods'), {recursive:true});
@@ -21,7 +22,7 @@ for (const version of versions) {
 }
 const main = versions.find(v => v.minecraft === '1.21.11');
 const manifest = {
-  client_version:'0.1.23', build:20261122, minecraft:main.minecraft,
+  client_version:modVersion, build:20261123, minecraft:main.minecraft,
   fabric_loader:main.fabric_loader, java:main.java, mods:[], versions,
   changelog:[
     '37 моделей Pulse, кольцо прыжка Pulse, обновлённые следы и обод China Hat. Шрифт Inter на экранах игры, реальные статусы загрузки и кнопка отмены.',

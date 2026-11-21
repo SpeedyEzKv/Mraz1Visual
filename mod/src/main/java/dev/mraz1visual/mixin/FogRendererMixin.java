@@ -14,6 +14,17 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
+    @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V",
+            at = @At("HEAD"), argsOnly = true, ordinal = 2)
+    private float mraz$distanceStart(float distance) {
+        return CustomFog.distance(distance, true);
+    }
+
+    @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V",
+            at = @At("HEAD"), argsOnly = true, ordinal = 3)
+    private float mraz$distanceEnd(float distance) {
+        return CustomFog.distance(distance, false);
+    }
     @ModifyReturnValue(method = "getFogType", at = @At("RETURN"))
     private net.minecraft.world.level.material.FogType mraz$fluidFog(net.minecraft.world.level.material.FogType original) {
         return dev.mraz1visual.module.NoFluids.hide(original) ? net.minecraft.world.level.material.FogType.NONE : original;

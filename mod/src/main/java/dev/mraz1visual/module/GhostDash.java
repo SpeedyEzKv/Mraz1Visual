@@ -19,6 +19,9 @@ public final class GhostDash extends Module implements DecorativeLayer {
     private final ColorSetting color=add(new ColorSetting("color","Оттенок скина",0xFF89DDFF));
     private static final class Ghost extends Recorder {double x,y,z;float yaw;long born;Identifier skin;}
     private final Ghost[] ghosts={new Ghost(),new Ghost(),new Ghost()};
+    private static final Identifier FROST = Identifier.fromNamespaceAndPath("mraz1visual", "textures/fx/ghost_frost.png");
+    private final EnumSetting surface = add(new EnumSetting("surface", "Материал копий", 0,
+            "frost", "Матовое стекло", "skin", "Скин игрока"));
     private double travel;
     private int next,lastTick=-1;private Object world;
     private Object player;private double previousX,previousY,previousZ;
@@ -41,7 +44,7 @@ public final class GhostDash extends Module implements DecorativeLayer {
         if(d.source()==null)return;
         for(var g:ghosts){float t=(System.nanoTime()-g.born)/(duration.getF()*1e9f);if(g.n==0||t>=1||g.skin==null)continue;
             ps.setIdentity();ps.last().pose().set(d.framePose());ps.translate(g.x-d.camX(),g.y+1.4072-d.camY(),g.z-d.camZ());ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180-g.yaw));ps.scale(.9375f,-.9375f,.9375f);
-            var vc=d.source().getBuffer(RenderTypes.entityTranslucent(g.skin));int tint=Colors.mulAlpha(Fx.color("custom",.4f,Fx.time(),color.get(),color.get()),opacity.getF()/100*(1-t)*Fx.decorativeAlpha(g.x,g.y+1,g.z,"trails"));
+            var vc=d.source().getBuffer(RenderTypes.entityTranslucent(surface.getId().equals("frost") ? FROST : g.skin));int tint=Colors.mulAlpha(Fx.color("custom",.4f,Fx.time(),color.get(),color.get()),opacity.getF()/100*(1-t)*Fx.decorativeAlpha(g.x,g.y+1,g.z,"trails"));
             double theta=Math.toRadians(180-g.yaw), cs=Math.cos(theta), sn=Math.sin(theta);
             double dx=d.camX()-g.x,dy=d.camY()-g.y-.9,dz=d.camZ()-g.z;
             double distance=Math.max(.01,Math.sqrt(dx*dx+dy*dy+dz*dz));
@@ -52,7 +55,7 @@ public final class GhostDash extends Module implements DecorativeLayer {
                     double rim=1-Math.min(1,Math.abs(vx*g.values[o+5]+vy*g.values[o+6]+vz*g.values[o+7]));
                     faceTint=Colors.mulAlpha(tint,(float)(1-t+t*rim*rim));
                 }
-                vc.addVertex(ps.last().pose(),g.values[o],g.values[o+1],g.values[o+2]).setColor(faceTint).setUv(g.values[o+3],g.values[o+4]).setUv1(0,0).setUv2(240,240).setNormal(g.values[o+5],g.values[o+6],g.values[o+7]);}
+                vc.addVertex(ps.last().pose(),g.values[o],g.values[o+1],g.values[o+2]).setColor(faceTint).setUv(g.values[o+3],g.values[o+4]).setOverlay(OverlayTexture.NO_OVERLAY).setUv2(240,240).setNormal(g.values[o+5],g.values[o+6],g.values[o+7]);}
         }d.restore();
     }
     private void clear(){for(var g:ghosts)g.n=0;lastTick=-1;next=0;travel=0;}

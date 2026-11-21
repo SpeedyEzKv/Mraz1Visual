@@ -9,6 +9,15 @@ import org.joml.Vector4f;
 /** Свой цвет тумана и горизонта: атмосфера заката, ночи или неона. */
 public final class CustomFog extends Module {
     private static CustomFog instance;
+    final SliderSetting start = add(new SliderSetting("distance_start", "Начало тумана", 100, 0, 100, 1, " %"));
+    final SliderSetting end = add(new SliderSetting("distance_end", "Дальность тумана", 100, 5, 100, 1, " %"));
+
+    public static float distance(float original, boolean beginning) {
+        CustomFog fog = instance;
+        if (fog == null || !fog.isEnabled()) return original;
+        float percent = beginning ? Math.min(fog.start.getF(), fog.end.getF()) : fog.end.getF();
+        return original * (percent / 100f);
+    }
     final dev.mraz1visual.setting.EnumSetting preset = add(new dev.mraz1visual.setting.EnumSetting("preset", "Пресет", 0,
             "custom", "Свой", "sunset", "Закат", "night", "Ночь", "violet", "Фиолет").onChange(this::applyPreset));
     final ColorSetting color = add(new ColorSetting("color", "Цвет тумана (горизонт)", 0xFF8A6FD8));

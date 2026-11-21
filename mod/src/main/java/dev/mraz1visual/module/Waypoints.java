@@ -40,7 +40,7 @@ public final class Waypoints extends Module implements WorldLayer {
     final KeySetting pingKey = add(new KeySetting("ping_key", "Колесо локальных меток", InputConstants.KEY_N));
     private static final List<String> PINGS = List.of("Сюда", "Опасность", "Предмет");
     private final List<Ping> pings = new ArrayList<>();
-    private record Ping(net.minecraft.world.phys.Vec3 at, int color, long expires) {}
+    private record Ping(net.minecraft.world.phys.Vec3 at, net.minecraft.core.Direction face, int color, long expires) {}
     private Object pingWorld;
     private boolean pingWas;
     final ColorSetting color = add(new ColorSetting("color", "Цвет точек", 0xB0B8B4F2).group("Вид"));
@@ -136,7 +136,7 @@ public final class Waypoints extends Module implements WorldLayer {
                     default -> 0xFFAC99FF;
                 };
                 if (pings.size() >= 12) pings.remove(0);
-                pings.add(new Ping(at, tint, level.getGameTime() + 120));
+                pings.add(new Ping(at, block.getDirection(), tint, level.getGameTime() + 120));
             }));
         }
     }
@@ -150,8 +150,22 @@ public final class Waypoints extends Module implements WorldLayer {
             float remaining = (ping.expires - mc.level.getGameTime() - pt) / 20f;
             float opacity = Math.min(1, Math.max(0, remaining));
             var at = ping.at;
-            d.ring(at.x, at.y + .025, at.z, .65, .70, 48,
-                    Colors.mulAlpha(ping.color, opacity * .4f), Colors.mulAlpha(ping.color, opacity));
+            int inner = Colors.mulAlpha(ping.color, opacity * .4f), outer = Colors.mulAlpha(ping.color, opacity);
+            double x = at.x + ping.face.getStepX() * .012;
+            double y = at.y + ping.face.getStepY() * .012;
+            double z = at.z + ping.face.getStepZ() * .012;
+            if (ping.face.getAxis() == net.minecraft.core.Direction.Axis.Y) {
+                d.ring(x, y, z, .65, .70, 48, inner, outer);
+            } else {
+                boolean alongX = ping.face.getAxis() == net.minecraft.core.Direction.Axis.Z;
+                for (int i = 0; i < 48; i++) {
+                    double a = i * Math.PI / 24, b = (i + 1) * Math.PI / 24;
+                    double ax = alongX ? Math.cos(a) : 0, az = alongX ? 0 : Math.cos(a), ay = Math.sin(a);
+                    double bx = alongX ? Math.cos(b) : 0, bz = alongX ? 0 : Math.cos(b), by = Math.sin(b);
+                    d.quad(x+.65*ax,y+.65*ay,z+.65*az, x+.70*ax,y+.70*ay,z+.70*az,
+                           x+.70*bx,y+.70*by,z+.70*bz, x+.65*bx,y+.65*by,z+.65*bz,inner,outer,outer,inner);
+                }
+            }
         }
         List<Point> list = data.get(serverKey(mc));
         if (list == null) return;
