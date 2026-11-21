@@ -22,6 +22,7 @@ public final class GhostDash extends Module implements DecorativeLayer {
     private static final Identifier FROST = Identifier.fromNamespaceAndPath("mraz1visual", "textures/fx/ghost_frost.png");
     private final EnumSetting surface = add(new EnumSetting("surface", "Материал копий", 0,
             "frost", "Матовое стекло", "skin", "Скин игрока"));
+    private int activeCount;
     private double travel;
     private int next,lastTick=-1;private Object world;
     private Object player;private double previousX,previousY,previousZ;
@@ -31,6 +32,12 @@ public final class GhostDash extends Module implements DecorativeLayer {
         var g=instance;var mc=Minecraft.getInstance();var p=mc.player;
         if(gui||g==null||!g.isEnabled()||p==null||p.tickCount==g.lastTick||g.sprint.get()&&!p.isSprinting()||Math.hypot(p.getX()-p.xo,p.getZ()-p.zo)*20<g.speed.get())return;
         if(g.world!=mc.level){g.clear();g.world=mc.level;}
+        int limit = g.count.getI();
+        if (g.activeCount != limit) {
+            for (int i = limit; i < g.ghosts.length; i++) g.ghosts[i].n = 0;
+            g.next %= limit;
+            g.activeCount = limit;
+        }
         double spacing = g.frequency.getI()*.24;
         if (g.lastTick >= 0 && g.travel < spacing) return;
         g.travel %= spacing;
@@ -42,7 +49,7 @@ public final class GhostDash extends Module implements DecorativeLayer {
     @Override public void onTick(Minecraft mc){var p=mc.player;if(mc.level!=world||p!=player||p!=null&&p.distanceToSqr(previousX,previousY,previousZ)>64){clear();world=mc.level;player=p;}if(p!=null){if(lastTick>=0)travel+=Math.hypot(p.getX()-previousX,p.getZ()-previousZ);previousX=p.getX();previousY=p.getY();previousZ=p.getZ();}}
     @Override public void renderWorld(WorldDraw d,float pt){
         if(d.source()==null)return;
-        for(var g:ghosts){float t=(System.nanoTime()-g.born)/(duration.getF()*1e9f);if(g.n==0||t>=1||g.skin==null)continue;
+        for(int index=0;index<count.getI();index++){var g=ghosts[index];float t=(System.nanoTime()-g.born)/(duration.getF()*1e9f);if(g.n==0||t>=1||g.skin==null)continue;
             ps.setIdentity();ps.last().pose().set(d.framePose());ps.translate(g.x-d.camX(),g.y+1.4072-d.camY(),g.z-d.camZ());ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180-g.yaw));ps.scale(.9375f,-.9375f,.9375f);
             var vc=d.source().getBuffer(RenderTypes.entityTranslucent(surface.getId().equals("frost") ? FROST : g.skin));int tint=Colors.mulAlpha(Fx.color("custom",.4f,Fx.time(),color.get(),color.get()),opacity.getF()/100*(1-t)*Fx.decorativeAlpha(g.x,g.y+1,g.z,"trails"));
             double theta=Math.toRadians(180-g.yaw), cs=Math.cos(theta), sn=Math.sin(theta);

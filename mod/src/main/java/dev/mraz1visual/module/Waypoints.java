@@ -42,6 +42,7 @@ public final class Waypoints extends Module implements WorldLayer {
     private final List<Ping> pings = new ArrayList<>();
     private record Ping(net.minecraft.world.phys.Vec3 at, net.minecraft.core.Direction face, int color, long expires) {}
     private Object pingWorld;
+    private List<Point> activePoints = List.of();
     private boolean pingWas;
     final ColorSetting color = add(new ColorSetting("color", "Цвет точек", 0xB0B8B4F2).group("Вид"));
 
@@ -63,11 +64,18 @@ public final class Waypoints extends Module implements WorldLayer {
     }
 
     private static String serverKey(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server != null) {
+            var folder = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).normalize().getFileName();
+            return "world:" + folder;
+        }
         return mc.getCurrentServer() != null ? mc.getCurrentServer().ip : "local";
     }
 
     private List<Point> points(Minecraft mc) {
-        return data.computeIfAbsent(serverKey(mc), k -> new ArrayList<>());
+        // Older clients shared one local list. Preserve those points when each world is first opened.
+        return data.computeIfAbsent(serverKey(mc), key -> key.startsWith("world:")
+                ? new ArrayList<>(data.getOrDefault("local", List.of())) : new ArrayList<>());
     }
 
     @Override
@@ -77,6 +85,7 @@ public final class Waypoints extends Module implements WorldLayer {
             pings.clear();
             pingWas = false;
             pingWorld = mc.level;
+            activePoints = mc.level == null ? List.of() : points(mc);
         }
         if (p == null || mc.level == null) return;
         long tick = mc.level.getGameTime();
@@ -167,9 +176,8 @@ public final class Waypoints extends Module implements WorldLayer {
                 }
             }
         }
-        List<Point> list = data.get(serverKey(mc));
-        if (list == null) return;
-        for (Point p : list) {
+        if (pingWorld != mc.level) return;
+        for (Point p : activePoints) {
             if (p.death || !p.dim.equals(dim)) continue;
             double dist = Math.sqrt(mc.player.distanceToSqr(p.x, p.y, p.z));
             float fade = (float) Math.min(1, Math.max(0.25, dist / 24)); // вблизи луч не мешает обзору
@@ -182,6 +190,8 @@ public final class Waypoints extends Module implements WorldLayer {
     @Override protected void onDisable() {
         pings.clear();
         pingWorld = null;
+        activePoints = List.of();
+        addWas = removeWas = false;
         pingWas = false;
     }
 
@@ -191,7 +201,12 @@ public final class Waypoints extends Module implements WorldLayer {
                 Map<String, List<Point>> m = GSON.fromJson(Files.readString(FILE, StandardCharsets.UTF_8),
                         new TypeToken<Map<String, List<Point>>>() {}.getType());
                 if (m != null) data = m;
-                for (List<Point> l : data.values()) counter += l.size();
+                data.values().removeIf(java.util.Objects::isNull);
+                for (List<Point> list : data.values()) {
+                    list.removeIf(point -> point == null || point.dim == null || !Double.isFinite(point.x)
+                            || !Double.isFinite(point.y) || !Double.isFinite(point.z));
+                    counter += list.size();
+                }
             }
         } catch (Throwable t) {
             ModuleManager.LOG.warn("waypoints.json unreadable ({})", t.toString());

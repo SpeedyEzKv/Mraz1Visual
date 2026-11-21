@@ -32,10 +32,11 @@ pub fn is_valid(path: &Path, sha1: Option<&str>, size: Option<u64>) -> bool {
         }
     }
     match sha1 {
-        Some(expected) => match std::fs::read(path) {
-            Ok(bytes) => hex::encode(Sha1::digest(&bytes)).eq_ignore_ascii_case(expected),
-            Err(_) => false,
-        },
+        Some(expected) => {
+            let Ok(mut file) = std::fs::File::open(path) else { return false };
+            let mut hash = Sha1::new();
+            std::io::copy(&mut file, &mut hash).is_ok() && hex::encode(hash.finalize()).eq_ignore_ascii_case(expected)
+        }
         None => meta.len() > 0,
     }
 }
@@ -128,11 +129,8 @@ async fn install_staged(tmp: &Path, path: &Path, sha256: Option<&str>) -> Result
 
 /// Скачать пачку параллельно. `on_done` вызывается после каждого файла.
 pub async fn fetch_all<F: FnMut(usize, usize)>(client: &reqwest::Client, jobs: Vec<Job>, parallel: usize, mut on_done: F) -> Result<()> {
-    let todo: Vec<Job> = jobs
-        .into_iter()
-        // уже скачанное пропускаем: при известном размере сверяем только размер (быстро), иначе sha1
-        .filter(|j| !is_valid(&j.path, if j.size.is_some() { None } else { j.sha1.as_deref() }, j.size))
-        .collect();
+    let todo = tokio::task::spawn_blocking(move || jobs.into_iter()
+        .filter(|j| !is_valid(&j.path, j.sha1.as_deref(), j.size)).collect::<Vec<_>>()).await?;
     let total = todo.len();
     on_done(0, total);
     let mut stream = futures::stream::iter(todo.into_iter().map(|j| async move { fetch(client, &j).await }))
@@ -153,6 +151,28 @@ pub async fn get_json(client: &reqwest::Client, url: &str) -> Result<serde_json:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn repairs_same_size_corruption() -> Result<()> {
+        use tokio::io::AsyncReadExt;
+        let path = std::env::temp_dir().join(format!("mraz-checksum-{}.jar", std::process::id()));
+        tokio::fs::write(&path, b"bad").await?;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+        let addr = listener.local_addr()?;
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0; 1024];
+            socket.read(&mut request).await.unwrap();
+            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\nConnection: close\r\n\r\nnew").await.unwrap();
+        });
+        let job = Job { url: format!("http://{addr}/resource"), path: path.clone(), size: Some(3),
+            sha1: Some(hex::encode(Sha1::digest(b"new"))) };
+        fetch_all(&client(), vec![job], 1, |_, _| {}).await?;
+        let content = tokio::fs::read(&path).await?;
+        tokio::fs::remove_file(path).await?;
+        assert_eq!(content, b"new");
+        Ok(())
+    }
 
     #[tokio::test]
     async fn truncated_download_preserves_installed_file() -> Result<()> {

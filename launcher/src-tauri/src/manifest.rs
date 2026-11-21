@@ -254,7 +254,7 @@ impl Manifest {
     }
 
     /// manifest.json из последнего релиза; при любой ошибке — встроенный.
-    pub async fn fetch(client: &reqwest::Client) -> (Self, bool) {
+    pub async fn fetch(client: &reqwest::Client, root: &std::path::Path) -> (Self, bool) {
         // A local preview bundle takes precedence over the published release.
         // The ordinary launcher still follows GitHub when no sidecar exists.
         if let Some(path) = std::env::current_exe().ok().and_then(|p| p.parent().map(|dir| dir.join("manifest.local.json"))) {
@@ -268,12 +268,55 @@ impl Manifest {
             return (Self::builtin(), false);
         }
         let url = format!("https://github.com/{GITHUB_REPO}/releases/latest/download/manifest.json");
-        match client.get(&url).send().await.and_then(|r| r.error_for_status()) {
-            Ok(resp) => match resp.json::<Manifest>().await {
-                Ok(m) => (m, true),
-                Err(_) => (Self::builtin(), false),
-            },
-            Err(_) => (Self::builtin(), false),
+        Self::fetch_remote(client, root, &url).await
+    }
+
+    async fn fetch_remote(client: &reqwest::Client, root: &std::path::Path, url: &str) -> (Self, bool) {
+        let cache = root.join("release-manifest.json");
+        if let Ok(response) = client.get(url).timeout(std::time::Duration::from_secs(15)).send().await.and_then(|r| r.error_for_status()) {
+            if let Ok(bytes) = response.bytes().await {
+                if let Ok(manifest) = serde_json::from_slice::<Self>(&bytes) {
+                    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+                    let sequence = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let tmp = cache.with_extension(format!("{}-{sequence}.tmp", std::process::id()));
+                    if tokio::fs::create_dir_all(root).await.is_ok() && tokio::fs::write(&tmp, &bytes).await.is_ok() {
+                        let _ = tokio::fs::rename(&tmp, &cache).await;
+                    }
+                    return (manifest, true);
+                }
+            }
         }
+        let cached = tokio::fs::read(cache).await.ok().and_then(|bytes| serde_json::from_slice(&bytes).ok());
+        (cached.unwrap_or_else(Self::builtin), false)
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    #[tokio::test]
+    async fn downloaded_manifest_survives_offline_restart() -> anyhow::Result<()> {
+        let dir = std::env::temp_dir().join(format!("mraz-manifest-{}", std::process::id()));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+        let url = format!("http://{}/manifest.json", listener.local_addr()?);
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await?;
+            let mut request = [0; 1024];
+            stream.read(&mut request).await?;
+            let body = br#"{"client_version":"test","build":99,"minecraft":"26.3","mods":[]}"#;
+            stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).as_bytes()).await?;
+            stream.write_all(body).await
+        });
+        let client = crate::net::client();
+        assert!(Manifest::fetch_remote(&client, &dir, &url).await.1);
+        server.await??;
+        let (cached, online) = Manifest::fetch_remote(&client, &dir, &url).await;
+        assert!(!online);
+        assert_eq!((cached.build, cached.recommended()), (99, "26.3".to_owned()));
+        std::fs::remove_file(dir.join("release-manifest.json"))?;
+        std::fs::remove_dir(dir)?;
+        Ok(())
     }
 }

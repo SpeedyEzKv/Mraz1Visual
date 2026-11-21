@@ -392,6 +392,8 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     // id проектов Modrinth из набора — чтобы «Оптимизация» не поставила их второй раз
     let staging = paths.game().join(".mraz-update");
     std::fs::create_dir_all(&staging)?;
+    let managed_path = paths.managed_mods_file();
+    let old: Managed = std::fs::read_to_string(&managed_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     let mut replacements = Vec::new();
     let mut stamps = Vec::new();
     let mut pinned: HashSet<String> = HashSet::new();
@@ -443,7 +445,7 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     while i < latest.len() {
         let slug = latest[i].clone();
         i += 1;
-        let Some(v) = latest_fabric(client, &slug, &m.minecraft).await else { continue };
+        let Some(v) = latest_fabric(client, &slug, &m.minecraft).await? else { continue };
         // уже стоит из набора (Sodium по галочке) или пришёл зависимостью другого мода
         if let Some(pid) = v["project_id"].as_str() {
             if pinned.contains(pid) || (!seen.insert(pid.to_string()) && pid != slug) { continue; }
@@ -459,7 +461,7 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
         if let Some(f) = v["files"].as_array().and_then(|a| a.iter().find(|f| f["primary"].as_bool() == Some(true)).or(a.first())) {
             if let (Ok(url), Ok(file)) = (str_of(f, "url"), str_of(f, "filename")) {
                 // тот же мод уже лежит другой версией (поставлен руками) — не ставим второй копией
-                if !has_other_copy(paths, &file, &slug) {
+                if !has_other_copy(&paths.mods(), &file, &slug, &old.files) {
                     validate_mod_name(&file)?;
                     let sha1 = f["hashes"]["sha1"].as_str();
                     if !files.contains(&file) && !net::is_valid(&paths.mods().join(&file), sha1, None) {
@@ -474,8 +476,6 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     net::fetch_all(client, jobs, 4, |d, t| report(progress, Stage::Mods, d, t)).await?;
 
     // удалить наши старые версии, которых больше нет в списке; чужие моды не трогаем
-    let managed_path = paths.managed_mods_file();
-    let old: Managed = std::fs::read_to_string(&managed_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
     for file in replacements {
         std::fs::rename(staging.join(&file), paths.mods().join(&file))
             .with_context(|| format!("Не удалось обновить {file}. Закройте игру и повторите установку"))?;
@@ -496,20 +496,20 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
 const FABRIC_API_ID: &str = "P7dR8mSH";
 
 /// Свежая релизная (или бета, если релиза нет) версия мода для Fabric под эту игру; нет — None.
-async fn latest_fabric(client: &reqwest::Client, project: &str, mc: &str) -> Option<Value> {
+async fn latest_fabric(client: &reqwest::Client, project: &str, mc: &str) -> Result<Option<Value>> {
     let url = format!("https://api.modrinth.com/v2/project/{project}/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%22{mc}%22%5D");
-    let list = net::get_json(client, &url).await.ok()?;
-    let a = list.as_array()?;
-    a.iter().find(|v| v["version_type"].as_str() == Some("release")).or(a.first()).cloned()
+    let list = net::get_json(client, &url).await.with_context(|| format!("Список версий {project}"))?;
+    let a = list.as_array().context("Некорректный список версий Modrinth")?;
+    Ok(a.iter().find(|v| v["version_type"].as_str() == Some("release")).or(a.first()).cloned())
 }
 
 /// В mods уже есть этот мод другим файлом (по началу имени: «lithium-…»), кроме нашего же файла.
-fn has_other_copy(paths: &Paths, file: &str, slug: &str) -> bool {
+fn has_other_copy(dir: &Path, file: &str, slug: &str, managed: &[String]) -> bool {
     let key = slug.to_lowercase().replace('-', "");
-    let Ok(rd) = std::fs::read_dir(paths.mods()) else { return false };
+    let Ok(rd) = std::fs::read_dir(dir) else { return false };
     rd.flatten().any(|e| {
         let n = e.file_name().to_string_lossy().to_lowercase();
-        n != file.to_lowercase() && n.ends_with(".jar") && n.replace(['-', '_'], "").starts_with(&key)
+        n != file.to_lowercase() && !managed.iter().any(|m| m.eq_ignore_ascii_case(&n)) && n.ends_with(".jar") && n.replace(['-', '_'], "").starts_with(&key)
     })
 }
 
@@ -625,4 +625,20 @@ pub fn rules_allow(rules: &Value) -> bool {
         }
     }
     allowed
+}
+
+#[cfg(test)]
+mod update_tests {
+    #[test]
+    fn managed_previous_version_does_not_block_update() -> anyhow::Result<()> {
+        let dir = std::env::temp_dir().join(format!("mraz-managed-{}", std::process::id()));
+        std::fs::create_dir_all(&dir)?;
+        let original = "lithium-old.jar";
+        std::fs::write(dir.join(original), [])?;
+        assert!(!super::has_other_copy(&dir, "lithium-new.jar", "lithium", &[original.into()]));
+        assert!(super::has_other_copy(&dir, "lithium-new.jar", "lithium", &[]));
+        std::fs::remove_file(dir.join(original))?;
+        std::fs::remove_dir(dir)?;
+        Ok(())
+    }
 }

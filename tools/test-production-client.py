@@ -4,6 +4,12 @@ root=pathlib.Path(__file__).resolve().parent.parent
 runtime=root/'launcher/portable/data'
 game=root/'.migration/production-smoke/1.21.11'
 game.mkdir(parents=True,exist_ok=True)
+# This runner owns its test profile. Start silently, including first launch and resource reloads.
+options = game / 'options.txt'
+lines = options.read_text(encoding='utf8').splitlines() if options.exists() else []
+muted = {'soundCategory_music', 'soundCategory_record', 'soundCategory_master'}
+lines = [line for line in lines if line.partition(':')[0] not in muted]
+options.write_text('\n'.join(lines + [key + ':0.0' for key in sorted(muted)]) + '\n', encoding='utf8')
 mods=game/'mods';mods.mkdir(exist_ok=True)
 version=re.search(r'^mod_version=(.+)$',(root/'mod/gradle.properties').read_text(),re.M)[1].strip()
 jar=root/f'mod/build/libs/all/mraz1visual-{version}+mc1.21.11.jar'

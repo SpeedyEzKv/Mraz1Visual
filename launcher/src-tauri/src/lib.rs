@@ -23,7 +23,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 struct AppState {
     paths: Paths,
     settings: Mutex<Settings>,
-    manifest: Mutex<Option<Manifest>>,
+    manifest: Mutex<Option<(Manifest, bool)>>,
     busy: AtomicBool,
     media: tokio::sync::OnceCell<Option<media::Media>>,
 }
@@ -90,10 +90,10 @@ fn memory() -> (u64, u64) {
 async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
     let cached = state.manifest.lock().unwrap().clone();
     let (m, online) = match cached {
-        Some(m) => (m, true),
+        Some(result) => result,
         None => {
-            let (m, online) = Manifest::fetch(&net::client()).await;
-            *state.manifest.lock().unwrap() = Some(m.clone());
+            let (m, online) = Manifest::fetch(&net::client(), &state.paths.root).await;
+            *state.manifest.lock().unwrap() = Some((m.clone(), online));
             discord::set_app_id(&m.discord_app_id);
             discord::launcher();
             (m, online)
@@ -115,7 +115,7 @@ async fn info(state: State<'_, AppState>) -> Result<LauncherInfo, String> {
         close_on_launch: s.close_on_launch,
         game_dir: state.paths.root.to_string_lossy().to_string(),
         account: launch::current_account(&state.paths).name,
-        has_mraz1visual: install::has_mraz1visual(&state.paths),
+        has_mraz1visual: install::has_mraz1visual(&state.paths.for_version(&selected_version(&m, &s))),
         launcher_update: (!m.launcher_url.is_empty() && manifest::newer(&m.launcher_version, env!("CARGO_PKG_VERSION")))
             .then(|| m.launcher_url.clone()),
         versions: m.choices(),
@@ -205,8 +205,12 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
     let manifest = {
         let cached = state.manifest.lock().unwrap().clone();
         match cached {
-            Some(m) => m,
-            None => Manifest::fetch(&net::client()).await.0,
+            Some((m, true)) => m,
+            _ => {
+                let result = Manifest::fetch(&net::client(), &state.paths.root).await;
+                *state.manifest.lock().unwrap() = Some(result.clone());
+                result.0
+            }
         }
     };
     let progress = EmitProgress(app.clone());
@@ -321,7 +325,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
 fn mc_version(state: &State<'_, AppState>) -> String {
     let m = state.manifest.lock().unwrap().clone();
     let s = state.settings.lock().unwrap().clone();
-    m.map(|m| selected_version(&m, &s)).unwrap_or_else(|| "1.21.11".into())
+    m.map(|(m, _)| selected_version(&m, &s)).unwrap_or_else(|| "1.21.11".into())
 }
 
 #[tauri::command]
@@ -357,7 +361,7 @@ fn market_delete_local(state: State<'_, AppState>, kind: String, file: String) -
 /// Папка игры выбранной версии и её Fabric Loader (для проверки модов).
 fn selected_profile(state: &State<'_, AppState>) -> (Paths, String, String) {
     let mc = mc_version(state);
-    let loader = state.manifest.lock().unwrap().as_ref().map(|m| m.resolve(&mc, false, false).fabric_loader).unwrap_or_default();
+    let loader = state.manifest.lock().unwrap().as_ref().map(|(m, _)| m.resolve(&mc, false, false).fabric_loader).unwrap_or_default();
     (state.paths.for_version(&mc), mc, loader)
 }
 

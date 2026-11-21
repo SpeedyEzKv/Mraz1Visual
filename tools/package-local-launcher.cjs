@@ -22,9 +22,10 @@ for (const version of versions) {
 }
 const main = versions.find(v => v.minecraft === '1.21.11');
 const manifest = {
-  client_version:modVersion, build:20261123, minecraft:main.minecraft,
+  client_version:modVersion, build:20261124, minecraft:main.minecraft,
   fabric_loader:main.fabric_loader, java:main.java, mods:[], versions,
   changelog:[
+    "Исправлено обновление модов оптимизации, проверка целостности файлов и восстановление списка версий без сети. Точки одиночной игры разделены по мирам.",
     '37 моделей Pulse, кольцо прыжка Pulse, обновлённые следы и обод China Hat. Шрифт Inter на экранах игры, реальные статусы загрузки и кнопка отмены.',
     'Eclipse — световой серп, гранёные крылья, движение питомцев на ступенях и направленная смена скина оружия. Обновлены следы шагов и приземления.',
     'Аудит визуалов: исправлены фоторежим при загрузке конфига, Aspect Ratio в 26.x, очистка следов/эффектов и сохранение косметики.',
