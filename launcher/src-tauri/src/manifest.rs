@@ -255,6 +255,15 @@ impl Manifest {
 
     /// manifest.json из последнего релиза; при любой ошибке — встроенный.
     pub async fn fetch(client: &reqwest::Client) -> (Self, bool) {
+        // A local preview bundle takes precedence over the published release.
+        // The ordinary launcher still follows GitHub when no sidecar exists.
+        if let Some(path) = std::env::current_exe().ok().and_then(|p| p.parent().map(|dir| dir.join("manifest.local.json"))) {
+            if let Ok(bytes) = tokio::fs::read(path).await {
+                if let Ok(manifest) = serde_json::from_slice::<Self>(&bytes) {
+                    return (manifest, true); // An installable manifest is available locally.
+                }
+            }
+        }
         if GITHUB_REPO.starts_with("OWNER/") {
             return (Self::builtin(), false);
         }

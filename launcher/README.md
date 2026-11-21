@@ -1,5 +1,23 @@
 # Mraz1Visual Launcher
 
+## Локальная сборка с новыми визуалами
+
+Готовая папка: `portable/`. Запуск — `portable/Mraz1Visual.exe`, затем выбрать Minecraft 1.21.11 и нажать «Играть».
+Для переноса на другой компьютер используйте весь архив `Mraz1Visual-AuraVisual-local.zip`: рядом с exe нужны `manifest.local.json`, `portable.flag` и папка `mods`.
+
+Эта сборка берёт четыре новых jar из своей папки `mods` и проверяет их SHA-256. Игра, настройки и миры сохраняются в `data` рядом с exe; прежняя установка AppData не изменяется. При первом запуске нужен интернет для Java, Minecraft, Fabric и дополнительных модов. Меню аккаунтов находится в самой игре.
+
+Повторная упаковка из корня репозитория:
+
+```powershell
+cargo build --release --manifest-path launcher/src-tauri/Cargo.toml
+pwsh -File tools/package-local-launcher.ps1
+```
+
+Упаковщик проверяет SHA-256 четырёх JAR и создаёт ZIP только из разрешённого списка файлов. Папка `portable/data` с мирами, настройками и аккаунтами в архив не попадает.
+
+Обычный лаунчер без `manifest.local.json` продолжает использовать опубликованный manifest. Локальная упаковка ничего не публикует.
+
 Tauri 2 (Rust + HTML). Ставит Java 21, Minecraft 1.21.11, Fabric, Fabric API, Sodium, Iris и Mraz1Visual, потом запускает игру.
 
 ## Где лежит игра

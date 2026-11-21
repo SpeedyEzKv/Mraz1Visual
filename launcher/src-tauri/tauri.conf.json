@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Mraz1Visual",
-  "version": "0.1.0",
+  "version": "0.1.23",
   "identifier": "dev.mraz1visual.launcher",
   "build": {
     "frontendDist": "../src"
@@ -14,7 +14,9 @@
         "title": "Mraz1Visual",
         "width": 1050,
         "height": 640,
-        "resizable": false,
+        "resizable": true,
+        "minWidth": 760,
+        "minHeight": 540,
         "decorations": false,
         "center": true,
         "backgroundColor": "#030308"

@@ -12,10 +12,14 @@ pub struct Paths {
 impl Paths {
     pub fn new() -> Self {
         let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
-        let root = base.join("Mraz1Visual");
+        // Preview bundles use their own profiles; existing mods, accounts and
+        // worlds in AppData remain available to the ordinary launcher.
+        let portable = std::env::current_exe().ok().and_then(|p| p.parent().map(|dir| dir.to_path_buf()))
+            .filter(|dir| dir.join("portable.flag").is_file());
+        let root = portable.as_ref().map(|dir| dir.join("data")).unwrap_or_else(|| base.join("Mraz1Visual"));
         // раньше проект назывался Umbra: переносим папку целиком (Java, Minecraft, аккаунты, миры)
         let old = base.join(concat!("Umb", "ra"));
-        if old.is_dir() && !root.exists() {
+        if portable.is_none() && old.is_dir() && !root.exists() {
             let _ = std::fs::rename(&old, &root);
         }
         let game = root.join("game");

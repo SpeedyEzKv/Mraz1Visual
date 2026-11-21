@@ -1,12 +1,17 @@
 // Лаунчер Mraz1Visual: интерфейс. Вся работа — в Rust (invoke), сюда приходят события.
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
+const { LogicalSize } = window.__TAURI__.dpi;
 const win = window.__TAURI__.window.getCurrentWindow();
 
 const $ = (id) => document.getElementById(id);
 
 let info = null;
 let busy = false;
+let updateNotice = "";
+const compactWindow = { width: 760, height: 540 };
+const normalWindow = { width: 1050, height: 640 };
+const isCompact = () => innerWidth <= compactWindow.width + 2 && innerHeight <= compactWindow.height + 2;
 
 // ── фон: видео на весь экран, диск с процентами — над деревом ──────
 function layout() {
@@ -15,8 +20,14 @@ function layout() {
   const disc = $("disc");
   Object.assign(disc.style, { left: dx - dr + "px", top: dy - dr + "px", width: dr * 2 + "px", height: dr * 2 + "px" });
   const st = $("status");
-  st.style.left = dx - 210 + "px";
-  st.style.top = Math.min(h - 70, dy + dr + 42) + "px";
+  const statusLeft=Math.max(Math.min(558,w-202),dx-180);
+  st.style.left=statusLeft+"px";
+  st.style.width=Math.max(160,Math.min(360,w-statusLeft-28))+"px";
+  st.style.top = Math.min(h - 185, dy + dr + 42) + "px";
+  const sizeButton = $("windowSize");
+  sizeButton.title = isCompact() ? "Вернуть обычный размер" : "Компактное окно";
+  sizeButton.setAttribute("aria-label", sizeButton.title);
+  sizeButton.setAttribute("aria-pressed", String(isCompact()));
 }
 function startVideo() {
   const v = $("bg");
@@ -193,6 +204,7 @@ async function saveSettings() {
 // ── действия ─────────────────────────────────────────────────
 async function play() {
   if (busy) return;
+  updateNotice = "";
   busy = true;
   $("play").disabled = true;
   percent(0);
@@ -363,6 +375,18 @@ try {
 
 // ── старт ────────────────────────────────────────────────────
 window.addEventListener("resize", layout);
+$("windowSize").onclick = async () => {
+  const button = $("windowSize");
+  const { width, height } = isCompact() ? normalWindow : compactWindow;
+  button.disabled = true;
+  try {
+    await win.setSize(new LogicalSize(width, height));
+  } catch (error) {
+    status("Не удалось изменить размер окна", String(error), true);
+  } finally {
+    button.disabled = false;
+  }
+};
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 $("min").onclick = () => win.minimize();
 $("close").onclick = () => win.close();
@@ -409,10 +433,11 @@ listen("progress", (e) => {
   percent(p);
   status(label, p >= 100 ? "Запуск" : "Скачиваю и проверяю");
 });
+listen("update-deferred", e => { updateNotice = e.payload; });
 listen("game-started", () => {
-  // окно скрывает Rust; подготовим вид к возвращению
+  // The launcher remains accessible for music control while the game runs.
   splash(false);
-  status("Игра запущена");
+  status("Игра запущена", updateNotice);
 });
 listen("game-exited", (e) => {
   busy = false;

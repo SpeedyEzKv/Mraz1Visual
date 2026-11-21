@@ -23,6 +23,7 @@
     <div class="brand" data-tauri-drag-region>MRAZ1VISUAL <span>бета</span></div>
     <div class="right">
       <span id="account"></span>
+      <button class="win" id="windowSize" type="button" title="Компактное окно" aria-label="Компактное окно" aria-pressed="false">↔</button>
       <button class="win" id="min" title="Свернуть">—</button>
       <button class="win" id="close" title="Закрыть">✕</button>
     </div>
@@ -124,6 +125,26 @@
 
   <div id="status"><div id="statusMain"></div><div id="statusSub"></div></div>
 
+  <aside id="musicDock" aria-label="Сейчас играет">
+    <button id="musicExpand" class="musicSummary" title="Открыть музыку" aria-controls="musicPanel" aria-expanded="false">
+      <span class="musicArt small"><img id="miniCover" alt="" hidden><span class="musicPlaceholder">♪</span></span>
+      <span class="musicCopy"><span class="musicEyebrow" id="miniState">МУЗЫКА</span><strong id="miniTitle">Сейчас ничего не играет</strong><span id="miniArtist">Медиасессии Windows</span></span>
+    </button>
+    <div class="musicTransport compact"><button data-media="prev" aria-label="Предыдущий трек">⏮</button><button data-media="toggle" aria-label="Воспроизведение или пауза">▶</button><button data-media="next" aria-label="Следующий трек">⏭</button></div>
+  </aside>
+  <div id="musicShade" hidden></div>
+  <section id="musicPanel" role="dialog" aria-modal="true" aria-labelledby="musicHeading" hidden>
+    <div class="musicHead"><div><span class="musicEyebrow">MRAZ1VISUAL · СЕЙЧАС ИГРАЕТ</span><h2 id="musicHeading">Музыка рядом</h2></div><button class="win" id="musicClose" aria-label="Закрыть музыку">✕</button></div>
+    <label class="musicSourceLabel" for="musicSource">Источник</label><select id="musicSource"><option value="auto">Авто · текущий источник Windows</option></select>
+    <p class="musicPolicy">Авто следует выбору Windows. Выбери конкретный источник, чтобы закрепить его.</p>
+    <div class="musicHero"><div class="musicArt large"><img id="fullCover" alt="Обложка композиции" hidden><span class="musicPlaceholder">♪</span></div><div class="musicDetails"><span class="musicEyebrow" id="fullState">ОЖИДАНИЕ</span><h3 id="fullTitle">Твоя музыка — здесь</h3><p id="fullArtist">Запусти плеер или видео в браузере</p><span id="fullApp" class="musicPill">Windows Media</span></div></div>
+    <div class="musicTimeline"><input type="range" id="musicSeek" min="0" max="1" value="0" disabled aria-label="Позиция воспроизведения"><div><span id="musicPosition">—:—</span><span id="musicDuration">—:—</span></div></div>
+    <div class="musicTransport"><button data-media="prev" aria-label="Предыдущий трек">⏮</button><button class="primary" data-media="toggle" aria-label="Воспроизведение или пауза">▶</button><button data-media="next" aria-label="Следующий трек">⏭</button></div>
+    <label class="musicVolume">Громкость плеера <input id="musicVolume" type="range" min="0" max="100" value="60" disabled aria-label="Громкость плеера"><span id="musicVolumeValue">—</span></label>
+    <p id="musicHint" class="musicHint" role="status">Подключаю медиасессии…</p>
+    <div class="musicSaved"><div class="musicSavedHead"><h4>Под рукой</h4><button id="musicAddLink">＋ Ссылка</button></div><form id="musicLinkForm" hidden><input id="musicLinkName" maxlength="60" placeholder="Название" aria-label="Название ссылки" required><input id="musicLinkUrl" type="url" placeholder="https://…" aria-label="Ссылка на плейлист или видео" required><button type="submit">Сохранить</button></form><div id="musicLinks"></div><p class="musicPolicy">Ссылки открываются в браузере. Локальная библиотека доступна во вкладке Music в игре.</p></div>
+  </section>
+
   <!-- заставка -->
   <div id="splash">
     <svg id="emblem" viewBox="0 0 200 200" aria-hidden="true">
@@ -142,5 +163,6 @@
   </div>
 </div>
 <script src="main.js"></script>
+<script src="music.js"></script>
 </body>
 </html>

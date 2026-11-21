@@ -65,6 +65,39 @@ pub struct Installed {
     pub version_name: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct CachedInstall {
+    profile: Installed,
+    managed_hashes: Vec<(String, String)>,
+}
+
+fn remember_install(paths: &Paths, profile: &Installed) -> Result<()> {
+    let managed: Managed = serde_json::from_slice(&std::fs::read(paths.managed_mods_file())?)?;
+    let mut managed_hashes = Vec::new();
+    for name in managed.files {
+        validate_mod_name(&name)?;
+        let hash = sha256_file(&paths.mods().join(&name))?;
+        managed_hashes.push((name, hash));
+    }
+    let cache = paths.game().join(".mraz-installed.json");
+    let tmp = cache.with_extension("tmp");
+    std::fs::write(&tmp, serde_json::to_vec(&CachedInstall { profile: profile.clone(), managed_hashes })?)?;
+    std::fs::rename(tmp, cache)?;
+    Ok(())
+}
+
+pub fn previous_install(paths: &Paths) -> Option<Installed> {
+    let cache: CachedInstall = serde_json::from_slice(&std::fs::read(paths.game().join(".mraz-installed.json")).ok()?).ok()?;
+    let p = cache.profile;
+    if !p.java.is_file() || !p.client_jar.is_file() || !p.version_json.is_file() || !p.fabric_profile.is_file()
+        || !p.classpath.iter().all(|path| path.is_file()) || cache.managed_hashes.is_empty() { return None; }
+    for (name, hash) in cache.managed_hashes {
+        validate_mod_name(&name).ok()?;
+        if sha256_file(&paths.mods().join(name)).ok()? != hash { return None; }
+    }
+    Some(p)
+}
+
 pub async fn install(paths: &Paths, manifest: &Manifest, progress: &dyn Progress) -> Result<Installed> {
     let client = net::client();
     let java = ensure_java(&client, paths, manifest.java.max(21), progress).await.context("Java")?;
@@ -135,7 +168,7 @@ pub async fn install(paths: &Paths, manifest: &Manifest, progress: &dyn Progress
 
     let main_class = str_of(&fabric, "mainClass")?;
     let version_name = str_of(&fabric, "id").unwrap_or_else(|_| format!("fabric-{}", manifest.minecraft));
-    Ok(Installed {
+    let installed = Installed {
         java,
         main_class,
         classpath,
@@ -144,7 +177,9 @@ pub async fn install(paths: &Paths, manifest: &Manifest, progress: &dyn Progress
         fabric_profile: fabric_path,
         asset_index,
         version_name,
-    })
+    };
+    remember_install(paths, &installed)?;
+    Ok(installed)
 }
 
 // ── Java ─────────────────────────────────────────────────────
@@ -343,11 +378,22 @@ struct Managed {
     files: Vec<String>,
 }
 
+fn validate_mod_name(name: &str) -> Result<()> {
+    if Path::new(name).file_name().and_then(|s| s.to_str()) != Some(name) || !name.to_ascii_lowercase().ends_with(".jar") {
+        bail!("Некорректное имя файла мода");
+    }
+    Ok(())
+}
+
 async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, progress: &dyn Progress) -> Result<()> {
     std::fs::create_dir_all(paths.mods())?;
     let mut jobs = Vec::new();
     let mut files = Vec::new();
     // id проектов Modrinth из набора — чтобы «Оптимизация» не поставила их второй раз
+    let staging = paths.game().join(".mraz-update");
+    std::fs::create_dir_all(&staging)?;
+    let mut replacements = Vec::new();
+    let mut stamps = Vec::new();
     let mut pinned: HashSet<String> = HashSet::new();
     for entry in &m.mods {
         if entry.modrinth.as_ref().map(|(_, v)| v == crate::manifest::LATEST).unwrap_or(false) {
@@ -370,48 +416,23 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
         } else {
             continue;
         };
-        let job = Job { url, path: paths.mods().join(&file), sha1, size: None };
+        validate_mod_name(&file)?;
+        let installed = paths.mods().join(&file);
+        let job = Job { url, path: staging.join(&file), sha1, size: None };
         if entry.url.is_some() {
-            // свой мод из релиза: качаем только когда вышла новая сборка (номер build в manifest)
             let stamp = paths.mods().join(format!(".{file}.build"));
             let have = std::fs::read_to_string(&stamp).ok().and_then(|t| t.trim().parse::<u32>().ok());
-            if have == Some(m.build) && paths.mods().join(&file).exists() {
-                files.push(file);
-                continue;
+            let hash_matches = entry.sha256.as_ref().map(|want| sha256_file(&installed)
+                .map(|got| got.eq_ignore_ascii_case(want)).unwrap_or(false)).unwrap_or(true);
+            if have != Some(m.build) || !installed.is_file() || !hash_matches {
+                net::fetch_verified(client, &job, entry.sha256.as_deref()).await?;
+                replacements.push(file.clone());
+                stamps.push(stamp);
             }
-            // если релиза нет, но jar уже лежит — играем с ним
-            if let Err(e) = net::fetch(client, &job).await {
-                if !has_mraz1visual(paths) {
-                    return Err(e);
-                }
-                files.push(file);
-                continue;
-            }
-            // убрать другие копии mraz1visual*.jar, иначе Fabric увидит два одинаковых мода
-            if is_client_jar(&file.to_lowercase()) {
-                if let Ok(rd) = std::fs::read_dir(paths.mods()) {
-                    for e in rd.flatten() {
-                        let n = e.file_name().to_string_lossy().to_string();
-                        let low = n.to_lowercase();
-                        if low != file.to_lowercase() && is_client_jar(&low) {
-                            let _ = std::fs::remove_file(e.path());
-                        }
-                    }
-                }
-            }
-            // проверка sha256 из manifest: битый или подменённый файл не запускаем
-            if let Some(want) = &entry.sha256 {
-                let got = sha256_file(&paths.mods().join(&file))?;
-                if !got.eq_ignore_ascii_case(want) {
-                    let _ = std::fs::remove_file(paths.mods().join(&file));
-                    bail!("{file}: sha256 не совпадает (ожидался {want}, получен {got})");
-                }
-            }
-            let _ = std::fs::write(&stamp, m.build.to_string());
-            files.push(file);
-            continue;
+        } else if !net::is_valid(&installed, job.sha1.as_deref(), None) {
+            jobs.push(job);
+            replacements.push(file.clone());
         }
-        jobs.push(job);
         files.push(file);
     }
     // моды «свежая версия под игру» (профиль «Оптимизация») + их обязательные зависимости
@@ -439,7 +460,12 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
             if let (Ok(url), Ok(file)) = (str_of(f, "url"), str_of(f, "filename")) {
                 // тот же мод уже лежит другой версией (поставлен руками) — не ставим второй копией
                 if !has_other_copy(paths, &file, &slug) {
-                    jobs.push(Job { url, path: paths.mods().join(&file), sha1: f["hashes"]["sha1"].as_str().map(String::from), size: None });
+                    validate_mod_name(&file)?;
+                    let sha1 = f["hashes"]["sha1"].as_str();
+                    if !files.contains(&file) && !net::is_valid(&paths.mods().join(&file), sha1, None) {
+                        jobs.push(Job { url, path: staging.join(&file), sha1: sha1.map(String::from), size: None });
+                        replacements.push(file.clone());
+                    }
                     files.push(file);
                 }
             }
@@ -450,9 +476,14 @@ async fn ensure_mods(client: &reqwest::Client, paths: &Paths, m: &Manifest, prog
     // удалить наши старые версии, которых больше нет в списке; чужие моды не трогаем
     let managed_path = paths.managed_mods_file();
     let old: Managed = std::fs::read_to_string(&managed_path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default();
+    for file in replacements {
+        std::fs::rename(staging.join(&file), paths.mods().join(&file))
+            .with_context(|| format!("Не удалось обновить {file}. Закройте игру и повторите установку"))?;
+    }
+    for stamp in stamps { std::fs::write(stamp, m.build.to_string())?; }
     let keep: HashSet<&String> = files.iter().collect();
     for f in &old.files {
-        if !keep.contains(f) {
+        if validate_mod_name(f).is_ok() && !keep.contains(f) {
             let _ = std::fs::remove_file(paths.mods().join(f));
         }
     }

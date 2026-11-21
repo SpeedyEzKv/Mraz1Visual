@@ -137,6 +137,23 @@ fn set_settings(state: State<'_, AppState>, ram_mb: u64, close_on_launch: bool) 
     s.save(&state.paths.settings_file()).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn media_snapshot(state: State<'_, AppState>) -> Result<media::NowPlaying,String> {
+    state.media.get_or_init(media::start).await.as_ref().map(|m|m.snapshot()).ok_or_else(||"Медиасервис недоступен".into())
+}
+#[tauri::command]
+async fn media_cover(state: State<'_, AppState>) -> Result<Vec<u8>,String> {
+    state.media.get_or_init(media::start).await.as_ref().map(|m|m.snapshot().cover).ok_or_else(||"Обложка недоступна".into())
+}
+#[tauri::command]
+async fn media_select(state: State<'_, AppState>, id: String) -> Result<(),String> {
+    state.media.get_or_init(media::start).await.as_ref().ok_or("Медиасервис недоступен")?.select(id)
+}
+#[tauri::command]
+async fn media_command(state: State<'_, AppState>, command: String, value: Option<u64>) -> Result<(),String> {
+    state.media.get_or_init(media::start).await.as_ref().ok_or("Медиасервис недоступен")?.command(media::Command{command,value:value.unwrap_or(0)}).await
+}
+
 /// Выбор версии Minecraft и дополнений (Sodium, Iris).
 #[tauri::command]
 fn set_profile(state: State<'_, AppState>, mc_version: String, sodium: bool, iris: bool) -> Result<(), String> {
@@ -203,7 +220,16 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
         manifest = manifest.with_optimization();
     }
     let paths = state.paths.for_version(&mc);
-    let installed = install::install(&paths, &manifest, &progress).await?;
+    let installed = match install::install(&paths, &manifest, &progress).await {
+        Ok(installed) => installed,
+        Err(error) => match install::previous_install(&paths) {
+            Some(installed) => {
+                let _ = app.emit("update-deferred", "Обновление прервано. Запущена предыдущая версия. Нажмите «Играть» ещё раз после выхода, чтобы повторить.");
+                installed
+            }
+            None => return Err(error.context("Установка не завершена. Проверьте подключение и повторно нажмите «Играть»")),
+        }
+    };
     install::sync_config(&state.paths.main_game(), &paths.game());
     if !install::has_mraz1visual(&paths) {
         anyhow::bail!("В папке mods нет mraz1visual.jar. Собери мод (gradlew build) и положи jar в папку игры → game/mods, либо укажи GitHub-репозиторий в лаунчере.");
@@ -269,9 +295,7 @@ async fn play_inner(app: &AppHandle, state: &State<'_, AppState>) -> anyhow::Res
                 if !started && (line.contains("Backend library: LWJGL") || line.contains("OpenAL initialized") || line.contains("Sound engine started")) {
                     started = true;
                     let _ = app2.emit("game-started", ());
-                    if let Some(w) = app2.get_webview_window("main") {
-                        let _ = w.hide();
-                    }
+                    // Keep the music controls accessible while Minecraft is running.
                 }
             }
         }
@@ -386,7 +410,8 @@ pub fn run() {
             media: tokio::sync::OnceCell::new(),
         })
         .invoke_handler(tauri::generate_handler![info, set_settings, set_profile, set_perf, open_folder, open_url, play, market_search, market_install, market_uninstall, market_local, market_delete_local,
-            open_mods_folder, mods_list, mods_toggle, mods_delete, mods_add])
+            open_mods_folder, mods_list, mods_toggle, mods_delete, mods_add,
+            media_snapshot, media_cover, media_select, media_command])
         .run(tauri::generate_context!())
         .expect("error while running Mraz1Visual launcher");
 }

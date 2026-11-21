@@ -1,8 +1,9 @@
 [package]
 name = "mraz1visual-launcher"
-version = "0.1.0"
+version = "0.1.23"
 edition = "2021"
 description = "Mraz1Visual launcher"
+default-run = "mraz1visual-launcher"
 
 [lib]
 name = "mraz1visual_launcher_lib"
@@ -29,7 +30,7 @@ open = "5"
 anyhow = "1"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Media_Control", "Foundation", "Storage_Streams", "Win32_System_WinRT"] }
+windows = { version = "0.58", features = ["ApplicationModel", "Media_Control", "Foundation", "Foundation_Collections", "Storage_Streams", "Win32_System_WinRT", "Win32_Security_Cryptography"] }
 
 [profile.release]
 opt-level = "s"
