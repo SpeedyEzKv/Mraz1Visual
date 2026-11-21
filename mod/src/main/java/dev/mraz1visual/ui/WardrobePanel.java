@@ -1,205 +1,91 @@
 package dev.mraz1visual.ui;
 
-import dev.mraz1visual.cosmetics.Wardrobe;
+import dev.mraz1visual.Mraz1Visual;
+import dev.mraz1visual.models.*;
+import dev.mraz1visual.module.ModelPets;
 import dev.mraz1visual.ui.widget.Widget;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Вкладка «Cosmetics» — гардероб: слева категории со счётчиками, сверху фильтр по цвету, в центре сетка вещей,
- * справа 3D-витрина с твоей моделью. Наведение на вещь — примерка (после ухода мыши всё как было),
- * клик — надеть или снять. Витрину можно крутить мышью, кнопками и включить авто-поворот.
- */
+/** Our wardrobe, backed by the built-in wearable collections. */
 public final class WardrobePanel implements Panel {
-    private static final String[] TONES = {"Все", "Тёплые", "Холодные", "Светлые", "Тёмные"};
-    private static final int CAT_W = 150, CELL_W = 118, CELL_H = 74, GAP = 8;
-
+    private static final ModelEntry.Kind[] KINDS={ModelEntry.Kind.WING,ModelEntry.Kind.HAT,ModelEntry.Kind.BACK,ModelEntry.Kind.PET};
+    private static final String[] LABELS={"Крылья","Головные уборы","На спину","Питомцы"};
+    private record Hit(int x,int y,int w,int h,Runnable action){}
     private final Runnable showModules;
-    private final PlayerPreview preview = new PlayerPreview();
-    private String category; // null — все
-    private int tone = -1;
-    private boolean autoSpin;
-    private float scroll, target;
-    private int maxScroll;
-    private boolean drag;
-    private final List<Object[]> hits = new ArrayList<>();
-    private int gridX, gridY, gridW, gridH, showX, showY, showW, showH;
-    private Wardrobe.Item hovered;
-
-    public WardrobePanel(Runnable showModules) {
-        this.showModules = showModules;
+    private final List<Hit> hits=new ArrayList<>();
+    private final Map<String,AnimPlayer> animations=new HashMap<>();
+    private int category=-1,maxScroll,gx,gy,gw,gh;
+    private float scroll,target,spin;
+    private String query="";
+    public WardrobePanel(Runnable showModules){this.showModules=showModules;}
+    @Override public void opened(){ModelRegistry.ensureLoaded();}
+    public void search(String value){String next=value.toLowerCase(Locale.ROOT);if(!query.equals(next)){query=next;scroll=target=0;}}
+    public static List<ModelEntry> catalog(){return ModelRegistry.all().stream().filter(e->(e.collection.equals("aura") || e.collection.equals("pulse"))&&Arrays.asList(KINDS).contains(e.kind)).toList();}
+    public static String selected(ModelEntry.Kind kind){return switch(kind){case HAT->ModelPrefs.hat;case WING->ModelPrefs.wing;case BACK->ModelPrefs.back;case PET->ModelPrefs.pet;default->"";};}
+    public static void toggle(ModelEntry e){
+        if(e==null||e.broken()||!(e.collection.equals("aura") || e.collection.equals("pulse")))return;
+        if(e.kind==ModelEntry.Kind.WING){var shards=Mraz1Visual.MODULES.find("shard_wings");if(shards!=null)shards.setEnabled(false);}
+        String id=e.id.equals(selected(e.kind))?"":e.id;
+        switch(e.kind){
+            case HAT->ModelPrefs.hat=id;
+            case WING->ModelPrefs.wing=id;
+            case BACK->ModelPrefs.back=id;
+            case PET->{var pets=ModelPets.get();if(pets!=null)pets.select(id.isEmpty()?null:e);else ModelPrefs.pet=id;}
+            default->{return;}
+        }
+        if(!id.isEmpty()){
+            var module=Mraz1Visual.MODULES.find(e.kind==ModelEntry.Kind.PET?"model_pets":"model_cosmetics");
+            if(module!=null){
+                if(e.kind!=ModelEntry.Kind.PET)for(var setting:module.settings())if(setting.id.equals(switch(e.kind){case HAT->"hat";case BACK->"back";default->"wing";}))setting.fromJson(new com.google.gson.JsonPrimitive(true));
+                module.setEnabled(true);
+            }
+        }
+        ModelPrefs.save();Mraz1Visual.CONFIG.markDirty();
     }
-
-    @Override
-    public void render(Draw d, double mx, double my, float dt, int x, int y, int w, int h) {
-        hits.clear();
-        // ── категории ──
-        d.glass(x, y, CAT_W, h, 14, Theme.GLASS_PANEL, 0.9f);
-        d.text("Гардероб", Fonts.Kind.BOLD, x + 12, y + 10, Theme.TEXT);
-        int cy = y + 30;
-        cy = catRow(d, mx, my, x, cy, null, "Всё", Wardrobe.ITEMS.size());
-        for (String c : Wardrobe.CATEGORIES) cy = catRow(d, mx, my, x, cy, c, c, Wardrobe.count(c));
-        int bx = x + 10, by = y + h - 32, bw = CAT_W - 20;
-        boolean bh = Widget.hit(mx, my, bx, by, bw, 22);
-        d.round(bx, by, bw, 22, 11, bh ? Theme.GLASS_ACTIVE : Theme.GLASS_CARD);
-        d.textCenter("Настройки модулей ›", bx + bw / 2, Draw.textY(by, 22), Theme.TEXT_DIM);
-        hits.add(new Object[]{bx, by, bw, 22, "modules"});
-
-        // ── витрина справа ──
-        showW = Math.max(170, Math.min(240, (w - CAT_W) / 3));
-        showX = x + w - showW;
-        showY = y;
-        showH = h;
-        d.glass(showX, showY, showW, showH, 14, Theme.GLASS_PANEL, 1f);
-        d.shadow(showX + showW / 2 - 36, showY + showH - 70, 72, 10, 5, 10f, 0x50000000);
-        Wardrobe.Item tr = Wardrobe.trying();
-        d.textScaled(tr != null ? "ПРИМЕРКА" : "ВИТРИНА", Fonts.Kind.HEAD, showX + 12, showY + 11, 0.72f, tr != null ? Theme.accent() : Theme.TEXT_MUTED);
-        if (tr != null) d.text(Draw.ellipsize(tr.name(), showW - 24), Fonts.Kind.BOLD, showX + 12, showY + 24, Theme.TEXT);
-        if (autoSpin) preview.setYaw(preview.yaw() + dt * 40f);
-        if (!preview.render(d.g, d.scale, showX + 4, showY + 34, showW - 8, showH - 76, true, dt)) {
-            d.textCenter("Зайдите в мир —", showX + showW / 2, showY + showH / 2 - 10, Theme.TEXT_MUTED);
-            d.textCenter("здесь будет ваша модель", showX + showW / 2, showY + showH / 2 + 2, Theme.TEXT_MUTED);
+    public static void clear(){ModelPrefs.hat=ModelPrefs.wing=ModelPrefs.back=ModelPrefs.pet="";if(ModelPets.get()!=null)ModelPets.get().select(null);for(String id:new String[]{"eclipse_crown","shard_wings"}){var m=Mraz1Visual.MODULES.find(id);if(m!=null)m.setEnabled(false);}ModelPrefs.save();}
+    @Override public void render(Draw d,double mx,double my,float dt,int x,int y,int w,int h){
+        hits.clear();spin+=dt*35;var all=catalog();int side=Math.min(150,Math.max(112,w/4));
+        d.glass(x,y,side,h,14,Theme.GLASS_PANEL,.9f);d.text("Косметика",Fonts.Kind.BOLD,x+10,y+12,Theme.TEXT);
+        int cy=y+36;category(d,mx,my,x,cy,side,-1,"Всё",all.size());cy+=29;
+        for(int i=0;i<KINDS.length;i++){final var kind=KINDS[i];category(d,mx,my,x,cy,side,i,LABELS[i],(int)all.stream().filter(e->e.kind==kind).count());cy+=29;}
+        if(h>310){for(String[] entry:new String[][]{{"eclipse_crown","Корона Eclipse"},{"shard_wings","Крылья-осколки"}}){var module=Mraz1Visual.MODULES.find(entry[0]);if(module!=null){button(d,mx,my,x+8,cy,side-16,22,(module.isEnabled()?"● ":"")+entry[1],module::toggle);cy+=27;}}}
+        button(d,mx,my,x+8,y+h-56,side-16,22,"Снять всё",WardrobePanel::clear);
+        button(d,mx,my,x+8,y+h-29,side-16,22,"Настройки ›",showModules);
+        gx=x+side+10;gw=w-side-10;gy=y+30;gh=h-30;
+        d.text("Каталог · " + all.size(),Fonts.Kind.BOLD,gx+2,y+2,Theme.TEXT);
+        d.text("Клик — надеть / снять",gx+2,y+16,Theme.TEXT_MUTED);
+        var list=all.stream().filter(e->(category<0||e.kind==KINDS[category])&&(query.isEmpty()||(e.name+" "+e.author+" "+e.id).toLowerCase(Locale.ROOT).contains(query))).toList();
+        int cols=Math.max(1,(gw+8)/106),cw=(gw-(cols-1)*8)/cols,ch=116;
+        maxScroll=Math.max(0,((list.size()+cols-1)/cols)*(ch+8)-8-gh);target=Math.max(0,Math.min(maxScroll,target));scroll=Anim.to(scroll,target,dt);
+        d.clip(gx,gy,gw,gh);
+        if(list.isEmpty() && !ModelRegistry.loading()) {
+            String message = all.isEmpty() ? "Косметические эффекты доступны в настройках." : "Ничего не найдено";
+            d.text(Draw.ellipsize(message, gw - 12), gx + 6, gy + 12, Theme.TEXT_DIM);
         }
-        // кнопки: повернуть влево, авто, вправо
-        String[] btn = {"‹", autoSpin ? "Стоп" : "Авто-поворот", "›"};
-        int[] bwid = {26, 0, 26};
-        bwid[1] = showW - 24 - 26 * 2 - 8;
-        int bxx = showX + 12, byy = showY + showH - 32;
-        for (int i = 0; i < 3; i++) {
-            boolean hv = Widget.hit(mx, my, bxx, byy, bwid[i], 22);
-            boolean on = i == 1 && autoSpin;
-            d.round(bxx, byy, bwid[i], 22, 11, on ? Colors.withAlpha(Theme.accent(), 0x50) : hv ? Theme.GLASS_ACTIVE : Theme.GLASS_CARD);
-            d.textCenter(btn[i], bxx + bwid[i] / 2, Draw.textY(byy, 22), Theme.TEXT);
-            hits.add(new Object[]{bxx, byy, bwid[i], 22, "rot" + i});
-            bxx += bwid[i] + 4;
-        }
-
-        // ── фильтр цвета и сетка ──
-        gridX = x + CAT_W + 10;
-        gridW = showX - 10 - gridX;
-        int tx = gridX, ty = y + 2, th = 20;
-        for (int i = -1; i < 4; i++) {
-            String label = TONES[i + 1];
-            int tw = d.width(label) + 18;
-            boolean on = tone == i, hv = Widget.hit(mx, my, tx, ty, tw, th);
-            d.round(tx, ty, tw, th, th / 2, on ? Colors.withAlpha(Theme.accent(), 0x48) : hv ? Theme.HOVER : Theme.GLASS_CARD);
-            if (i >= 0) d.disc(tx + 9, ty + th / 2f, 3f, new int[]{0xFFFF9A6B, 0xFF8FD8FF, 0xFFF2F0FF, 0xFF2A2A30}[i]);
-            d.text(label, tx + (i >= 0 ? 15 : 9), Draw.textY(ty, th), on ? Theme.TEXT : Theme.TEXT_DIM);
-            hits.add(new Object[]{tx, ty, tw, th, "tone" + i});
-            tx += tw + 4;
-        }
-        gridY = y + 30;
-        gridH = y + h - gridY;
-        List<Wardrobe.Item> items = Wardrobe.filter(category, tone);
-        int cols = Math.max(1, (gridW + GAP) / (CELL_W + GAP));
-        int cw = (gridW - (cols - 1) * GAP) / cols;
-        int rows = (items.size() + cols - 1) / cols;
-        maxScroll = Math.max(0, rows * (CELL_H + GAP) - GAP - gridH);
-        target = Math.max(0, Math.min(target, maxScroll));
-        scroll = Anim.to(scroll, target, dt);
-        boolean in = Widget.hit(mx, my, gridX, gridY, gridW, gridH);
-        Wardrobe.Item hov = null;
-        d.clip(gridX - 2, gridY, gridW + 4, gridH);
-        for (int i = 0; i < items.size(); i++) {
-            Wardrobe.Item it = items.get(i);
-            int c = i % cols, r = i / cols;
-            int ix = gridX + c * (cw + GAP), iy = gridY + r * (CELL_H + GAP) - Math.round(scroll);
-            if (iy + CELL_H < gridY || iy > gridY + gridH) continue;
-            boolean hv = in && Widget.hit(mx, my, ix, iy, cw, CELL_H);
-            if (hv) hov = it;
-            boolean worn = Wardrobe.worn(it) && Wardrobe.trying() != it;
-            d.glass(ix, iy, cw, CELL_H, 12, hv ? Theme.GLASS_ACTIVE : Theme.GLASS_CARD, hv ? 1.3f : 1f);
-            if (worn) d.rim(ix, iy, cw, CELL_H, 12, Colors.withAlpha(Theme.accent(), 0xC0), Colors.withAlpha(Theme.accent(), 0x40));
-            // образец: светящийся кружок цвета вещи
-            d.shadow(ix + cw / 2 - 14, iy + 8, 28, 28, 14, 10f, Colors.withAlpha(it.color(), 0x70));
-            d.disc(ix + cw / 2f, iy + 22, 11f, it.color());
-            d.icon(icon(it), ix + cw / 2 - 5, iy + 17, 10, Wardrobe.tone(it.color()) == 2 ? 0xFF202028 : 0xFFFFFFFF);
-            d.textCenter(Draw.ellipsize(it.name(), cw - 10), ix + cw / 2, iy + 42, Theme.TEXT);
-            d.textCenter(worn ? "Надето" : it.category(), ix + cw / 2, iy + 56, worn ? Theme.accent() : Theme.TEXT_MUTED);
-            hits.add(new Object[]{ix, iy, cw, CELL_H, it});
+        for(int i=0;i<list.size();i++){
+            var e=list.get(i);int cx=gx+i%cols*(cw+8),yy=gy+i/cols*(ch+8)-Math.round(scroll);
+            if(yy+ch<gy||yy>=gy+gh)continue;
+            boolean hov=Widget.hit(mx,my,cx,Math.max(yy,gy),cw,Math.min(yy+ch,gy+gh)-Math.max(yy,gy)),on=e.id.equals(selected(e.kind));
+            d.glass(cx,yy,cw,ch,12,on?Theme.GLASS_ACTIVE:hov?Theme.GLASS_PANEL:Theme.GLASS_CARD,1);
+            if(on)d.rim(cx,yy,cw,ch,12,Theme.accent(),Colors.mulAlpha(Theme.accent(),.4f));
+            if(!e.broken()){
+                var player=animations.computeIfAbsent(e.id,key->{var a=new AnimPlayer();a.play(e.anim("idle")!=null?e.anim("idle"):e.anims.isEmpty()?null:e.anims.get(0),0,true);return a;});player.update(dt);
+                ModelPreview.draw(d.g,e.mesh(),player.pose(e.mesh()),(e.kind==ModelEntry.Kind.WING||e.kind==ModelEntry.Kind.BACK?180:200)+(hov?spin:0),-15,0,.8f,true,Math.round((cx+4)*d.scale),Math.round((yy+4)*d.scale),Math.round((cw-8)*d.scale),Math.round(76*d.scale));
+            }else d.textCenter("Ошибка модели",cx+cw/2,yy+36,0xFFFF6B6B);
+            d.text(Draw.ellipsize(e.name,cw-12),cx+6,yy+84,Theme.TEXT);
+            d.text(Draw.ellipsize(on?"Надето · снять":e.author.isEmpty()?e.sourceTitle:e.author,cw-12),cx+6,yy+99,on?Theme.accent():Theme.TEXT_MUTED);
+            hits.add(new Hit(cx,Math.max(yy,gy),cw,Math.max(0,Math.min(yy+ch,gy+gh)-Math.max(yy,gy)),()->toggle(e)));
         }
         d.unclip();
-        // примерка: наведение держит вещь, уход мыши — всё как было
-        if (hov != hovered) {
-            hovered = hov;
-            Wardrobe.tryOn(hov);
-        }
+        if(list.isEmpty())d.text(ModelRegistry.loading()?"Загрузка моделей…":"Ничего не найдено",gx+12,gy+20,Theme.TEXT_MUTED);
+        if(maxScroll>0){int th=Math.max(18,gh*gh/(gh+maxScroll));d.round(gx+gw-3,gy+Math.round((gh-th)*scroll/maxScroll),3,th,1,Theme.ELEVATED);}
     }
-
-    private static int icon(Wardrobe.Item it) {
-        return switch (it.category()) {
-            case "Крылья", "Плащи" -> Icons.CAPE;
-            case "Головные уборы" -> Icons.HAT;
-            case "Ауры" -> Icons.SPARKLE;
-            default -> Icons.PAW;
-        };
+    private void category(Draw d,double mx,double my,int x,int y,int w,int index,String label,int count){
+        button(d,mx,my,x+6,y,w-12,24,Draw.ellipsize(label,w-40)+"  "+count,()->{category=index;scroll=target=0;});
+        if(category==index)d.rim(x+6,y,w-12,24,10,Theme.accent(),Colors.mulAlpha(Theme.accent(),.3f));
     }
-
-    private int catRow(Draw d, double mx, double my, int x, int y, String cat, String label, int count) {
-        boolean on = cat == null ? category == null : cat.equals(category);
-        boolean hv = Widget.hit(mx, my, x + 6, y, CAT_W - 12, 24);
-        if (on) d.glass(x + 6, y, CAT_W - 12, 24, 10, Colors.withAlpha(Theme.accent(), Theme.isLight() ? 0x50 : 0x30), 1.2f);
-        else if (hv) d.round(x + 6, y, CAT_W - 12, 24, 10, Theme.HOVER);
-        d.text(label, on ? Fonts.Kind.BOLD : Fonts.Kind.TEXT, x + 14, Draw.textY(y, 24), on ? Theme.TEXT : Theme.TEXT_DIM);
-        d.textRight(Integer.toString(count), x + CAT_W - 14, Draw.textY(y, 24), Theme.TEXT_MUTED);
-        hits.add(new Object[]{x + 6, y, CAT_W - 12, 24, cat == null ? "cat:" : "cat:" + cat});
-        return y + 26;
-    }
-
-    @Override
-    public boolean click(double mx, double my, int button) {
-        if (button != 0) return true;
-        for (Object[] h : hits) {
-            if (!Widget.hit(mx, my, (int) h[0], (int) h[1], (int) h[2], (int) h[3])) continue;
-            Object a = h[4];
-            if (a instanceof Wardrobe.Item it) {
-                Wardrobe.toggle(it);
-                hovered = null; // следующая отрисовка снова начнёт примерку уже от нового состояния
-            } else if (a.equals("modules")) {
-                Wardrobe.endTryOn();
-                showModules.run();
-            } else if (a instanceof String s && s.startsWith("cat:")) {
-                category = s.length() == 4 ? null : s.substring(4);
-                target = 0;
-            } else if (a instanceof String s && s.startsWith("tone")) {
-                tone = Integer.parseInt(s.substring(4));
-                target = 0;
-            } else if (a.equals("rot0")) preview.setYaw(preview.yaw() - 45);
-            else if (a.equals("rot2")) preview.setYaw(preview.yaw() + 45);
-            else if (a.equals("rot1")) autoSpin = !autoSpin;
-            return true;
-        }
-        if (Widget.hit(mx, my, showX, showY, showW, showH)) {
-            drag = true;
-            autoSpin = false;
-            preview.dragStart(mx);
-        }
-        return true;
-    }
-
-    @Override
-    public void drag(double mx, double my) {
-        if (drag) preview.drag(mx);
-    }
-
-    @Override
-    public void release(double mx, double my) {
-        if (drag) {
-            drag = false;
-            preview.dragEnd();
-        }
-    }
-
-    @Override
-    public boolean scroll(double mx, double my, double amount) {
-        target = Math.max(0, Math.min(maxScroll, target - (float) amount * 30));
-        return true;
-    }
-
-    /** Окно закрыли или ушли с вкладки — снять примерку. */
-    public void left() {
-        hovered = null;
-        Wardrobe.endTryOn();
-    }
+    private void button(Draw d,double mx,double my,int x,int y,int w,int h,String text,Runnable action){d.round(x,y,w,h,10,Widget.hit(mx,my,x,y,w,h)?Theme.GLASS_ACTIVE:Theme.GLASS_CARD);d.textCenter(text,x+w/2,Draw.textY(y,h),Theme.TEXT);hits.add(new Hit(x,y,w,h,action));}
+    @Override public boolean click(double mx,double my,int button){if(button==0)for(var hit:hits)if(Widget.hit(mx,my,hit.x,hit.y,hit.w,hit.h)){hit.action.run();break;}return true;}
+    @Override public boolean scroll(double mx,double my,double amount){if(Widget.hit(mx,my,gx,gy,gw,gh))target=Math.max(0,Math.min(maxScroll,target-(float)amount*40));return true;}
+    public void left(){hits.clear();}
 }

@@ -58,12 +58,13 @@ public final class Mraz1Visual implements ClientModInitializer {
         AutoCommand.register();
         dev.mraz1visual.module.AuctionHelper.register();
         dev.mraz1visual.module.ItemHighlighter.register();
-        dev.mraz1visual.ui.menu.LoadingScreens.register();
+        dev.mraz1visual.module.PotionHighlight.register();
         dev.mraz1visual.module.Hotbar.register();
         dev.mraz1visual.render.VanillaHudHooks.register();
         dev.mraz1visual.music.MediaClient.start();
         dev.mraz1visual.render.FriendGuard.register();
         dev.mraz1visual.dev.Harness.init();
+        dev.mraz1visual.dev.IntegrationSmoke.init();
         // импортированные 3D-модели: выбор и позы — из своего файла, сами паки читаются в фоне после старта
         dev.mraz1visual.models.ModelPrefs.load();
         dev.mraz1visual.ui.ModelPreview.register();
@@ -74,7 +75,9 @@ public final class Mraz1Visual implements ClientModInitializer {
         PlayStats.load();
         AccountStore.load();
         ClientLifecycleEvents.CLIENT_STARTED.register(mc -> {
-            AccountStore.autoLogin();
+            dev.mraz1visual.integration.IntegrationTheme.removeImportedShellWallpaper();
+            // IAS owns session changes, profile keys and service refresh now.
+            // Do not race its login with the legacy account store on startup.
             WindowBranding.applyIcon();
             mc.updateTitle();
         });
@@ -95,6 +98,7 @@ public final class Mraz1Visual implements ClientModInitializer {
     private static Object lastLevel;
 
     private static void tick(Minecraft mc) {
+        dev.mraz1visual.input.CursorGuard.tick(mc);
         // смена мира / измерения — частицы старого мира не «висят» на чужих координатах
         if (mc.level != lastLevel) {
             lastLevel = mc.level;

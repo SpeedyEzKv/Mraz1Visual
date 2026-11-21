@@ -97,8 +97,11 @@ public final class Sdf {
         r = Math.max(0, Math.min(r, Math.min(w, h) / 2f));
         Matrix3x2f pose = new Matrix3x2f(g.pose());
         ScreenRectangle scissor = g.scissorStack.peek();
+        if (scissor != null && (scissor.width() <= 0 || scissor.height() <= 0)) return;
+        ScreenRectangle visible = bounds(pose, x-pad, y-pad, w+2*pad, h+2*pad, scissor);
+        if (visible == null || visible.width() <= 0 || visible.height() <= 0) return;
         g.guiRenderState.submitGuiElement(new Shape(pose, x - pad, y - pad, x + w + pad, y + h + pad,
-                w / 2f, h / 2f, r, mode, extra, top, bottom, scissor, bounds(pose, x - pad, y - pad, w + 2 * pad, h + 2 * pad, scissor)));
+                w / 2f, h / 2f, r, mode, extra, top, bottom, scissor, visible));
     }
 
     public static void fill(GuiGraphics g, float x, float y, float w, float h, float r, int color) {

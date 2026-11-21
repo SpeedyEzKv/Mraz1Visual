@@ -31,7 +31,7 @@ public final class ModelPrefs {
     public static final Set<String> favorites = new LinkedHashSet<>();
     /** id скина → [группа FP/TP/ICON][rx, ry, rz, tx, ty, tz, масштаб]. */
     public static final Map<String, float[][]> poses = new HashMap<>();
-    public static String pet = "", hat = "", wing = "";
+    public static String pet = "", hat = "", wing = "", back = "";
     /** Меняется при любой правке позы — часть ключа кэша иконок предметов. */
     public static int poseVersion;
 
@@ -41,28 +41,36 @@ public final class ModelPrefs {
         try {
             if (!Files.exists(FILE)) return;
             JsonObject o = Json.parse(Files.readAllBytes(FILE));
+            Map<String,String> nextWeapons=new LinkedHashMap<>();
+            Set<String> nextFavorites=new LinkedHashSet<>();
+            Map<String,float[][]> nextPoses=new HashMap<>();
             JsonObject w = Json.obj(o, "weapons");
-            if (w != null) for (var en : w.entrySet()) weapons.put(en.getKey(), en.getValue().getAsString());
+            if (w != null) for (var en : w.entrySet()) if(en.getValue().isJsonPrimitive())nextWeapons.put(en.getKey(), en.getValue().getAsString());
             JsonArray f = Json.arr(o, "favorites");
-            if (f != null) for (JsonElement e : f) favorites.add(e.getAsString());
+            if (f != null) for (JsonElement e : f) if(e.isJsonPrimitive())nextFavorites.add(e.getAsString());
             JsonObject p = Json.obj(o, "poses");
             if (p != null) for (var en : p.entrySet()) {
+                if(!en.getValue().isJsonArray())continue;
                 JsonArray groups = en.getValue().getAsJsonArray();
                 float[][] g = new float[3][];
                 for (int i = 0; i < Math.min(3, groups.size()); i++) {
                     if (!groups.get(i).isJsonArray()) continue;
                     JsonArray a = groups.get(i).getAsJsonArray();
                     float[] v = defaultAdjust();
-                    for (int k = 0; k < Math.min(7, a.size()); k++) v[k] = a.get(k).getAsFloat();
+                    for (int k = 0; k < Math.min(7, a.size()); k++){float value=Json.f(a.get(k),v[k]);if(Float.isFinite(value)&&(k!=6||value>0))v[k]=value;}
                     g[i] = v;
                 }
-                poses.put(en.getKey(), g);
+                nextPoses.put(en.getKey(), g);
             }
+            weapons.clear();weapons.putAll(nextWeapons);
+            favorites.clear();favorites.addAll(nextFavorites);
+            poses.clear();poses.putAll(nextPoses);poseVersion++;
             pet = Json.s(o, "pet", "");
             hat = Json.s(o, "hat", "");
             wing = Json.s(o, "wing", "");
+            back = Json.s(o, "back", "");
         } catch (Exception e) {
-            ModuleManager.LOG.warn("models.json не прочитан, выбор моделей сброшен", e);
+            ModuleManager.LOG.warn("models.json не прочитан, сохранён предыдущий выбор моделей", e);
         }
     }
 
@@ -88,11 +96,13 @@ public final class ModelPrefs {
         o.addProperty("pet", pet);
         o.addProperty("hat", hat);
         o.addProperty("wing", wing);
+        o.addProperty("back", back);
         try {
             Files.createDirectories(FILE.getParent());
             Path tmp = FILE.resolveSibling("models.json.tmp");
             Files.writeString(tmp, GSON.toJson(o), StandardCharsets.UTF_8);
-            Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            try{Files.move(tmp, FILE, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);}
+            catch(java.nio.file.AtomicMoveNotSupportedException unsupported){Files.move(tmp,FILE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
         } catch (Exception e) {
             ModuleManager.LOG.warn("models.json не сохранён", e);
         }

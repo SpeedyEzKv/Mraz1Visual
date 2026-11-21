@@ -63,7 +63,7 @@ public final class AccountStore {
                 save();
             }
         } catch (Throwable t) {
-            ModuleManager.LOG.warn("accounts.json unreadable ({}), starting empty", t.toString());
+            ModuleManager.LOG.warn("accounts.json unreadable ({}), starting empty", t.getClass().getSimpleName());
         }
     }
 
@@ -111,7 +111,7 @@ public final class AccountStore {
                 status = e.getMessage();
             } catch (Exception e) {
                 status = "Ошибка сети: " + e.getClass().getSimpleName();
-                ModuleManager.LOG.warn("Microsoft login failed", e);
+                ModuleManager.LOG.warn("Microsoft login failed ({})", e.getClass().getSimpleName());
             } finally {
                 pendingCode = null;
                 busy.set(false);

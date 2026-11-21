@@ -19,7 +19,6 @@
     "ItemModelResolverMixin",
     "ItemStackRenderStateMixin",
     "ItemLayerRenderStateMixin",
-    "GuiMixin",
     "FovMixin",
     "GameRendererPostMixin",
     "ParticleEngineMixin"

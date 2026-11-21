@@ -37,6 +37,12 @@ public final class Waypoints extends Module implements WorldLayer {
 
     final KeySetting addKey = add(new KeySetting("add_key", "Поставить точку", com.mojang.blaze3d.platform.InputConstants.KEY_B));
     final KeySetting removeKey = add(new KeySetting("remove_key", "Убрать ближайшую", KeySetting.NONE));
+    final KeySetting pingKey = add(new KeySetting("ping_key", "Колесо локальных меток", InputConstants.KEY_N));
+    private static final List<String> PINGS = List.of("Сюда", "Опасность", "Предмет");
+    private final List<Ping> pings = new ArrayList<>();
+    private record Ping(net.minecraft.world.phys.Vec3 at, int color, long expires) {}
+    private Object pingWorld;
+    private boolean pingWas;
     final ColorSetting color = add(new ColorSetting("color", "Цвет точек", 0xB0B8B4F2).group("Вид"));
 
     public static final class Point {
@@ -52,7 +58,7 @@ public final class Waypoints extends Module implements WorldLayer {
     private int counter = 1;
 
     public Waypoints() {
-        super("waypoints", "Waypoints", "Свои точки-маяки по клавише.", Category.MISC);
+        super("waypoints", "Waypoints", "Личные маяки и временные метки. Колесо видно только вам.", Category.MISC);
         load();
     }
 
@@ -67,7 +73,19 @@ public final class Waypoints extends Module implements WorldLayer {
     @Override
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
+        if (pingWorld != mc.level) {
+            pings.clear();
+            pingWas = false;
+            pingWorld = mc.level;
+        }
         if (p == null || mc.level == null) return;
+        long tick = mc.level.getGameTime();
+        pings.removeIf(mark -> mark.expires <= tick);
+        boolean held = Keys.isDown(pingKey.get());
+        if (held && !pingWas && mc.screen == null) {
+            openPingWheel(mc, pingKey.get());
+        }
+        pingWas = held;
         String dim = mc.level.dimension().toString();
 
         boolean add = mc.screen == null && Keys.isDown(addKey.get());
@@ -103,11 +121,38 @@ public final class Waypoints extends Module implements WorldLayer {
 
     }
 
+    public void openPingWheel(Minecraft mc, int key) {
+        if (!isEnabled() || mc.player == null || mc.level == null) return;
+        var hit = mc.player.pick(64, 1, false);
+        if (hit instanceof net.minecraft.world.phys.BlockHitResult block
+                && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            var at = block.getLocation();
+            var level = mc.level;
+            mc.setScreen(new dev.mraz1visual.ui.WheelScreen("Локальная метка", PINGS, key, type -> {
+                if (!isEnabled() || mc.level != level) return;
+                int tint = switch (type) {
+                    case "Опасность" -> 0xFFFF697A;
+                    case "Предмет" -> 0xFFFFCF76;
+                    default -> 0xFFAC99FF;
+                };
+                if (pings.size() >= 12) pings.remove(0);
+                pings.add(new Ping(at, tint, level.getGameTime() + 120));
+            }));
+        }
+    }
+
     @Override
     public void renderWorld(WorldDraw d, float pt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         String dim = mc.level.dimension().toString();
+        for (Ping ping : pings) {
+            float remaining = (ping.expires - mc.level.getGameTime() - pt) / 20f;
+            float opacity = Math.min(1, Math.max(0, remaining));
+            var at = ping.at;
+            d.ring(at.x, at.y + .025, at.z, .65, .70, 48,
+                    Colors.mulAlpha(ping.color, opacity * .4f), Colors.mulAlpha(ping.color, opacity));
+        }
         List<Point> list = data.get(serverKey(mc));
         if (list == null) return;
         for (Point p : list) {
@@ -118,6 +163,12 @@ public final class Waypoints extends Module implements WorldLayer {
             d.beam(p.x, p.y, p.z, 96, 0.22, c);
             d.ring(p.x, p.y + 0.02, p.z, 0.35, 0.5, 32, Colors.mulAlpha(c, 0.3f), c);
         }
+    }
+
+    @Override protected void onDisable() {
+        pings.clear();
+        pingWorld = null;
+        pingWas = false;
     }
 
     private void load() {

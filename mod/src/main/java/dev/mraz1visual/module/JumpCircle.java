@@ -21,10 +21,13 @@ import net.minecraft.client.player.LocalPlayer;
  * Мягкое светящееся кольцо под ногами в момент прыжка: тонкая кромка с ореолом расходится по ease-out,
  * следом — вторая, бледнее; в центре на мгновение светится земля. Видишь только ты.
  */
-public final class JumpCircle extends Module implements WorldLayer {
+public final class JumpCircle extends Module implements dev.mraz1visual.core.DecorativeLayer {
     private static final int MAX = 8;
 
-    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "ring", "Мягкое кольцо", "waves", "Две волны", "disc", "Светящийся диск", "sparks", "Кольцо + искры", "gradient", "Градиент", "triple", "Волна (3 кольца)"));
+    final EnumSetting style = add(new EnumSetting("style", "Вид", 0, LocalArtwork.options("ring", "Мягкое кольцо", "waves", "Две волны", "disc", "Светящийся диск", "sparks", "Кольцо + искры", "gradient", "Градиент", "triple", "Волна (3 кольца)", "aura", "AuraVisual", "aura_ring", "AuraVisual Ring", "pulse", "Pulse")));
+    private static final net.minecraft.resources.Identifier AURA = net.minecraft.resources.Identifier.fromNamespaceAndPath("auravisuals","textures/jump2.png");
+    private static final net.minecraft.resources.Identifier AURA_RING = net.minecraft.resources.Identifier.fromNamespaceAndPath("auravisuals","textures/jump_circle_ring.png");
+    private static final net.minecraft.resources.Identifier PULSE = net.minecraft.resources.Identifier.fromNamespaceAndPath("mraz1visual", "textures/fx/pulse_jump.png");
     final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 0, Palette.OPTIONS));
     final ColorSetting color = add(new ColorSetting("color", "Свой: центр", 0xFFB8E6FF));
     final ColorSetting color2 = add(new ColorSetting("color2", "Свой: край", 0xFF7A6BFF));
@@ -37,10 +40,21 @@ public final class JumpCircle extends Module implements WorldLayer {
     private final double[] cx = new double[MAX], cy = new double[MAX], cz = new double[MAX];
     private final long[] born = new long[MAX];
     private int next;
+    private LocalPlayer owner;
+
+    @Override protected void onDisable() { reset(); }
+
+    private void reset() {
+        owner = null;
+        java.util.Arrays.fill(born, 0L);
+        next = 0;
+    }
+
     private boolean wasOnGround = true;
 
     public JumpCircle() {
         super("jump_circle", "Jump Circle", "Мягкое светящееся кольцо под ногами при прыжке.", Category.COMBAT);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> reset());
         markNew();
     }
 
@@ -51,6 +65,11 @@ public final class JumpCircle extends Module implements WorldLayer {
     @Override
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;
+        if (p != owner) {
+            reset();
+            owner = p;
+            wasOnGround = p != null && p.onGround();
+        }
         if (p == null) return;
         boolean onGround = p.onGround();
         boolean jump = wasOnGround && !onGround && p.getDeltaMovement().y > 0.1;
@@ -90,6 +109,8 @@ public final class JumpCircle extends Module implements WorldLayer {
             float a = (float) Math.pow(1 - t, 1.5);
             double y = cy[i] + 0.02;
             switch (style.getId()) {
+                case "pulse" -> d.sprite(PULSE, cx[i], y, cz[i], r, col(t, a), true);
+                case "aura", "aura_ring" -> d.sprite(style.getId().equals("aura") ? AURA : AURA_RING, cx[i],y,cz[i],r,col(t,a),true);
                 case "gradient" -> gradientRing(d, cx[i], y, cz[i], r, a, segs);
                 case "triple" -> {
                     // несколько расходящихся колец одно за другим

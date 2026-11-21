@@ -17,6 +17,7 @@ public abstract class ParticleEngineMixin {
             at = @At("HEAD"), cancellable = true, require = 0)
     private void mraz1visual$totem(Entity e, ParticleOptions p, int lifetime, CallbackInfo ci) {
         if (p != ParticleTypes.TOTEM_OF_UNDYING) return;
+        dev.mraz1visual.module.AuraParticles.totem(e);
         // тотем сработал (у своего игрока событие идёт мимо LivingEntity.handleEntityEvent — ловим здесь)
         if (e instanceof net.minecraft.world.entity.LivingEntity le) TotemFx.onPop(le);
         if (e == net.minecraft.client.Minecraft.getInstance().player) dev.mraz1visual.module.Notifications.totemPopped();

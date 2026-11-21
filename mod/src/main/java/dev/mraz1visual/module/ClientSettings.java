@@ -13,6 +13,10 @@ import dev.mraz1visual.ui.Theme;
 
 /** Настройки самого клиента. Живут как модуль без тумблера — тот же конфиг и тот же GUI. */
 public final class ClientSettings extends Module {
+    public final ActionSetting accountsMenu = add(new ActionSetting("accounts_menu", "Аккаунты", "Открыть",
+            () -> dev.mraz1visual.integration.IntegrationScreens.accounts(net.minecraft.client.Minecraft.getInstance().screen)).group("Меню игры"));
+    public final ActionSetting modsMenu = add(new ActionSetting("mods_menu", "Mod Menu", "Открыть",
+            () -> dev.mraz1visual.integration.IntegrationScreens.mods(net.minecraft.client.Minecraft.getInstance().screen)).group("Меню игры"));
     public final KeySetting menuKey = add(new KeySetting("menu_key", "Открыть меню", InputConstants.KEY_RSHIFT)
             .group("Управление"));
 

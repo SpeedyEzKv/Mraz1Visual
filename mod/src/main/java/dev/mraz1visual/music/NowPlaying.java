@@ -18,7 +18,7 @@ import java.io.ByteArrayInputStream;
  */
 public final class NowPlaying {
     private static final Identifier LOCAL_COVER = Identifier.fromNamespaceAndPath("mraz1visual", "music/local_cover");
-    private static int coverSerial = -1;
+    private static volatile int coverSerial = -1;
     private static volatile boolean localCover;
     /** Средний цвет обложки — фон карточки («размытый цвет обложки»). */
     public static volatile int coverTint = 0xFF2A2A3C;
@@ -66,7 +66,7 @@ public final class NowPlaying {
 
     /** Ключ трека (смена → перезапрос текста, анимация смены). */
     public static String key() {
-        return artist() + "\u0001" + title();
+        return source()+"\u0001"+artist() + "\u0001" + title();
     }
 
     public static boolean hasCover() {
@@ -82,6 +82,7 @@ public final class NowPlaying {
     }
 
     public static void command(String c) {
+        if(!supports(c))return;
         if (local()) {
             switch (c) {
                 case "toggle" -> MusicPlayer.toggle();
@@ -90,6 +91,11 @@ public final class NowPlaying {
                 default -> { }
             }
         } else MediaClient.command(c);
+    }
+
+    public static boolean supports(String command) {
+        if(local())return switch(command){case "toggle","prev"->true;case "next"->MusicPlayer.queue().size()>1;case "seek"->MusicPlayer.length()>0;default->false;};
+        return MediaClient.supports(command);
     }
 
     /** Обложка трека плеера: из тегов или cover.jpg рядом — в фоне, на видеокарту — в потоке рендера. */
@@ -104,7 +110,7 @@ public final class NowPlaying {
             try {
                 byte[] img = Tags.read(t.path, true).cover;
                 if (img == null) return;
-                upload(ImageIO.read(new ByteArrayInputStream(img)), LOCAL_COVER, () -> localCover = true);
+                upload(ImageIO.read(new ByteArrayInputStream(img)), LOCAL_COVER, () -> coverSerial==s&&MusicPlayer.trackSerial==s, () -> localCover = true);
             } catch (Exception ignored) {
             }
         }, "Mraz1Visual cover");
@@ -114,7 +120,11 @@ public final class NowPlaying {
 
     /** Картинка → квадрат 96×96 по центру → текстура; заодно средний цвет для фона карточки. */
     static void upload(BufferedImage img, Identifier id, Runnable done) {
-        if (img == null) return;
+        upload(img,id,()->true,done);
+    }
+
+    static void upload(BufferedImage img,Identifier id,java.util.function.BooleanSupplier current,Runnable done) {
+        if (img == null||!current.getAsBoolean()) return;
         int s = 96;
         BufferedImage scaled = new BufferedImage(s, s, BufferedImage.TYPE_INT_ARGB);
         var g = scaled.createGraphics();
@@ -129,11 +139,13 @@ public final class NowPlaying {
         int n = argb.length;
         // приглушённый средний цвет: темнее и чуть менее насыщенный — спокойный фон под текстом
         int tr = (int) (r / n * 0.55), tg = (int) (gg / n * 0.55), tb = (int) (b / n * 0.55);
-        coverTint = 0xFF000000 | tr << 16 | tg << 8 | tb;
+        int tint=0xFF000000 | tr << 16 | tg << 8 | tb;
         Minecraft.getInstance().execute(() -> {
+            if(!current.getAsBoolean())return;
             NativeImage ni = new NativeImage(s, s, false);
             for (int y = 0; y < s; y++) for (int x = 0; x < s; x++) ni.setPixel(x, y, argb[y * s + x] | 0xFF000000);
             Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "mraz1visual cover", ni));
+            coverTint=tint;
             done.run();
         });
     }

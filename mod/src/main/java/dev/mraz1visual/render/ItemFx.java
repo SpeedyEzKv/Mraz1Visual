@@ -39,6 +39,8 @@ public final class ItemFx {
     /** Состояние предмета, чей слой сейчас отправляется (между submit предмета и слоя). */
     private static int currentFlags;
     private static Item currentItem;
+    private static final RenderStateDataKey<String> SKIN_SLOT = RenderStateDataKey.create(() -> "mraz1visual:skin_slot");
+    private static String currentSlot;
     private static ModelEntry currentSkin;
     private static String currentState;
     private static ItemDisplayContext currentCtx;
@@ -66,6 +68,9 @@ public final class ItemFx {
             // иконки в хотбаре/инвентаре кэшируются по «личности» модели — без галочки не помечаем вовсе
             if (skin != null && ctx == ItemDisplayContext.GUI && !WeaponSkins.allowed(ctx, false)) skin = null;
         }
+        String slot = skin == null ? null : WeaponSkins.slotOf(stack);
+        if (skin != null && !skin.id.equals(dev.mraz1visual.models.ModelPrefs.weapons.get(slot))) slot="all_swords";
+        state.setData(SKIN_SLOT,slot);
         state.setData(SKIN, skin);
         state.setData(SKIN_STATE, skin == null ? null : WeaponSkins.stateFor(stack));
         state.setData(CTX, skin == null ? null : ctx);
@@ -89,6 +94,7 @@ public final class ItemFx {
         currentFlags = f == null ? 0 : f;
         currentItem = state.getData(ITEM);
         currentSkin = state.getData(SKIN);
+        currentSlot = state.getData(SKIN_SLOT);
         currentState = state.getData(SKIN_STATE);
         currentCtx = state.getData(CTX);
         skinPose = false;
@@ -126,7 +132,8 @@ public final class ItemFx {
             WeaponSkins w = WeaponSkins.get();
             // в руке от 1-го лица и в меню поза уже видовая; от 3-го лица — довернуть нормали камерой
             ModelDraw.viewFromCamera(!guiPass && (ctx == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || ctx == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND));
-            ModelDraw.submit(c, ps, m, null, -1, overlay, light, w != null && w.glow.get());
+            if(!dev.mraz1visual.module.SkinTransition.submit(ps,c,currentSlot,currentSkin,currentState,overlay,light,ctx==ItemDisplayContext.GUI))ModelDraw.submit(c, ps, m, null, -1, overlay, light, w != null && w.glow.get());
+            if(ctx!=ItemDisplayContext.GUI)dev.mraz1visual.module.SkinTransition.musicalTrim(ps,c,m);
             if (ctx != ItemDisplayContext.GUI && ctx != ItemDisplayContext.GROUND && ctx != ItemDisplayContext.FIXED) {
                 FireHand.submitAuraBounds(ps, c, ctx, m.bounds, guiPass);
             }

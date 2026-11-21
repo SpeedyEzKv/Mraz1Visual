@@ -384,7 +384,8 @@ public final class ModelRegistry {
             int before = out.size();
             try {
                 PackFs fs = PackFs.open(dir);
-                if (c.kind().equals("pets")) scanPets(fs, c.stem(), out);
+                if (c.kind().equals("aura") || c.kind().equals("bedrock")) scanWearables(c, fs, out);
+                else if (c.kind().equals("pets")) scanPets(fs, c.stem(), out);
                 else scanWeapons(fs, c.stem(), out);
             } catch (Throwable t) {
                 ModuleManager.LOG.warn("Mraz1Visual models: встроенный пак {} не прочитан", c.id(), t);
@@ -394,8 +395,41 @@ public final class ModelRegistry {
                 e.builtin = true;
                 e.collection = c.id();
                 e.sourceTitle = c.title();
-                e.author = c.author();
+                if (e.author.isEmpty()) e.author = c.author();
             }
+        }
+    }
+
+    private static void scanWearables(Collection pack, PackFs fs, List<ModelEntry> out) {
+        var catalog = com.google.gson.JsonParser.parseString(new String(fs.get("catalog.json"), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonArray();
+        for (var item : catalog) {
+            JsonObject o = item.getAsJsonObject();
+            ModelEntry.Kind kind = switch (Json.s(o, "category", "")) {
+                case "wings" -> ModelEntry.Kind.WING;
+                case "hats" -> ModelEntry.Kind.HAT;
+                case "back" -> ModelEntry.Kind.BACK;
+                default -> ModelEntry.Kind.PET;
+            };
+            String slug = Json.s(o, "slug", ""), path = Json.s(o, "converted", "");
+            ModelEntry e = new ModelEntry(pack.id() + ":" + slug, Json.s(o, "name", slug), pack.id(), kind);
+            e.format = "Bedrock → Blockbench";
+            e.author = Json.s(o, "author", pack.author());
+            var sourceWarnings = Json.arr(o, "sourceWarnings");
+            if (sourceWarnings != null) for (var warning : sourceWarnings) e.warnings.add(warning.getAsString());
+            try {
+                BbModelLoader.Result r = BbModelLoader.load(fs.get(path), slug, fs, path, warn(e));
+                JsonObject meta = new JsonObject();
+                if (o.has("metaPath")) try (var metaStream = ModelRegistry.class.getResourceAsStream("/assets/auravisuals/" + Json.s(o, "metaPath", ""))) {
+                    if (metaStream == null) throw new java.io.IOException("Aura metadata missing: " + slug);
+                    meta = com.google.gson.JsonParser.parseString(new String(metaStream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+                }
+                e.auraPlacement = AuraPlacement.load(slug, Json.s(o, "category", ""), meta, r.mesh, pack.id().equals("aura"));
+                e.states.put(ModelEntry.DEFAULT, r.mesh);
+                e.anims.addAll(r.anims);
+                e.setDisplay(r.display, null);
+                e.rebuildDisplay(null);
+            } catch (Throwable t) { fail(e, t); }
+            out.add(e);
         }
     }
 

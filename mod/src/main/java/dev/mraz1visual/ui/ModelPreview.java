@@ -42,6 +42,7 @@ public final class ModelPreview {
         float dim = Math.max(m.sizeY(), Math.max(m.sizeX(), m.sizeZ()));
         float scale = Math.min(w, h) * fit / Math.max(0.05f, dim);
         ScreenRectangle scissor = g.scissorStack.peek();
+        if (scissor != null && (scissor.width() <= 0 || scissor.height() <= 0)) return;
         float[] copy = pose == null ? null : pose.clone();
         g.guiRenderState.submitPicturesInPictureState(new State(m, copy, yaw, pitch, roll, glow, x, y, x + w, y + h, scale, scissor,
                 PictureInPictureRenderState.getBounds(x, y, x + w, y + h, scissor)));
@@ -73,6 +74,11 @@ public final class ModelPreview {
             return "mraz1visual model preview";
         }
 
+        @Override
+        protected float getTranslateY(int height, int guiScale) {
+            return height / 2f; // Models are centered; the vanilla default anchors feet at the bottom.
+        }
+
         //? if >=26.2 {
         /*// 26.2: модель уходит в коллектор PIP — по одному submitCustomGeometry на проход (основа, кромка, свечение)
         @Override
@@ -93,7 +99,7 @@ public final class ModelPreview {
                 if (m.bones.length > 0) ModelDraw.bones(m, bones);
                 ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.SOLID);
             });
-            if (ModelDraw.rimStrength > 0.01f) c.submitCustomGeometry(ps, ModelDraw.rimType(), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.RIM));
+            if (ModelDraw.rimStrength > 0.01f) c.submitCustomGeometry(ps, ModelDraw.rimType(m), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.RIM));
             if (s.glow() && m.selfGlow) c.submitCustomGeometry(ps, RenderTypes.eyes(m.texture()), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.GLOW_SELF));
             if (s.glow() && m.atlas.glowTexture != null) c.submitCustomGeometry(ps, RenderTypes.eyes(m.atlas.glowTexture), (pose, vc) -> ModelDraw.draw(m, pose, vc, -1, ov, light, ModelDraw.GLOW_LAYER));
             ps.popPose();
@@ -114,7 +120,7 @@ public final class ModelPreview {
             int light = dev.mraz1visual.compat.Mc.FULL_BRIGHT, ov = OverlayTexture.NO_OVERLAY;
             ModelDraw.viewFromCamera(false);
             ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.solidType(m)), -1, ov, light, ModelDraw.SOLID);
-            if (ModelDraw.rimStrength > 0.01f) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.rimType()), -1, ov, light, ModelDraw.RIM);
+            if (ModelDraw.rimStrength > 0.01f) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(ModelDraw.rimType(m)), -1, ov, light, ModelDraw.RIM);
             if (s.glow() && m.selfGlow) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.eyes(m.texture())), -1, ov, light, ModelDraw.GLOW_SELF);
             if (s.glow() && m.atlas.glowTexture != null) ModelDraw.draw(m, ps.last(), bufferSource.getBuffer(RenderTypes.eyes(m.atlas.glowTexture)), -1, ov, light, ModelDraw.GLOW_LAYER);
             ps.popPose();

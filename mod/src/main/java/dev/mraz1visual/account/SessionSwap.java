@@ -23,7 +23,7 @@ public final class SessionSwap {
             ((MinecraftAccessor) Minecraft.getInstance()).mraz1visual$setUser(user);
             ModuleManager.LOG.info("Session switched to {}", name);
         } catch (Throwable t) {
-            ModuleManager.LOG.error("Session switch failed", t);
+            ModuleManager.LOG.error("Session switch failed ({})", t.getClass().getSimpleName());
             AccountStore.status = "Не удалось переключить сессию";
         }
     }

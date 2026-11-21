@@ -29,6 +29,8 @@ import java.util.Random;
  */
 public final class MusicPlayer {
     public static final int RATE = 44100;
+    /** RMS of the actual decoded output; no microphone/system capture and no recording. */
+    public static volatile float signalLevel;
     public static final String[] EQ = {"flat", "Плоский", "bass", "Басы", "vocal", "Вокал", "bright", "Яркий", "soft", "Мягкий"};
     public static final String[] REPEAT = {"off", "Без повтора", "all", "Повтор очереди", "one", "Повтор трека"};
     private static final Path FILE = TextFiles.DIR.resolve("music.json");
@@ -146,6 +148,7 @@ public final class MusicPlayer {
     }
 
     private static synchronized void ensureThread() {
+        dev.mraz1visual.music.MediaClient.start();
         if (thread != null && thread.isAlive()) return;
         thread = new Thread(MusicPlayer::run, "Mraz1Visual player");
         thread.setDaemon(true);
@@ -183,11 +186,16 @@ public final class MusicPlayer {
                 long ps = pendingSeek;
                 if (ps >= 0 && cur != null) {
                     pendingSeek = -1;
-                    cur.seek(ps);
-                    framesPlayed = ps * RATE / 1000;
+                    long seekTo=lengthMs>0?Math.min(ps,lengthMs):ps;
+                    cur.seek(seekTo);
+                    framesPlayed = seekTo * RATE / 1000;
+                    positionMs=seekTo;
+                    // A preloaded crossfade belongs to the old playback position.
+                    if(nxt!=null){nxt.close();nxt=null;}
                     line.flush();
                 }
                 if (!playing || cur == null) {
+                    signalLevel=0;
                     Thread.sleep(25);
                     continue;
                 }
@@ -232,12 +240,15 @@ public final class MusicPlayer {
                     if (got <= 0) continue;
                 }
                 float vol = volume * volume; // громкость на слух — квадратом
+                double energy=0;
                 for (int i = 0; i < got; i++) {
                     float l = eqL.process(mix[i * 2]) * vol, r = eqR.process(mix[i * 2 + 1]) * vol;
+                    energy+=(l*l+r*r)*.5;
                     int li = (int) Math.max(-32768, Math.min(32767, l * 32767)), ri = (int) Math.max(-32768, Math.min(32767, r * 32767));
                     out[i * 4] = (byte) li; out[i * 4 + 1] = (byte) (li >> 8);
                     out[i * 4 + 2] = (byte) ri; out[i * 4 + 3] = (byte) (ri >> 8);
                 }
+                signalLevel=(float)Math.sqrt(energy/Math.max(1,got));
                 line.write(out, 0, got * 4);
                 framesPlayed += got;
                 positionMs = Math.max(0, (framesPlayed * 1000 / RATE) - 180);
@@ -250,6 +261,7 @@ public final class MusicPlayer {
             if (line != null) { line.stop(); line.close(); }
             stopRequested = false;
             playing = false;
+            signalLevel=0;
         }
     }
 

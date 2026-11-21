@@ -19,6 +19,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true, require = 0)
     private void mraz1visual$cinematic(GuiGraphics g, DeltaTracker delta, CallbackInfo ci) {
-        if (Cinematic.render(g)) ci.cancel();
+        if (dev.mraz1visual.module.PhotoMode.active() || Cinematic.render(g)) ci.cancel();
     }
 }

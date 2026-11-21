@@ -43,8 +43,7 @@ import java.util.Map;
 /**
  * Меню клиента v2: окно по центру поверх размытого мира. Сверху — вкладки с иконками и стеклянной «каплей»,
  * которая перетекает к выбранной; справа — поиск, настройки, друзья, уведомления и аватар.
- * Слева — список модулей вкладки, справа — большой баннер с живым превью (параллакс, «● ПРЕДПРОСМОТР»,
- * клавиша и главный переключатель), под ним — карточки настроек с сегментами и ползунками.
+ * Слева — список модулей, справа — компактный заголовок и рабочие настройки.
  * Маркет, Форум и Конфиги — свои панели в той же области.
  */
 public final class ClientScreen extends Screen implements Host {
@@ -148,7 +147,6 @@ public final class ClientScreen extends Screen implements Host {
     private float detailScroll, detailTarget;
     private int detailMax;
 
-    private final PreviewScene scene = new PreviewScene();
     private final ProfilesPanel profiles = new ProfilesPanel();
     private final Map<Tab, Panel> panels = new EnumMap<>(Tab.class);
 
@@ -163,7 +161,7 @@ public final class ClientScreen extends Screen implements Host {
     private boolean closing;
     private final Spring dropX = Spring.ui(-1), dropW = Spring.ui(0), listDrop = Spring.ui(-1), sideDrop = Spring.ui(-1);
     private static final int SIDE_W = 128;
-    private float togT, bannerHover, searchGlow;
+    private float togT, searchGlow;
     private final float[] tabHover = new float[Tab.BAR.length];
     private final float[] iconHover = new float[4];
 
@@ -176,6 +174,8 @@ public final class ClientScreen extends Screen implements Host {
         if (tab == Tab.COSMETICS && cosmeticsModules) return null;
         return panels.get(tab);
     }
+
+    private boolean panelVisible() { return search.isEmpty() || tab == Tab.COSMETICS && !cosmeticsModules; }
 
     public ClientScreen() {
         super(Component.literal("Mraz1Visual"));
@@ -340,7 +340,7 @@ public final class ClientScreen extends Screen implements Host {
     }
     private int detailX() { return listX() + LIST_W + GAP; }
     private int detailW() { return wx + ww - PAD - detailX(); }
-    private int bannerH() { return Math.max(118, Math.min(196, Math.round(bodyH() * 0.42f))); }
+    private int bannerH() { return 64; }
     private int cardsY() { return bodyY() + bannerH() + GAP; }
     private int cardsH() { return bodyY() + bodyH() - cardsY(); }
     private int searchX() { return wx + ww - 14 - 4 * 26 - SEARCH_W - 6; }
@@ -378,7 +378,6 @@ public final class ClientScreen extends Screen implements Host {
         sel = m;
         detailScroll = detailTarget = 0;
         togT = m != null && m.isEnabled() ? 1 : 0;
-        scene.restart();
         buildGroups();
     }
 
@@ -426,6 +425,8 @@ public final class ClientScreen extends Screen implements Host {
                 rows.add(e.getKey());
                 rows.addAll(e.getValue());
             }
+        } else if (tab == Tab.COSMETICS) {
+            for (String id : new String[]{"model_cosmetics", "model_pets", "eclipse_crown", "shard_wings", "music_cosmetics", "pet_reactions", "skin_transition"}) { Module module=mm.find(id); if(module!=null)rows.add(module); }
         } else {
             boolean many = tab.cats.length > 1;
             for (Category c : tab.cats) {
@@ -522,6 +523,7 @@ public final class ClientScreen extends Screen implements Host {
     }
 
     private void clearSearch() {
+        wardrobe.search("");
         if (!search.isEmpty()) {
             search.setLength(0);
             searchView = "";
@@ -531,6 +533,7 @@ public final class ClientScreen extends Screen implements Host {
 
     private void onSearchChanged() {
         searchView = search.toString();
+        wardrobe.search(searchView);
         listScroll = listTarget = 0;
         rebuild();
         if (!search.isEmpty() || sel == null || !rows.contains(sel)) {
@@ -630,7 +633,7 @@ public final class ClientScreen extends Screen implements Host {
         drawTopBar(mx, my, dt, now);
         Panel panel = panel();
         if (tab == Tab.CONFIGS && search.isEmpty()) drawConfigs(mx, my, dt);
-        else if (panel != null && search.isEmpty()) panel.render(d, mx, my, dt, contentX(), bodyY(), contentW(), bodyH());
+        else if (panel != null && panelVisible()) panel.render(d, mx, my, dt, contentX(), bodyY(), contentW(), bodyH());
         else {
             drawList(mx, my, dt);
             drawDetail(mx, my, dt);
@@ -896,37 +899,21 @@ public final class ClientScreen extends Screen implements Host {
         }
         Module m = sel;
         togT = Anim.to(togT, m.isEnabled() ? 1 : 0, dt);
-        // ── баннер ──
-        boolean hb = Widget.hit(mx, my, x, y, w, bh);
-        bannerHover = Anim.to(bannerHover, hb ? 1 : 0, dt);
-        float px = hb ? (float) ((mx - (x + w / 2.0)) / (w / 2.0)) : 0, py = hb ? (float) ((my - (y + bh / 2.0)) / (bh / 2.0)) : 0;
-        parX = parX + (px - parX) * Math.min(1, dt * 6);
-        parY = parY + (py - parY) * Math.min(1, dt * 6);
-        d.shadow(x + 4, y + 6, w - 8, bh, CARD_R, 16f, Colors.mulAlpha(Theme.SHADOW, 0.9f));
-        d.g.nextStratum();
-        scene.render(d, m, x, y, w, bh, dt, parX, parY);
-        // затемнение снизу под текст
-        d.gradientV(x, y + bh - 64, w, 64, 0x00000000, 0xB0000000);
-        d.rim(x, y, w, bh, CARD_R, 0x40FFFFFF, 0x10FFFFFF);
-        // «● ПРЕДПРОСМОТР»
-        String pv = "ПРЕДПРОСМОТР";
-        int pw = d.width(pv) + 26;
-        d.glass(x + 10, y + 10, pw, 18, 9, 0x50000000, 1f);
-        float blink = 0.6f + 0.4f * (float) Math.sin(System.nanoTime() / 2.5e8);
-        d.disc(x + 19, y + 19, 3f, Colors.withAlpha(0xFF453A, Math.round(255 * blink)));
-        d.text(pv, Fonts.Kind.BOLD, x + 26, Draw.textY(y + 10, 18), 0xFFFFFFFF);
-        String style = PreviewScene.style(m);
-        if (!style.isEmpty()) {
-            int sw = d.width(style) + 16;
-            d.glass(x + w - 10 - sw, y + 10, sw, 18, 9, 0x50000000, 1f);
-            d.textCenter(style, x + w - 10 - sw / 2, Draw.textY(y + 10, 18), 0xFFFFFFFF);
-        }
+        glassPanel(x, y, w, bh, CARD_R, Theme.GLASS_PANEL, 0.9f);
         // название и описание
-        d.textScaled(m.name, Fonts.Kind.HEAD, x + 16, y + bh - 42, 1.45f, 0xFFFFFFFF);
-        d.text(Draw.ellipsize(m.description, w - 32 - 120), x + 16, y + bh - 20, 0xD0FFFFFF);
+        d.textScaled(Draw.ellipsize(m.name, Math.max(40,(int)((w-168)/1.1f))), Fonts.Kind.HEAD, x + 12, y + 12, 1.1f, Theme.TEXT);
+        boolean crosshair = m instanceof dev.mraz1visual.module.Crosshair;
+        d.text(Draw.ellipsize(m.description, w - (crosshair ? 72 : 24)), x + 12, y + 45, Theme.TEXT_DIM);
+        if (m instanceof dev.mraz1visual.module.Crosshair cross) {
+            d.g.pose().pushMatrix();
+            d.g.pose().translate(x + w - 35f, y + 47f);
+            d.g.pose().scale(1f / d.scale, 1f / d.scale);
+            cross.drawAt(d.g, 0, 0);
+            d.g.pose().popMatrix();
+        }
         // клавиша и главный переключатель
         if (!m.alwaysOn()) {
-            int tw = 40, th = 22, tx = x + w - 16 - tw, tyy = y + bh - 16 - th;
+            int tw = 40, th = 22, tx = x + w - 16 - tw, tyy = y + 10;
             d.round(tx, tyy, tw, th, th / 2, Colors.lerp(0x60FFFFFF, Theme.accent() | 0xFF000000, togT));
             d.shadow(Math.round(tx + 3 + (tw - th) * togT), tyy + 3, th - 6, th - 6, (th - 6) / 2, 4f, 0x50000000);
             d.disc(tx + th / 2f + (tw - th) * togT, tyy + th / 2f, th / 2f - 3, 0xFFFFFFFF);
@@ -978,8 +965,6 @@ public final class ClientScreen extends Screen implements Host {
             d.round(x + w - 4, thumbY, 3, thumbH, 1, Theme.ELEVATED);
         }
     }
-
-    private float parX, parY;
 
     private void drawGroup(Group g, double mx, double my, float dt) {
         glassPanel(g.x, g.y, g.w, g.h, CARD_R, Theme.GLASS_CARD, 1f);
@@ -1087,7 +1072,7 @@ public final class ClientScreen extends Screen implements Host {
             else profiles.clickContent(mx, my, x + lw + 16, y);
             return true;
         }
-        if (search.isEmpty() && panel != null) {
+        if (panelVisible() && panel != null) {
             panel.click(mx, my, b);
             return true;
         }
@@ -1113,7 +1098,7 @@ public final class ClientScreen extends Screen implements Host {
         int x = detailX(), y = bodyY(), w = detailW(), bh = bannerH();
         if (Widget.hit(mx, my, x, y, w, bh)) {
             if (bindChip != null && bindChip.mouseClicked(mx, my, b)) return true;
-            int tx = x + w - 16 - 40, tyy = y + bh - 16 - 22;
+            int tx = x + w - 16 - 40, tyy = y + 10;
             if (!sel.alwaysOn() && (b == 1 || Widget.hit(mx, my, tx - 4, tyy - 4, 48, 30))) sel.toggle();
             return true;
         }
@@ -1141,7 +1126,7 @@ public final class ClientScreen extends Screen implements Host {
     @Override
     public boolean mouseReleased(MouseButtonEvent e) {
         Panel panel = panel();
-        if (panel != null && search.isEmpty()) panel.release(e.x() / k, e.y() / k);
+        if (panel != null && panelVisible()) panel.release(e.x() / k, e.y() / k);
         if (active != null) {
             active.mouseReleased(e.x() / k, activeY(e.y() / k));
             active = null;
@@ -1152,7 +1137,7 @@ public final class ClientScreen extends Screen implements Host {
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dragX, double dragY) {
         Panel panel = panel();
-        if (panel != null && search.isEmpty()) panel.drag(e.x() / k, e.y() / k);
+        if (panel != null && panelVisible()) panel.drag(e.x() / k, e.y() / k);
         if (active != null) active.mouseDragged(e.x() / k, activeY(e.y() / k));
         return true;
     }
@@ -1162,7 +1147,7 @@ public final class ClientScreen extends Screen implements Host {
         if (popup != null) return true;
         double mx = mouseX / k, my = mouseY / k;
         Panel panel = panel();
-        if (panel != null && search.isEmpty()) {
+        if (panel != null && panelVisible()) {
             panel.scroll(mx, my, scrollY);
             return true;
         }

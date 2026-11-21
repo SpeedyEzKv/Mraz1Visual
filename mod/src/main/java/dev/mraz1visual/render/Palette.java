@@ -12,16 +12,23 @@ public final class Palette {
 
     public static final String[] IDS = {"ether", "amethyst", "sunset", "emerald", "obsidian", "chrome"};
     public static final String[] OPTIONS = {"ether", "Эфир", "amethyst", "Аметист", "sunset", "Закат", "emerald", "Изумруд",
-            "obsidian", "Обсидиан", "chrome", "Хром", "accent", "Акцент клиента", "custom", "Свой градиент"};
+            "obsidian", "Обсидиан", "chrome", "Хром", "aura", "AuraVisual", "accent", "Акцент клиента", "custom", "Свой градиент",
+            "eclipse", "Eclipse", "aurora", "Aurora", "ember", "Ember"};
 
     private static final int[] ETHER = {0xFFF2FAFF, 0xFF8FD8FF, 0xFF3D7BFF};
+    private static final int[] AURA = {0xFFFFE8ED,0xFFE4274E,0xFF671D4A};
     private static final int[] AMETHYST = {0xFFF6EEFF, 0xFFB896FF, 0xFF6A3FE0};
     private static final int[] SUNSET = {0xFFFFF4D6, 0xFFFFB067, 0xFFFF5E8E};
     private static final int[] EMERALD = {0xFFEDFFF7, 0xFF62E6B4, 0xFF15A06C};
     private static final int[] OBSIDIAN = {0xFFE8E2FF, 0xFF8C6CFF, 0xFF241A3A};
+    private static final int[] ECLIPSE = {0xFFF4F7FF, 0xFFB9C2D8, 0xFF303443};
+    private static final int[] EMBER = {0xFFFFE8BB, 0xFFE39752, 0xFF9D4131};
 
     private static int[] tones(String id) {
         return switch (id) {
+            case "eclipse" -> ECLIPSE;
+            case "ember" -> EMBER;
+            case "aura" -> AURA;
             case "amethyst" -> AMETHYST;
             case "sunset" -> SUNSET;
             case "emerald" -> EMERALD;
@@ -36,6 +43,7 @@ public final class Palette {
      */
     public static int color(String id, float t, float phase, int c1, int c2) {
         t = Math.max(0f, Math.min(1f, t));
+        if (id.equals("aurora")) return Colors.lerp(0xFF6BE7CF,0xFFA78BEF,(float)(.5+.5*Math.sin(phase*.35+t*2)));
         if (id.equals("custom")) return t < 0.15f ? Colors.lerp(0xFFFFFFFF, c1, t / 0.15f) : Colors.lerp(c1, c2, (t - 0.15f) / 0.85f);
         if (id.equals("accent")) {
             // акцент интерфейса: белая серединка → акцент → тот же тон темнее

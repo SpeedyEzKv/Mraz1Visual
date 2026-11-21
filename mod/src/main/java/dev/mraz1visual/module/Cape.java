@@ -26,9 +26,8 @@ public final class Cape extends Module {
     private static Cape instance;
     private static final Identifier TEX = Identifier.fromNamespaceAndPath("mraz1visual", "cosmetics/cape");
 
-    final EnumSetting style = add(new EnumSetting("style", "Рисунок", 0,
-            "eclipse", "Затмение", "gradient", "Градиент", "plain", "Однотонный", "file", "Свой файл",
-            "mraz", "Mraz1: фиолет → голубой", "sunset", "Закат", "ocean", "Океан", "aurora", "Сияние"));
+    final EnumSetting style = add(new EnumSetting("style", "Рисунок", 0, LocalArtwork.options("eclipse", "Затмение", "gradient", "Градиент", "plain", "Однотонный", "file", "Свой файл",
+            "mraz", "Mraz1: фиолет → голубой", "sunset", "Закат", "ocean", "Океан", "aurora", "Сияние", "aura", "AuraVisual")));
     final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFB9A6FF));
 
     private boolean ready;
@@ -56,6 +55,11 @@ public final class Cape extends Module {
 
     private void rebuild() {
         NativeImage img = style.getId().equals("file") ? loadFile() : null;
+        if (style.getId().equals("aura")) {
+            try (InputStream in = Cape.class.getResourceAsStream("/assets/auravisuals/textures/cape_aura.png")) {
+                if (in != null) img = NativeImage.read(in);
+            } catch (Exception e) { dev.mraz1visual.core.ModuleManager.LOG.warn("Aura cape texture could not be read ({})", e.getClass().getSimpleName()); }
+        }
         if (img == null) img = paint(style.getId(), color.get());
         Minecraft.getInstance().getTextureManager().register(TEX, new DynamicTexture(() -> "mraz1visual cape", img));
         asset = new ClientAsset.ResourceTexture(TEX, TEX);

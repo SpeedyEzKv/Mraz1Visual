@@ -26,6 +26,7 @@ public final class ChinaHat extends Module implements WorldLayer {
     final SliderSetting height = add(new SliderSetting("height", "Высота", 0.28, 0.1, 0.6, 0.02, " бл."));
     final SliderSetting opacity = add(new SliderSetting("opacity", "Прозрачность", 70, 15, 100, 5, " %"));
     final BoolSetting rim = add(new BoolSetting("rim", "Светящийся обод", true));
+    final BoolSetting gradientRim = add(new BoolSetting("gradient_rim", "Перелив по ободу", true));
     final BoolSetting sway = add(new BoolSetting("sway", "Покачивание", true));
 
     private double swayX, swayZ, swayVX, swayVZ;
@@ -72,7 +73,7 @@ public final class ChinaHat extends Module implements WorldLayer {
         // база конуса — над макушкой (0.3 блока над глазами вдоль оси головы)
         double bx = x + ux * 0.32, by = y + uy * 0.32, bz = z + uz * 0.32;
         // базис в плоскости основания
-        double ax = 1, ay = 0, az = 0;
+        double ax = Math.abs(ux) < .9 ? 1 : 0, ay = 1 - ax, az = 0;
         double e1x = ay * uz - az * uy, e1y = az * ux - ax * uz, e1z = ax * uy - ay * ux;
         double l1 = Math.sqrt(e1x * e1x + e1y * e1y + e1z * e1z);
         e1x /= l1; e1y /= l1; e1z /= l1;
@@ -91,7 +92,10 @@ public final class ChinaHat extends Module implements WorldLayer {
                 double m1x = (ex + apx) / 2, m1y = (ey + apy) / 2, m1z = (ez + apz) / 2;
                 d.quad(px0, py0, pz0, ex, ey, ez, m1x, m1y, m1z, m0x, m0y, m0z, cEdge, cEdge, cMid, cMid);
                 d.quad(m0x, m0y, m0z, m1x, m1y, m1z, apx, apy, apz, apx, apy, apz, cMid, cMid, cTip, cTip);
-                if (rim.get()) d.line(px0, py0, pz0, ex, ey, ez, 0.016, col(0.15f, 0.95f));
+                if (rim.get()) {
+                    float phase = gradientRim.get() ? .5f + .45f * (float)Math.cos(i * Math.PI * 2 / n - Fx.time()) : .15f;
+                    d.line(px0, py0, pz0, ex, ey, ez, .016, col(phase, .95f));
+                }
             }
             px0 = ex; py0 = ey; pz0 = ez;
         }

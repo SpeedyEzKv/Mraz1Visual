@@ -45,7 +45,7 @@ public final class ModsPanel implements Panel {
         d.round(x, y, w, h, 14, Theme.isLight() ? 0x60FFFFFF : 0x40101018);
         d.text(Lang.get("mraz1visual.mods.title"), Fonts.Kind.BOLD, x + 14, y + 12, Theme.TEXT);
         d.text(count, x + 14, y + 25, Theme.TEXT_MUTED);
-        String open = Lang.get("mraz1visual.mods.open_folder");
+        String open = "Mod Menu →";
         bw = d.width(open) + 24;
         bh = 20;
         bx = x + w - bw - 12;
@@ -80,12 +80,7 @@ public final class ModsPanel implements Panel {
     @Override
     public boolean click(double mx, double my, int button) {
         if (button == 0 && mx >= bx && mx < bx + bw && my >= by && my < by + bh) {
-            java.nio.file.Path dir = FabricLoader.getInstance().getGameDir().resolve("mods");
-            try {
-                java.nio.file.Files.createDirectories(dir);
-            } catch (java.io.IOException ignored) {
-            }
-            dev.mraz1visual.compat.Platform.openPath(dir);
+            dev.mraz1visual.integration.IntegrationScreens.mods(net.minecraft.client.Minecraft.getInstance().screen);
             return true;
         }
         return false;

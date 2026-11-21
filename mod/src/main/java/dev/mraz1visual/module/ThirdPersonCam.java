@@ -29,6 +29,7 @@ public final class ThirdPersonCam extends Module {
 
     /** Из миксина Camera.setup: длина отъезда камеры (ваниль — 4). */
     public static float distance(float original) {
+        if(PhotoMode.active())return original/4f*PhotoMode.distance();
         ThirdPersonCam c = instance;
         if (c == null || !c.isEnabled()) return original;
         float d = original / 4f * c.distance.getF();

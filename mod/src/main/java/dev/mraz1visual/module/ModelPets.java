@@ -57,6 +57,7 @@ public final class ModelPets extends Module implements WorldLayer {
     private final AnimPlayer anim = new AnimPlayer();
     private double x, y, z, vx, vy, vz, yaw;
     private boolean placed;
+    private Object lastWorld;
     private long last;
     private float moving, appear, nextSpecial = -1, clock;
     private boolean inSpecial;
@@ -96,12 +97,12 @@ public final class ModelPets extends Module implements WorldLayer {
     }
 
     private ModelEntry current() {
-        if (pet == null || ModelRegistry.get(pet.id) != pet) {
+        if (ModelPrefs.pet.isEmpty()) { pet = null; placed = false; return null; }
+        if (pet == null || !pet.id.equals(ModelPrefs.pet) || ModelRegistry.get(pet.id) != pet) {
             pet = ModelRegistry.get(ModelPrefs.pet);
             if (pet == null || pet.broken()) {
-                // ничего не выбрано — первый рабочий из папки
+                // Invalid selections stay empty until a real model is selected.
                 pet = null;
-                for (ModelEntry e : ModelRegistry.of(ModelEntry.Kind.PET)) if (!e.broken()) { pet = e; break; }
             }
             anim.play(null, 0, true);
             inSpecial = false;
@@ -118,6 +119,8 @@ public final class ModelPets extends Module implements WorldLayer {
     }
 
     private Anim base(ModelEntry e) {
+        String reaction=PetReactions.state();
+        if(!reaction.equals("follow")){String clip=switch(reaction){case "joy"->"happy";case "hide"->"hide";case "sleep"->"sleep";default->"wake";};Anim found=e.anim(clip);if(found!=null)return found;}
         Anim a = null;
         if (moving > 0.5f) {
             if (e.flying) a = e.anim("fly");
@@ -131,6 +134,10 @@ public final class ModelPets extends Module implements WorldLayer {
     }
 
     private void updateAnim(ModelEntry e, float dt) {
+        if(!PetReactions.state().equals("follow")){
+            fx=null;inSpecial=false;forced=null;anim.play(base(e),.25f,false);
+            anim.update(dt*animSpeed.getF()*(PetReactions.state().equals("sleep")&&e.anim("sleep")==null?.04f:1));return;
+        }
         if (nextSpecial < 0) nextSpecial = clock + 15 + (float) Math.random() * 25;
         if (forced != null) {
             Anim f = e.anim(forced);
@@ -156,7 +163,7 @@ public final class ModelPets extends Module implements WorldLayer {
             }
         }
         if (!inSpecial) anim.play(base(e), 0.3f, false);
-        anim.update(dt * animSpeed.getF());
+        anim.update(dt * animSpeed.getF() * (PetReactions.state().equals("sleep")&&e.anim("sleep")==null?.04f:1));
         if (fx != null) {
             fxAnim.update(dt * animSpeed.getF());
             if (fxAnim.current() == null || fxAnim.finished() || fxAnim.time() > 3f) fx = null;
@@ -183,12 +190,14 @@ public final class ModelPets extends Module implements WorldLayer {
         LocalPlayer p = mc.player;
         ModelEntry e = current();
         if (p == null || e == null || mc.level == null) return;
+        if (lastWorld != mc.level) { placed = false; fx = null; last = 0; lastWorld = mc.level; }
         long now = System.nanoTime();
         float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
+        if(PhotoMode.frozen())dt=0;
         last = now;
         clock += dt;
         Mesh m = e.mesh();
-        float scale = scale(m);
+        float scale = scale(m)*PetReactions.scale()*(1+MusicCosmetics.pulse("pet")*.035f);
 
         double ex = p.xo + (p.getX() - p.xo) * pt, ey = p.yo + (p.getY() - p.yo) * pt, ez = p.zo + (p.getZ() - p.zo) * pt;
         double pyaw = Math.toRadians(p.getYRot());
@@ -212,6 +221,9 @@ public final class ModelPets extends Module implements WorldLayer {
                 ty += 1;
             }
         }
+        if(PetReactions.state().equals("hide")){tx=ex-dirX*.3;tz=ez-dirZ*.3;ty=ey+.35;}
+        if(PetReactions.state().equals("sleep"))ty=ground(mc,tx,ey+.6,tz,ey);
+        ty+=PetReactions.bounce();
         if (!placed) {
             x = tx; y = ty; z = tz; yaw = pyaw;
             vx = vy = vz = 0;
@@ -222,11 +234,16 @@ public final class ModelPets extends Module implements WorldLayer {
             // на плече — без пружины, точно за игроком
             x = tx; y = ty; z = tz; vx = vy = vz = 0;
         } else {
+            double toX = tx-x, toZ = tz-z;
+            double desired = Math.atan2(-toX, toZ);
+            double turn = Math.atan2(Math.sin(desired-yaw),Math.cos(desired-yaw));
+            double alignment = Math.max(.24, .5+.5*Math.cos(turn));
             double k = follow.get(), stiff = 22 * k * k, damp = 8.5 * k;
-            vx += ((tx - x) * stiff - vx * damp) * dt;
+            vx += (toX * stiff * alignment - vx * damp) * dt;
             vy += ((ty - y) * stiff * (walker ? 2 : 1) - vy * damp * (walker ? 1.4 : 1)) * dt;
-            vz += ((tz - z) * stiff - vz * damp) * dt;
+            vz += (toZ * stiff * alignment - vz * damp) * dt;
             x += vx * dt; y += vy * dt; z += vz * dt;
+            if (walker && dt>0) y = Math.max(y, ground(mc,x,y+.55,z,y-.55));
             if ((tx - x) * (tx - x) + (tz - z) * (tz - z) + (ty - y) * (ty - y) > 100) {
                 // далеко отстал (телепорт, полёт) — появляется рядом мягко
                 x = tx; y = ty; z = tz; vx = vy = vz = 0;
@@ -236,9 +253,11 @@ public final class ModelPets extends Module implements WorldLayer {
         appear = Math.min(1, appear + dt / 0.45f);
         double hv = Math.sqrt(vx * vx + vz * vz);
         moving += ((hv > 0.35 ? 1f : 0f) - moving) * Math.min(1f, dt * 6f);
-        double want = shoulder || hv <= 0.35 ? pyaw : Math.atan2(-vx, vz);
+        double want = pyaw;
+        if (!shoulder && Math.hypot(tx-x,tz-z) > .18) want = Math.atan2(x-tx,tz-z);
+        else if (!shoulder && hv > .35) want = Math.atan2(-vx,vz);
         double dyaw = Math.atan2(Math.sin(want - yaw), Math.cos(want - yaw));
-        yaw += dyaw * Math.min(1, dt * 7);
+        yaw += dyaw * Math.min(1, dt * 11);
         updateAnim(e, dt);
 
         if (!firstPerson.get() && mc.options.getCameraType() == CameraType.FIRST_PERSON) return;
@@ -246,10 +265,10 @@ public final class ModelPets extends Module implements WorldLayer {
         if (src == null) return;
         int light = dev.mraz1visual.compat.Mc.lightCoords(mc.level, bp.set(Math.floor(x), Math.floor(y + 0.4), Math.floor(z)));
         float pop = easeBack(appear);
-        drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, m.bounds[1], light);
+        drawWorld(d, src, m, anim.pose(m), x, y, z, yaw, scale * pop, m.bounds[1], light, petLean(e));
         if (fx != null) {
             Mesh fm = fx.mesh();
-            drawWorld(d, src, fm, fxAnim.pose(fm), fxX, fxY, fxZ, fxYaw, scale, m.bounds[1], light);
+            drawWorld(d, src, fm, fxAnim.pose(fm), fxX, fxY, fxZ, fxYaw, scale, fm.bounds[1], light, 0);
         }
         d.restore();
         if (nameTag.get() && label != null) {
@@ -264,12 +283,17 @@ public final class ModelPets extends Module implements WorldLayer {
         for (int yy = top; yy > top - 7; yy--) {
             bp.set(bx, yy, bz);
             var st = mc.level.getBlockState(bp);
-            if (!st.getCollisionShape(mc.level, bp).isEmpty()) {
-                double h = st.getCollisionShape(mc.level, bp).max(net.minecraft.core.Direction.Axis.Y);
-                return yy + Math.min(1, h);
+            var shape = st.getCollisionShape(mc.level, bp);
+            if (!shape.isEmpty()) {
+                double h = shape.max(net.minecraft.core.Direction.Axis.Y, z-bz, x-bx);
+                if (Double.isFinite(h)) return yy+h;
             }
         }
         return fallback;
+    }
+
+    private static float petLean(ModelEntry e) {
+        return e.anim(PetReactions.state())==null ? PetReactions.restAngle() : 0;
     }
 
     private float scale(Mesh m) {
@@ -284,7 +308,7 @@ public final class ModelPets extends Module implements WorldLayer {
         return 1 + (c + 1) * u * u * u + c * u * u;
     }
 
-    private void drawWorld(WorldDraw d, MultiBufferSource src, Mesh m, float[] pose, double wx, double wy, double wz, double yaw, float s, float base, int light) {
+    private void drawWorld(WorldDraw d, MultiBufferSource src, Mesh m, float[] pose, double wx, double wy, double wz, double yaw, float s, float base, int light, float lean) {
         if (m == null || m.texture() == null || s <= 0.001f) return;
         m.atlas.lastUsed = System.currentTimeMillis();
         ps.setIdentity();
@@ -292,6 +316,7 @@ public final class ModelPets extends Module implements WorldLayer {
         ps.translate((float) (wx - d.camX()), (float) (wy - d.camY()), (float) (wz - d.camZ()));
         // модели Blockbench смотрят на север (−Z): разворот к направлению движения
         ps.mulPose(com.mojang.math.Axis.YP.rotation((float) (-yaw + Math.PI)));
+        if(lean!=0)ps.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(lean));
         ps.scale(s, s, s);
         ps.translate(0, -base, 0);
         if (m.bones.length > 0) ModelDraw.bones(m, pose);
@@ -299,7 +324,7 @@ public final class ModelPets extends Module implements WorldLayer {
         ModelDraw.draw(m, ps.last(), vc, -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.SOLID);
         if (ModelDraw.rimStrength > 0.01f) {
             ModelDraw.viewFromCamera(true);
-            ModelDraw.draw(m, ps.last(), src.getBuffer(ModelDraw.rimType()), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.RIM);
+            ModelDraw.draw(m, ps.last(), src.getBuffer(ModelDraw.rimType(m)), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.RIM);
         }
         if (glow.get() && m.hasGlow) {
             if (m.selfGlow) ModelDraw.draw(m, ps.last(), src.getBuffer(RenderTypes.eyes(m.texture())), -1, OverlayTexture.NO_OVERLAY, light, ModelDraw.GLOW_SELF);
@@ -317,16 +342,18 @@ public final class ModelPets extends Module implements WorldLayer {
         if (!mp.placed) {
             long now = System.nanoTime();
             float dt = mp.last == 0 ? 0 : Math.min(0.05f, (now - mp.last) / 1e9f);
+            if (PhotoMode.frozen()) dt=0;
             mp.last = now;
             mp.clock += dt;
             mp.updateAnim(e, dt);
         }
         Mesh m = e.mesh();
-        float s = mp.scale(m) * 0.8f;
+        float s = mp.scale(m) * PetReactions.scale() * 0.8f;
         ps.pushPose();
         ps.translate(0.55f, 0.15f + (float) Math.sin(mp.clock * 1.6) * 0.03f, -0.1f);
         // лицом к зрителю (модель смотрит на −Z, как и игрок), чуть вполоборота
         ps.mulPose(com.mojang.math.Axis.YP.rotation(0.45f));
+        ps.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(petLean(e)));
         ps.scale(s, s, s);
         ps.translate(0, -m.bounds[1], 0);
         ModelDraw.submit(c, ps, m, mp.anim.pose(m), -1, OverlayTexture.NO_OVERLAY, dev.mraz1visual.compat.Mc.FULL_BRIGHT, mp.glow.get());

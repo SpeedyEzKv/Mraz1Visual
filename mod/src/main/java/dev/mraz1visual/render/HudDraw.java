@@ -11,6 +11,8 @@ import net.minecraft.resources.Identifier;
 
 /** Один HUD-слой мода, внутри — все включённые HUD-модули. */
 public final class HudDraw {
+    private static int renderErrors;
+    public static int errorCount() { return renderErrors; }
     private HudDraw() {}
 
     public static void register() {
@@ -21,7 +23,7 @@ public final class HudDraw {
         HudLayer[] layers = Mraz1Visual.MODULES.hudLayers();
         if (layers.length == 0) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.options.hideGui || mc.player == null) return;
+        if (mc.options.hideGui || mc.player == null || dev.mraz1visual.module.PhotoMode.active()) return;
         float pt = delta.getGameTimeDeltaPartialTick(true);
         dev.mraz1visual.render.HudPos.nextFrame();
         float hs = dev.mraz1visual.module.UiAnimations.hudScale(mc);
@@ -37,6 +39,7 @@ public final class HudDraw {
             try {
                 l.renderHud(g, pt);
             } catch (Throwable t) {
+                renderErrors++;
                 ModuleManager.LOG.error("HUD layer {} failed", l.getClass().getSimpleName(), t);
             }
         }

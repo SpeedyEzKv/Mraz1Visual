@@ -47,12 +47,12 @@ public final class Halo extends Module {
     public static void submit(PoseStack ps, SubmitNodeCollector c, boolean gui) {
         Halo h = instance;
         if (h == null || !h.isEnabled()) return;
-        h.time = (System.nanoTime() - START) / 1e9f * h.speed.getF();
+        h.time = dev.mraz1visual.render.Fx.time() * h.speed.getF();
         WorldDraw.submitLocal(ps, c, gui, h.painter);
     }
 
     private int col(float t, float alpha) {
-        int c = Palette.color(preset.getId(), t, time * 0.3f, color.get(), color2.get());
+        int c = dev.mraz1visual.render.Fx.color(preset.getId(), t, time * 0.3f, color.get(), color2.get());
         c = Colors.shade(c, brightness.getF() / 100f);
         return Colors.withAlpha(c, Math.max(0, Math.min(255, Math.round(255 * alpha))));
     }

@@ -13,7 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
 /** Остаточные силуэты за тобой на быстром беге и прыжках — эффект рывка. Видно от 3-го лица. */
-public final class DashTrail extends Module implements WorldLayer {
+public final class DashTrail extends Module implements dev.mraz1visual.core.DecorativeLayer {
     private static final int MAX = 8;
     final EnumSetting colorMode = add(new EnumSetting("color_mode", "Цвет", 1, "solid", "Один", "gradient", "Градиент", "rainbow", "Радуга"));
     final ColorSetting color = add(new ColorSetting("color", "Цвет 1", 0x70B8B4F2));

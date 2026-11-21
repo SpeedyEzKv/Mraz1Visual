@@ -27,4 +27,11 @@ public final class AspectRatio extends Module {
         double target = Double.parseDouble(p[0]) / Double.parseDouble(p[1]);
         return new Matrix4f(m).m00((float) (m.m00() * screen / target));
     }
+
+    /** 26.x keeps perspective/culling in Camera's Projection, rather than GameRenderer. */
+    public static float projectionWidth(float original){
+        var a=instance;if(a==null||!a.isEnabled())return original;
+        var window=Minecraft.getInstance().getWindow();if(window.getHeight()<=0)return original;
+        String[] parts=a.ratio.getId().split(":");return window.getHeight()*Float.parseFloat(parts[0])/Float.parseFloat(parts[1]);
+    }
 }

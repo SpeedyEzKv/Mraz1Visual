@@ -46,6 +46,7 @@ public final class ModelDraw {
             Mesh.Bone b = bs[i];
             Matrix4f out = m.scratch[i];
             if (b.parent >= 0) out.set(m.scratch[b.parent]);
+            else if (m.rootTransform != null) out.set(m.rootTransform);
             else out.identity();
             float rx = b.rx, ry = b.ry, rz = b.rz, tx = 0, ty = 0, tz = 0, sx = 1, sy = 1, sz = 1;
             if (pose != null) {
@@ -69,6 +70,17 @@ public final class ModelDraw {
      * Кости должны быть посчитаны {@link #bones} (или у модели их нет).
      */
     public static void draw(Mesh m, PoseStack.Pose pose, VertexConsumer vc, int color, int overlay, int light, int pass) {
+        draw(m,pose,vc,color,overlay,light,pass,-1,false,0);
+    }
+
+    private static void draw(Mesh m, PoseStack.Pose pose, VertexConsumer vc, int color, int overlay, int light, int pass,
+                             float progress, boolean arriving, int highlight) {
+        float[] bounds = m.bounds;
+        int axis = m.sizeX() > m.sizeY() ? 0 : 1;
+        if (m.sizeZ() > bounds[axis+3]-bounds[axis]) axis=2;
+        float low=bounds[axis], high=bounds[axis+3];
+        float inverseSpan=1f/Math.max(.001f,high-low);
+        boolean reverse=Math.abs(high)<Math.abs(low);
         Matrix4f pm = pose.pose();
         Matrix3f pn = pose.normal();
         float[] d = m.data;
@@ -120,8 +132,17 @@ public final class ModelDraw {
                 float tx = mm.m00() * x + mm.m10() * y + mm.m20() * z + mm.m30();
                 float ty = mm.m01() * x + mm.m11() * y + mm.m21() * z + mm.m31();
                 float tz = mm.m02() * x + mm.m12() * y + mm.m22() * z + mm.m32();
-                if (pass == RIM) vc.addVertex(tx, ty, tz, color, 0.5f, 0.5f, overlay, light, nx, ny, nz);
-                else vc.addVertex(tx, ty, tz, color, d[o + 3], d[o + 4], overlay, light, nx, ny, nz);
+                int vertexColor=color;
+                if(progress>=0){
+                    float along=(d[o+axis]-low)*inverseSpan;
+                    if(reverse)along=1-along;
+                    float front=progress*1.32f-.16f;
+                    float reveal=Math.clamp(.5f+(front-along)*3.125f,0,1);
+                    float edge=Math.max(0,1-Math.abs(along-front)*6.25f);
+                    vertexColor=dev.mraz1visual.ui.Colors.lerp(color,highlight,edge*.85f);
+                    vertexColor=dev.mraz1visual.ui.Colors.mulAlpha(vertexColor,arriving?reveal:1-reveal);
+                }
+                vc.addVertex(tx, ty, tz, vertexColor, d[o + 3], d[o + 4], overlay, light, nx, ny, nz);
             }
         }
     }
@@ -131,7 +152,9 @@ public final class ModelDraw {
     /** Задание на отрисовку модели в коллектор (переиспользуется, без лямбд с захватом). */
     private static final class Job implements SubmitNodeCollector.CustomGeometryRenderer {
         Mesh mesh;
-        int color, overlay, light, pass;
+        int color, overlay, light, pass, highlight;
+        float progress;
+        boolean arriving;
         float[] pose;
         float[] poseCopy = new float[9 * 64];
         boolean world;
@@ -142,7 +165,7 @@ public final class ModelDraw {
             if (m == null) return;
             if (m.bones.length > 0) bones(m, pose == null ? null : poseCopy);
             worldSpace = world;
-            draw(m, p, vc, color, overlay, light, pass);
+            draw(m, p, vc, color, overlay, light, pass,progress,arriving,highlight);
         }
     }
 
@@ -159,8 +182,8 @@ public final class ModelDraw {
     }
 
     /** Тип прохода материала: белая текстура, свет складывается (как у эмиссивных глаз). */
-    public static RenderType rimType() {
-        return RenderTypes.eyes(dev.mraz1visual.render.SkyTextures.white());
+    public static RenderType rimType(Mesh m) {
+        return RenderTypes.entityTranslucent(m.texture());
     }
 
     /**
@@ -171,13 +194,24 @@ public final class ModelDraw {
         if (m == null || m.texture() == null) return;
         m.atlas.lastUsed = System.currentTimeMillis();
         submitPass(c, ps, solidType(m), m, bonePose, color, overlay, light, SOLID);
-        if (rimStrength > 0.01f) submitPass(c, ps, rimType(), m, bonePose, color, overlay, light, RIM);
+        if (rimStrength > 0.01f) submitPass(c, ps, rimType(m), m, bonePose, color, overlay, light, RIM);
         if (!glow || !m.hasGlow) return;
         if (m.selfGlow) submitPass(c, ps, RenderTypes.eyes(m.texture()), m, bonePose, color, overlay, light, GLOW_SELF);
         if (m.atlas.glowTexture != null) submitPass(c, ps, RenderTypes.eyes(m.atlas.glowTexture), m, bonePose, color, overlay, light, GLOW_LAYER);
     }
 
+    /** Advance a soft band along the longest model dimension, starting at the end nearest the grip origin. */
+    public static void submitSweep(SubmitNodeCollector c, PoseStack ps, Mesh m, float progress, boolean arriving, int accent, int overlay, int light) {
+        if(m==null || m.texture()==null)return;
+        submitPass(c, ps, RenderTypes.entityTranslucent(m.texture()), m, null, -1, overlay, light, SOLID, progress, arriving, accent);
+    }
+
     private static void submitPass(SubmitNodeCollector c, PoseStack ps, RenderType type, Mesh m, float[] bonePose, int color, int overlay, int light, int pass) {
+        submitPass(c,ps,type,m,bonePose,color,overlay,light,pass,-1,false,0);
+    }
+
+    private static void submitPass(SubmitNodeCollector c, PoseStack ps, RenderType type, Mesh m, float[] bonePose,
+                                   int color, int overlay, int light, int pass, float progress, boolean arriving, int highlight) {
         Job j = POOL[next];
         next = (next + 1) % POOL.length;
         j.mesh = m;
@@ -185,6 +219,9 @@ public final class ModelDraw {
         j.overlay = overlay;
         j.light = light;
         j.pass = pass;
+        j.progress = progress;
+        j.arriving = arriving;
+        j.highlight = highlight;
         j.pose = bonePose;
         j.world = worldSpace;
         if (bonePose != null) {

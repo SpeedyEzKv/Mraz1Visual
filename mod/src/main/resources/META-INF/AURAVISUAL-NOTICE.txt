@@ -1,0 +1,30 @@
+AuraVisual resources supplied in "source auravisual by @fixedproject.zip".
+Original mod: auravisuals 1.0.2, Minecraft 1.21.11.
+Original author notice: "source by @fixedproject".
+Original homepage: https://t.me/fixedproject
+Original license declaration: All Rights Reserved.
+
+Original cosmetic namespaces, metadata, contributor names and
+cosmetic catalog are preserved. Individual cosmetic contributors are listed
+in assets/auravisuals/cosmetics/*/*/meta.json and in the converted catalog.
+The archive contains no standalone license granting general redistribution.
+This integration does not change the original license or grant additional rights.
+
+Bedrock cosmetic geometry and animation channels are adapted for Mraz1Visual's
+Blockbench renderer by tools/import-aura.mjs. Original resources remain in the
+auravisuals namespace for provenance. Only cosmetics and game visual functions
+are adapted. AuraVisual's menu shell, themes, UI fonts, icons and wallpapers
+are excluded. Mraz1Visual keeps its own interface and fonts; IAS/Mod Menu use
+that interface's design tokens without replacing upstream input/authentication.
+
+In-Game Account Switcher (IAS) is bundled as an unmodified upstream mod.
+Copyright (C) 2015-2022 The_Fireplace; Copyright (C) 2021-2026 VidTu.
+License: LGPL-3.0-or-later. Upstream source and license:
+https://github.com/The-Fireplace-Minecraft-Mods/In-Game-Account-Switcher
+
+Mod Menu is bundled as an unmodified upstream mod, licensed under MIT:
+https://github.com/TerraformersMC/ModMenu
+
+Text Placeholder API is bundled as an unmodified upstream dependency:
+https://modrinth.com/mod/placeholder-api
+All license files supplied inside the upstream jars are preserved in those jars.

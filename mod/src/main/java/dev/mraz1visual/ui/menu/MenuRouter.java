@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 /** Решает, какой экран показать вместо ванильного. Любая ошибка — показываем ванильный. */
 public final class MenuRouter {
     private MenuRouter() {}
+    private static Screen title() { return new Mraz1VisualTitleScreen(); }
 
     /** Ванильный выбор миров нужен как запасной путь — тогда не перехватываем. */
     static boolean bypassWorlds;
@@ -25,12 +26,13 @@ public final class MenuRouter {
         try {
             // setScreen(null) без мира ваниль сама превращает в TitleScreen — перехватываем заранее
             if (screen == null) {
-                return mc.level == null && Modules.client.customTitle.get() ? new Mraz1VisualTitleScreen() : null;
+                return mc.level == null && Modules.client.customTitle.get() ? title() : null;
             }
             if (screen instanceof TitleScreen && Modules.client.customTitle.get()) {
-                return new Mraz1VisualTitleScreen();
+                return title();
             }
-            if (screen instanceof OptionsScreen) {
+            // Mod Menu may open a mod-owned OptionsScreen subclass; keep its real configuration UI.
+            if (screen.getClass() == OptionsScreen.class) {
                 if (Mraz1VisualOptionsScreen.bypass) {
                     Mraz1VisualOptionsScreen.vanillaInstance = new java.lang.ref.WeakReference<>(screen);
                     return screen;
@@ -43,7 +45,7 @@ public final class MenuRouter {
                 return new Mraz1VisualCreateWorldScreen(cws);
             }
             if (screen instanceof SelectWorldScreen && Modules.client.customWorlds.get() && !bypassWorlds) {
-                Screen parent = mc.screen instanceof Mraz1VisualTitleScreen ? mc.screen : new Mraz1VisualTitleScreen();
+                Screen parent = mc.screen instanceof Mraz1VisualTitleScreen ? mc.screen : title();
                 return new Mraz1VisualWorldsScreen(parent);
             }
             if (Modules.client.customPause.get()) {
@@ -53,7 +55,7 @@ public final class MenuRouter {
                 if (screen instanceof ShareToLanScreen) return new Mraz1VisualLanScreen(mc.screen);
             }
             if (screen instanceof JoinMultiplayerScreen && Modules.client.customServers.get()) {
-                Screen parent = mc.screen instanceof Mraz1VisualTitleScreen ? mc.screen : new Mraz1VisualTitleScreen();
+                Screen parent = mc.screen instanceof Mraz1VisualTitleScreen ? mc.screen : title();
                 return new Mraz1VisualServersScreen(parent);
             }
         } catch (Throwable t) {

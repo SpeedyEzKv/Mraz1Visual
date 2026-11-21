@@ -50,7 +50,12 @@ final class GlProgramCache {
     private static Field find(Class<?> c) {
         for (; c != null && c != Object.class; c = c.getSuperclass()) {
             for (Field f : c.getDeclaredFields()) {
-                if (f.getName().equals("lastProgram")) {
+                boolean programCache = f.getName().equals("lastProgram");
+                // 1.21.11 uses intermediary field names in production. The GL encoder
+                // owns exactly one GlProgram field. Both class literals remap with the JAR.
+                //? if <26.1
+                programCache |= c == com.mojang.blaze3d.opengl.GlCommandEncoder.class && f.getType() == com.mojang.blaze3d.opengl.GlProgram.class;
+                if (programCache) {
                     f.setAccessible(true);
                     return f;
                 }

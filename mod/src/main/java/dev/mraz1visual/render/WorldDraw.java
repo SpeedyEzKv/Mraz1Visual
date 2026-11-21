@@ -24,12 +24,17 @@ import org.joml.Matrix4f;
  */
 public final class WorldDraw {
     private static final WorldDraw INSTANCE = new WorldDraw();
+    public void quad(double x1,double y1,double z1,double x2,double y2,double z2,double x3,double y3,double z3,double x4,double y4,double z4,int color){quad(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,color,color,color,color);}
+    private static int renderErrors;
+    public static int errorCount() { return renderErrors; }
     private static final int SEG_MAX = 64;
     private static final float[] COS = new float[SEG_MAX + 1], SIN = new float[SEG_MAX + 1];
 
     private VertexConsumer vc;
     /** Яркость эффектов (общая настройка) — множитель прозрачности на этот кадр. */
     private float alphaK = 1f;
+    private boolean decorative;
+    private float localAlpha=1;
     private boolean worldGlow;
     private Matrix4f pose;
     private double cx, cy, cz;
@@ -42,6 +47,7 @@ public final class WorldDraw {
     private WorldDraw() {}
 
     public static void register() {
+        WorldLabels.register();
         WorldRenderEvents.BEFORE_TRANSLUCENT.register(WorldDraw::onRender);
     }
 
@@ -75,15 +81,20 @@ public final class WorldDraw {
         d.alphaK = Fx.brightness();
         float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         for (WorldLayer l : layers) {
+            d.decorative=l instanceof dev.mraz1visual.core.DecorativeLayer;
+            if(d.decorative&&!dev.mraz1visual.module.PhotoMode.effectsVisible())continue;
             try {
                 l.renderWorld(d, pt);
             } catch (Throwable t) {
+                renderErrors++;
                 ModuleManager.LOG.error("World layer {} failed", l.getClass().getSimpleName(), t);
             }
         }
+        d.decorative=false;
         try {
             FxParticles.render(d);
         } catch (Throwable t) {
+            renderErrors++;
             ModuleManager.LOG.error("Particles failed", t);
         }
         d.vc = null;
@@ -104,12 +115,16 @@ public final class WorldDraw {
         // локальный режим: два прохода, в каждом — только своя половина (обычные квады или свечение)
         if (local) {
             if (glowing != glowPass) return;
+            float opacity=localAlpha;
+            if(!ortho){var settings=dev.mraz1visual.module.VisualFx.get();if(settings!=null){double dx=x-eyeX,dy=y-eyeY,dz=z-eyeZ;opacity=Math.min(opacity,settings.cosmeticNearCameraAlpha(Math.sqrt(dx*dx+dy*dy+dz*dz)));}}
+            if(opacity<1)argb=dev.mraz1visual.ui.Colors.mulAlpha(argb,opacity);
             // у модели игрока — типы сущностей (тот же проход, что и модель; дружит с Iris)
             if (glowPass) FxVertex.putGlow(vc, pose, (float) x, (float) y, (float) z, argb);
             else FxVertex.put(vc, pose, (float) x, (float) y, (float) z, argb);
             return;
         }
-        if (alphaK != 1f) argb = Math.min(255, Math.round((argb >>> 24) * alphaK)) << 24 | (argb & 0xFFFFFF);
+        float alpha=alphaK*(decorative?Fx.decorativeAlpha(x,y,z,"trails"):1);
+        if (alpha != 1f) argb = Math.min(255, Math.round((argb >>> 24) * alpha)) << 24 | (argb & 0xFFFFFF);
         vc.addVertex(pose, (float) (x - cx), (float) (y - cy), (float) (z - cz)).setColor(argb);
     }
 
@@ -157,6 +172,8 @@ public final class WorldDraw {
         glowPass = glow;
         glowing = false;
         ortho = gui;
+        var player=Minecraft.getInstance().player;
+        localAlpha=gui||player==null?1:Fx.decorativeAlpha(player.getX(),player.getY()+1.6,player.getZ(),"cosmetics");
         vc = consumer;
         pose = m;
         src = null;
@@ -182,6 +199,7 @@ public final class WorldDraw {
         try {
             painter.paint(this);
         } catch (Throwable t) {
+            renderErrors++;
             ModuleManager.LOG.error("Local layer failed", t);
         } finally {
             vc = null;
@@ -199,6 +217,16 @@ public final class WorldDraw {
     }
 
     /** Локальный режим: примитив не для текущего прохода (обычный / свечение) — не считать его вовсе. */
+    /** Apparent detail for local cosmetics during orbit shots and distant avatar draws. */
+    public float localDetail() {
+        if (ortho) return 1;
+        double distanceSquared = eyeX*eyeX + eyeY*eyeY + eyeZ*eyeZ;
+        if (distanceSquared > 24*24) return .40f;
+        return distanceSquared > 12*12 ? .65f : 1;
+    }
+
+    public boolean isGlowPass() { return local && glowPass; }
+
     private boolean skip() {
         return local && glowing != glowPass;
     }
@@ -291,6 +319,40 @@ public final class WorldDraw {
     public double camY() { return cy; }
     public double camZ() { return cz; }
 
+    /** Textured AuraVisual sprite using the native translucent entity pipeline. */
+    public void sprite(net.minecraft.resources.Identifier texture, double x, double y, double z, double radius, int color, boolean ground) {
+        sprite(texture,x,y,z,radius,color,ground,0);
+    }
+
+    /** The optional rotation is in the sprite plane; old callers retain exactly their original orientation. */
+    public void sprite(net.minecraft.resources.Identifier texture, double x, double y, double z, double radius, int color, boolean ground, double rotation) {
+        if (src == null || local) return;
+        VertexConsumer buffer = src.getBuffer(RenderTypes.entityTranslucent(texture));
+        double rx = ground ? radius : camRight.x * radius;
+        double ry = ground ? 0 : camRight.y * radius;
+        double rz = ground ? 0 : camRight.z * radius;
+        double ux = ground ? 0 : camUp.x * radius;
+        double uy = ground ? 0 : camUp.y * radius;
+        double uz = ground ? radius : camUp.z * radius;
+        if(rotation!=0){double cos=Math.cos(rotation),sin=Math.sin(rotation),ax=rx,ay=ry,az=rz;
+            rx=ax*cos+ux*sin;ry=ay*cos+uy*sin;rz=az*cos+uz*sin;
+            ux=ux*cos-ax*sin;uy=uy*cos-ay*sin;uz=uz*cos-az*sin;}
+        int tinted = dev.mraz1visual.ui.Colors.mulAlpha(color, alphaK);
+        texturedVertex(buffer,x-rx-ux,y-ry-uy,z-rz-uz,0,1,tinted);
+        texturedVertex(buffer,x+rx-ux,y+ry-uy,z+rz-uz,1,1,tinted);
+        texturedVertex(buffer,x+rx+ux,y+ry+uy,z+rz+uz,1,0,tinted);
+        texturedVertex(buffer,x-rx+ux,y-ry+uy,z-rz+uz,0,0,tinted);
+        restore();
+    }
+
+    private void texturedVertex(VertexConsumer buffer, double x, double y, double z, float u, float v, int color) {
+        float px = (float)(x-cx), py = (float)(y-cy), pz = (float)(z-cz);
+        float tx = pose.m00()*px+pose.m10()*py+pose.m20()*pz+pose.m30();
+        float ty = pose.m01()*px+pose.m11()*py+pose.m21()*pz+pose.m31();
+        float tz = pose.m02()*px+pose.m12()*py+pose.m22()*pz+pose.m32();
+        buffer.addVertex(tx,ty,tz,color,u,v,net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,dev.mraz1visual.compat.Mc.FULL_BRIGHT,0,1,0);
+    }
+
     /** Отрезок толщиной w, развёрнутый к камере. */
     public void line(double x1, double y1, double z1, double x2, double y2, double z2, double w, int c) {
         if (skip()) return;
@@ -312,6 +374,9 @@ public final class WorldDraw {
      */
     public void label(net.minecraft.network.chat.Component text, double x, double y, double z, float scale, int color, int background) {
         if (src == null || local) return;
+        WorldLabels.Entry label = WorldLabels.get(text);
+        if (!label.ready) return;
+        text = label.text;
         Minecraft mc = Minecraft.getInstance();
         PoseStack ps = labelStack;
         ps.setIdentity();
@@ -321,7 +386,7 @@ public final class WorldDraw {
         float s = 0.025f * scale;
         ps.scale(s, -s, s);
         var font = mc.font;
-        float w = font.width(text);
+        float w = label.width;
         //? if >=26.2 {
         /*if (collector != null) collector.submitText(ps, -w / 2f, 0, text.getVisualOrderText(), false,
                 net.minecraft.client.gui.Font.DisplayMode.NORMAL, 0xF000F0, color, background, 0);
@@ -490,11 +555,11 @@ public final class WorldDraw {
         return t;
     }
 
-    private static float cos(int i, int n) {
+    public static float cos(int i, int n) {
         return table(n)[0][i % n];
     }
 
-    private static float sin(int i, int n) {
+    public static float sin(int i, int n) {
         return table(n)[1][i % n];
     }
 }

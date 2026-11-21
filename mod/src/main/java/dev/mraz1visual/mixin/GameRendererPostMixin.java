@@ -17,6 +17,7 @@ public abstract class GameRendererPostMixin {
     private void mraz1visual$postFx(CallbackInfo ci) {
         DeltaTracker delta = net.minecraft.client.Minecraft.getInstance().getDeltaTracker();
         PostFxModule.afterLevel(delta.getGameTimeDeltaPartialTick(false));
+        dev.mraz1visual.module.MotionBlur.afterLevel();
         dev.mraz1visual.ui.GlassBlur.afterLevel();
     }
 
@@ -29,6 +30,7 @@ public abstract class GameRendererPostMixin {
     @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GameRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;)V", shift = At.Shift.AFTER), require = 0)
     private void mraz1visual$postFx(DeltaTracker delta, boolean tick, CallbackInfo ci) {
         PostFxModule.afterLevel(delta.getGameTimeDeltaPartialTick(false));
+        dev.mraz1visual.module.MotionBlur.afterLevel();
         dev.mraz1visual.ui.GlassBlur.afterLevel();
     }
 

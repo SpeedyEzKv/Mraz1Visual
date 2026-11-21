@@ -46,3 +46,32 @@
 - **jflac-codec** 1.5.2 (FLAC) — Apache License 2.0.
 - **stb_vorbis** (OGG) — public domain / MIT, из LWJGL, который уже есть в игре.
 - **LRCLIB** (https://lrclib.net) — открытый API синхронных текстов песен; тексты кэшируются только локально, для личного показа.
+
+## AuraVisual integration
+
+Visual resources: AuraVisual, archive `source auravisual by @fixedproject.zip`,
+author notice `source by @fixedproject`, https://t.me/fixedproject.
+Original license declaration: **All Rights Reserved**. The archive provides no
+standalone redistribution license. Individual cosmetic authors remain recorded
+in their original `meta.json` files and the converted catalog.
+
+IAS: The_Fireplace / VidTu, LGPL-3.0-or-later,
+https://github.com/The-Fireplace-Minecraft-Mods/In-Game-Account-Switcher.
+Mod Menu: TerraformersMC, MIT, https://github.com/TerraformersMC/ModMenu.
+Upstream dependency jars retain their license files unchanged.
+
+## Eclipse additions and native media bridge
+
+Eclipse Crown, Shard Wings, posed Ghost Dash, reactive pet integration, surface/landing
+effects, skin transitions and photo mode are implemented in Mraz1Visual source.
+Imported Aura assets and their original author metadata remain unchanged.
+
+The bundled `mraz1visual-media.exe` is built from `launcher/src-tauri/src/media.rs`
+and `src/bin/mraz1visual-media.rs`. It reuses the launcher media implementation.
+Windows API bindings: Microsoft `windows` crate 0.58, MIT OR Apache-2.0,
+https://github.com/microsoft/windows-rs. The bridge uses Windows SMTC metadata and
+commands; it does not record system audio or read browser profiles.
+
+## Локальная коллекция Pulse
+
+Модели, текстуры и анимации коллекции Pulse из debuda-beta 1.1. Автор указан как LuckyVIP в 27 карточках; для остальных сохранено название исходной коллекции. Текстура кольца прыжка — Pulse SRC. Исходные обозначения прав — All-Rights-Reserved. Перелив обода China Hat реализован средствами Mraz1Visual по визуальному приёму из mbreadysrc. Подробности включены в JAR в META-INF/PULSE-COSMETICS-NOTICE.txt.

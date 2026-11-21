@@ -37,9 +37,20 @@ public final class PlayerLayer extends RenderLayer<AvatarRenderState, PlayerMode
     @Override
     public void submit(PoseStack ps, SubmitNodeCollector c, int light, AvatarRenderState s, float yRot, float xRot) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || s.id != mc.player.getId() || s.isInvisible || s.isSpectator) return;
+        if (mc.player == null || s.isInvisible || s.isSpectator) return;
+        boolean owner = s.id == mc.player.getId();
+        if (!owner && !dev.mraz1visual.dev.Harness.reviewAvatar(mc, s.id)) return;
         boolean gui = Boolean.TRUE.equals(s.getData(GUI));
-        if (Wings3D.active()) {
+        if (owner) dev.mraz1visual.module.GhostDash.capture(getParentModel(),gui);
+        if (dev.mraz1visual.module.ShardWings.active()) {
+            ps.pushPose();getParentModel().body.translateAndRotate(ps);ps.scale(-K,-K,K);
+            dev.mraz1visual.module.ShardWings.submit(ps,c,gui);ps.popPose();
+        }
+        if (dev.mraz1visual.module.EclipseCrown.active()) {
+            ps.pushPose();getParentModel().head.translateAndRotate(ps);ps.scale(-K,-K,K);
+            dev.mraz1visual.module.EclipseCrown.submit(ps,c,gui);ps.popPose();
+        }
+        if (Wings3D.active() && !dev.mraz1visual.module.ShardWings.active()) {
             // к телу: поворот и наклон корпуса берутся из позы модели; оси → вправо +X, вверх +Y, вперёд −Z
             ps.pushPose();
             getParentModel().body.translateAndRotate(ps);

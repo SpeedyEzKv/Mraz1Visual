@@ -19,7 +19,7 @@ import net.minecraft.client.player.LocalPlayer;
  * Лента-след за тобой на бегу и в полёте на элитрах: гладкая (точки каждый кадр, сплайн), сужается и тает.
  * Стили: лента света, звёздная пыль, стеклянный шлейф, огоньки. Только твой след и только у тебя на экране.
  */
-public final class Trails extends Module implements WorldLayer {
+public final class Trails extends Module implements dev.mraz1visual.core.DecorativeLayer {
     final EnumSetting style = add(new EnumSetting("style", "Вид", 4, "light", "Лента света", "stardust", "Звёздная пыль",
             "glass", "Стеклянный шлейф", "particles", "Огоньки", "soft", "Простой мягкий след")
             .alias("ribbon", "light").alias("line", "light").alias("both", "stardust"));
@@ -34,15 +34,22 @@ public final class Trails extends Module implements WorldLayer {
     final BoolSetting thirdOnly = add(new BoolSetting("third_only", "Только от 3-го лица", true));
 
     private final Ribbon ribbon = new Ribbon(160);
+    private LocalPlayer owner;
     private long last;
     private float dustAcc;
 
     public Trails() {
         super("trails", "Trails", "Гладкая лента за тобой на бегу и на элитрах — тает со временем.", Category.VISUALS);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> reset());
     }
 
     @Override
-    protected void onEnable() {
+    protected void onDisable() { reset(); }
+
+    private void reset() {
+        owner = null;
+        last = 0;
+        dustAcc = 0;
         ribbon.clear();
     }
 
@@ -58,9 +65,13 @@ public final class Trails extends Module implements WorldLayer {
     public void renderWorld(WorldDraw d, float pt) {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
+        if (owner != p) {
+            reset();
+            owner = p;
+        }
         if (p == null) return;
         long now = System.nanoTime();
-        float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
+        float dt = last == 0 ? 0 : Math.min(ribbon.life + 1f, (now - last) / 1e9f);
         last = now;
         var pos = p.getPosition(pt);
         boolean fly = p.isFallFlying();
@@ -103,7 +114,7 @@ public final class Trails extends Module implements WorldLayer {
     /** Звёздная пыль: редкие мягкие звёздочки, медленно оседают и плывут (без мигания). */
     private void dust(LocalPlayer p, double x, double y, double z, float dt, float a) {
         if (!active(p) || p.getDeltaMovement().horizontalDistanceSqr() < 0.004) return;
-        dustAcc += dt * 22 * Fx.quality();
+        dustAcc += Math.min(dt, .1f) * 22 * Fx.quality();
         while (dustAcc >= 1) {
             dustAcc--;
             int c = Fx.color(preset.getId(), (float) Math.random() * 0.5f, Fx.time(), color.get(), color2.get(), a);

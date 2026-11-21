@@ -2,6 +2,8 @@
 mod/.gradle/
 mod/build/
 mod/run/
+mod/run-ui-smoke/
+mod/run-art-review/
 mod/out/
 .idea/
 *.iml
@@ -9,6 +11,8 @@ mod/out/
 launcher/node_modules/
 launcher/src-tauri/target/
 launcher/src-tauri/gen/
+launcher/portable/
+launcher/*-local.zip
 # Импортированные модели (паки игрока — в репозиторий не попадают)
 mraz1visual/weapon_skins/
 mraz1visual/pets/

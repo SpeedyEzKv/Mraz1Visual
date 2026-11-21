@@ -47,6 +47,7 @@ public final class WheelScreen extends Screen {
         float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
         last = now;
         openT = Math.min(1f, openT + dt / 0.18f);
+        selected = sector(mouseX, mouseY);
         // отпустил клавишу — выполнить выбранное и закрыть
         if (key > 0 && !Keys.isDown(key)) {
             pick();
@@ -54,9 +55,7 @@ public final class WheelScreen extends Screen {
         }
         d.begin(g, font, 1f);
         float cx = width / 2f, cy = height / 2f, r = Math.min(width, height) * 0.30f * (0.85f + 0.15f * openT);
-        float dx = mouseX - cx, dy = mouseY - cy;
         int n = Math.max(1, items.size());
-        selected = dx * dx + dy * dy < 18 * 18 ? -1 : Math.floorMod((int) Math.round(Math.atan2(dy, dx) / (Math.PI * 2 / n)), n);
         d.shadow(Math.round(cx - r - 20), Math.round(cy - r - 20), Math.round(2 * r + 40), Math.round(2 * r + 40), Math.round(r + 20), 24f, 0x50000000);
         d.ring(cx, cy, r * 0.62f, r * 0.62f, 0x50101018);
         d.ring(cx, cy, r * 0.62f, 1f, 0x30FFFFFF);
@@ -73,6 +72,13 @@ public final class WheelScreen extends Screen {
         d.end();
     }
 
+    private int sector(double x, double y) {
+        double dx = x - width / 2.0, dy = y - height / 2.0;
+        int n = Math.max(1, items.size());
+        return dx * dx + dy * dy < 18 * 18 ? -1 :
+                Math.floorMod((int) Math.round(Math.atan2(dy, dx) / (Math.PI * 2 / n)), n);
+    }
+
     private void pick() {
         int s = selected;
         onClose();
@@ -81,6 +87,7 @@ public final class WheelScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
+        selected = sector(e.x(), e.y());
         if (e.button() == 0) pick();
         else onClose();
         return true;

@@ -11,6 +11,7 @@ import dev.mraz1visual.render.Ease;
 import dev.mraz1visual.setting.BoolSetting;
 import dev.mraz1visual.setting.EnumSetting;
 import dev.mraz1visual.setting.KeySetting;
+import dev.mraz1visual.setting.SliderSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -22,6 +23,9 @@ public final class Music extends Module implements HudLayer {
     final EnumSetting style = add(new EnumSetting("style", "Вид", 0, "card", "Карточка", "island", "Остров сверху"));
     final EnumSetting corner = add(new EnumSetting("corner", "Угол (карточка)", 0, "tl", "Слева сверху", "tr", "Справа сверху", "bl", "Слева снизу"));
     final BoolSetting hideIdle = add(new BoolSetting("hide_idle", "Прятать, когда ничего не играет", true));
+    final SliderSetting size=add(new SliderSetting("size","Размер карточки",100,75,150,5," %")),opacity=add(new SliderSetting("opacity","Непрозрачность",100,25,100,5," %"));
+    final BoolSetting cover=add(new BoolSetting("cover","Обложка",true)),artist=add(new BoolSetting("artist","Исполнитель",true)),source=add(new BoolSetting("source","Источник",true)),progress=add(new BoolSetting("progress","Прогресс",true));
+    private final dev.mraz1visual.ui.Draw draw=new dev.mraz1visual.ui.Draw();
     final KeySetting toggleKey = add(new KeySetting("toggle_key", "Пауза / играть", KeySetting.NONE).group("Клавиши"));
     final KeySetting nextKey = add(new KeySetting("next_key", "Следующий трек", KeySetting.NONE).group("Клавиши"));
     final KeySetting prevKey = add(new KeySetting("prev_key", "Предыдущий трек", KeySetting.NONE).group("Клавиши"));
@@ -58,9 +62,13 @@ public final class Music extends Module implements HudLayer {
         boolean show = NowPlaying.available() || !hideIdle.get() && MediaClient.available();
         alpha = Ease.approach(alpha, show ? 1 : 0, 8, dt);
         if (alpha < 0.02f) return;
-        int w = g.guiWidth(), h = g.guiHeight();
+        widget.configure(cover.get(),artist.get(),source.get(),progress.get());
+        float scale=size.getF()/100,visible=alpha*opacity.getF()/100;
+        int w = Math.round(g.guiWidth()/scale), h = Math.round(g.guiHeight()/scale);
+        draw.begin(g,Minecraft.getInstance().font,scale);
+        try {
         if (style.getId().equals("island")) {
-            widget.renderIsland(g, (w - MusicWidget.IW) / 2f, 6, alpha);
+            widget.renderIsland(g, (w - MusicWidget.IW) / 2f, 6, visible);
             return;
         }
         float x, y;
@@ -69,6 +77,7 @@ public final class Music extends Module implements HudLayer {
             case "bl" -> { x = 6; y = h - MusicWidget.H - 6; }
             default -> { x = 6; y = 6; }
         }
-        widget.renderCard(g, x, y, alpha);
+        widget.renderCard(g, x, y, visible);
+        } finally {draw.end();}
     }
 }

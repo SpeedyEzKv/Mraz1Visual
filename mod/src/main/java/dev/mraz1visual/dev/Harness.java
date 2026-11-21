@@ -50,6 +50,8 @@ public final class Harness {
     private static long waitUntil;
     private static boolean worldRequested;
     private static int inWorldTicks;
+    private static long clipStart, clipEnd;
+    private static int clipFrame;
 
     // замер
     private static String measureLabel;
@@ -59,7 +61,15 @@ public final class Harness {
 
     private Harness() {}
 
+    /** Dressed mannequins for the repeatable, offline multi-avatar frame benchmark. */
+    public static boolean reviewAvatar(Minecraft mc, int id) {
+        if (!active || !Boolean.getBoolean("mraz1.artReview") || mc.level == null) return false;
+        var entity = mc.level.getEntity(id);
+        return entity != null && entity.hasCustomName() && "EclipseReview".equals(entity.getCustomName().getString());
+    }
+
     public static void init() {
+        if (Boolean.getBoolean("mraz1.uiSmoke")) return;
         if (!FabricLoader.getInstance().isDevelopmentEnvironment()) return;
         dir = FabricLoader.getInstance().getGameDir().resolve("harness");
         Path file = dir.resolve("script.txt");
@@ -86,8 +96,14 @@ public final class Harness {
 
     /** Из миксина Minecraft.runTick: начало каждого кадра. */
     public static void frame() {
-        if (!active || measureLabel == null) return;
+        if (!active) return;
         long now = System.nanoTime();
+        if (active && now < clipEnd && now - clipStart >= clipFrame * 100_000_000L) {
+            var mc = Minecraft.getInstance();
+            String file = String.format(Locale.ROOT, "reference-motion-%04d.png", clipFrame++);
+            Screenshot.grab(mc.gameDirectory, file, mc.getMainRenderTarget(), 1, ignored -> {});
+        }
+        if (measureLabel == null) return;
         if (lastFrame != 0 && frameCount < frames.length) frames[frameCount++] = (now - lastFrame) / 1e6f;
         lastFrame = now;
     }
@@ -119,7 +135,7 @@ public final class Harness {
         }
     }
 
-    private static void openWorld(Minecraft mc) {
+    static void openWorld(Minecraft mc) {
         worldRequested = true;
         try {
             if (mc.getLevelSource().levelExists(WORLD)) {
@@ -141,7 +157,7 @@ public final class Harness {
                         new TitleScreen());
             }
         } catch (Throwable t) {
-            log("ERROR opening world: " + t);
+            if (dir != null) log("ERROR opening world: " + t);
             ModuleManager.LOG.error("Harness: world open failed", t);
         }
     }
@@ -156,6 +172,35 @@ public final class Harness {
     /** @return true — шаг выполнен сразу, можно следующий; false — ждём (wait/measure). */
     private static boolean run(Minecraft mc, String[] a) throws Exception {
         switch (a[0]) {
+            case "ping-wheel" -> ((dev.mraz1visual.module.Waypoints) Mraz1Visual.MODULES.find("waypoints")).openPingWheel(mc, 0);
+            case "ping-pick" -> {
+                if (!(mc.screen instanceof dev.mraz1visual.ui.WheelScreen wheel)) throw new IllegalStateException("wheel closed");
+                wheel.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(wheel.width / 2 + 40, wheel.height / 2,
+                        new net.minecraft.client.input.MouseButtonInfo(0, 0)), false);
+            }
+            case "clip" -> {
+                clipStart = System.nanoTime();
+                clipEnd = clipStart + 1_000_000_000L * Integer.parseInt(a[1]);
+                clipFrame = 0;
+            }
+            case "reference-player" -> {
+                int id = Integer.parseInt(a[1]);
+                var player = (net.minecraft.client.player.RemotePlayer) mc.level.getEntity(id);
+                if (player == null) {
+                    player = new net.minecraft.client.player.RemotePlayer(mc.level,
+                            new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), a[2]));
+                    player.setId(id);
+                    mc.level.addEntity(player);
+                }
+                player.setPos(mc.player.getX() + Double.parseDouble(a[3]), mc.player.getY(), mc.player.getZ() + 3);
+                player.setHealth(Float.parseFloat(a[4]));
+                if (a.length > 5) {
+                    player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_HELMET));
+                    player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE));
+                    player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+                ((dev.mraz1visual.core.AttackListener) Mraz1Visual.MODULES.find("target_hud")).onAttack(player);
+            }
             case "wait" -> {
                 waitUntil = System.nanoTime() + (long) (Double.parseDouble(a[1]) * 1e9);
                 return false;
@@ -174,6 +219,14 @@ public final class Harness {
                 case "front" -> CameraType.THIRD_PERSON_FRONT;
                 default -> CameraType.FIRST_PERSON;
             });
+            case "orbit" -> dev.mraz1visual.module.PhotoMode.orbit(Double.parseDouble(a[1]),Double.parseDouble(a[2]));
+            case "photo-shot" -> dev.mraz1visual.module.PhotoMode.takeShot();
+            case "checkwear" -> {
+                var item=findModel(a[1]);
+                if(item==null || !dev.mraz1visual.ui.WardrobePanel.selected(item.kind).equals(item.id))
+                    throw new IllegalStateException("Saved selection was not restored: "+a[1]);
+                log("  restored "+item.id);
+            }
             case "rot" -> {
                 mc.player.setYRot(Float.parseFloat(a[1]));
                 mc.player.setXRot(Float.parseFloat(a[2]));
@@ -227,6 +280,7 @@ public final class Harness {
                     case "up" -> mc.options.keyUp.setDown(on);
                     case "sprint" -> mc.options.keySprint.setDown(on);
                     case "jump" -> mc.options.keyJump.setDown(on);
+                    case "sneak" -> mc.options.keyShift.setDown(on);
                     default -> log("  no key " + a[1]);
                 }
             }
@@ -251,6 +305,14 @@ public final class Harness {
                 var e = findModel(a[2]);
                 if (e == null) log("  no model " + a[2]);
                 else dev.mraz1visual.models.ModelPrefs.weapons.put(a[1], e.id);
+            }
+            case "wear" -> {
+                if (a[1].equals("clear")) dev.mraz1visual.ui.WardrobePanel.clear();
+                else {
+                    var item = findModel(a[1]);
+                    if (item == null) throw new IllegalArgumentException("Missing cosmetic " + a[1]);
+                    dev.mraz1visual.ui.WardrobePanel.toggle(item);
+                }
             }
             case "pet" -> {
                 var e = findModel(a[1]);

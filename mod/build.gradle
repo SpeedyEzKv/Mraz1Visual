@@ -30,6 +30,15 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${property('deps.fabric_loader')}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${property('deps.fabric_api')}"
 
+    // UI integrations are bundled, so they also work outside our launcher.
+    // Keep the upstream jars intact, including their license notices.
+    ['ias', 'modmenu', 'placeholder'].each { key ->
+        def slug = [ias: 'in-game-account-switcher', modmenu: 'modmenu', placeholder: 'placeholder-api'][key]
+        def coordinate = "maven.modrinth:${slug}:${property('deps.' + key)}"
+        modImplementation coordinate
+        include coordinate
+    }
+
     // Браузер: компилируемся против API, в игре он необязателен (лаунчер ставит его сам)
     modCompileOnly "maven.modrinth:mcef-modern:${property('deps.mcef')}"
     // Классы Chromium (CefBrowser) лежат внутри MCEF вложенным jar — для компиляции берём их отдельно
@@ -60,7 +69,14 @@ loom {
     runs {
         client {
             // общая папка запуска mod/run для всех версий: стенд, скриншоты, конфиг
-            runDir = '../../run'
+            runDir = project.hasProperty('uiSmoke') ? "../../run-ui-smoke/${mc}" :
+                    project.hasProperty('artReview') ? "../../run-art-review/${mc}" : '../../run'
+            if (project.hasProperty('artReview')) {
+                programArgs '--username', 'EclipseReview'
+                vmArg '-Dmraz1.artReview=true'
+            }
+            if (project.hasProperty('uiSmoke')) vmArg '-Dmraz1.uiSmoke=true'
+            if (project.hasProperty('worldSmoke')) vmArg '-Dmraz1.worldSmoke=true'
             programArgs '--width', '1600', '--height', '900'
             // профилирование: ./gradlew runClient -Pjfr=путь.jfr
             if (project.findProperty('jfr')) vmArg "-XX:StartFlightRecording=filename=${project.findProperty('jfr')},settings=profile"
@@ -69,9 +85,38 @@ loom {
     }
 }
 
+if (project.hasProperty('uiSmoke')) {
+    tasks.named('runClient') {
+        def smokeReport = rootProject.file("run-ui-smoke/${mc}/integration-smoke-${mc}.txt")
+        doFirst { if (smokeReport.exists() && !smokeReport.delete()) throw new GradleException("Cannot reset smoke report: ${smokeReport}") }
+        doLast {
+            if (!smokeReport.isFile() || smokeReport.readLines('UTF-8').any { it.startsWith('FAIL ') }) {
+                throw new GradleException("UI smoke failed or did not complete: ${smokeReport}")
+            }
+        }
+    }
+}
+
 processResources {
     inputs.properties resourceProps
     filesMatching('fabric.mod.json') { expand resourceProps }
+    // Font licenses are notices, not Minecraft identifiers (26.x rejects uppercase resource paths).
+    if (project.hasProperty('publicRelease') || System.getenv('GITHUB_ACTIONS') == 'true') {
+        exclude 'assets/auravisuals/**', 'assets/talismanvisuals/**', 'assets/mraz1visual/textures/fx/pulse_jump.png'
+        ['aura', 'aura-items', 'pulse', 'majestica', 'weapons_free', 'fantasy_sword',
+         'cubees_currets', 'cubees_biomes', 'carnivoret'].each { pack ->
+            exclude "assets/mraz1visual/cosmetics/${pack}/**"
+        }
+    }
+    exclude 'assets/mraz1visual/font/*.txt'
+    // AuraVisual supplies cosmetics/effects only. Its UI shell is not part of our client.
+    exclude 'assets/auravisuals/fonts/**', 'assets/auravisuals/font/**', 'assets/auravisuals/icons/**'
+    exclude 'assets/auravisuals/gifs/**', 'assets/auravisuals/lang/**', 'assets/auravisuals/updates/**'
+    exclude 'assets/auravisuals/textures/mainmenu/**', 'assets/auravisuals/textures/gui/**'
+    from(rootProject.file('src/main/resources/assets/mraz1visual/font')) {
+        include '*.txt'
+        into 'META-INF/licenses/mraz-fonts'
+    }
 }
 
 java {
@@ -142,6 +187,8 @@ stonecutter {
         // миксины: имена методов и пути классов в дескрипторах
         replace 'method = "setup"', 'method = "alignWithEntity"'
         replace 'method = "render"', 'method = "extractRenderState"'
+        replace 'method = "renderWidget"', 'method = "extractWidgetRenderState"'
+        replace 'method = "renderBackground"', 'method = "extractBackground"'
         replace '"renderBlurredBackground"', '"extractBlurredBackground"'
         replace ';submitEntityRenderState(', ';entity('
         replace 'net/minecraft/client/renderer/block/model/ItemTransform', 'net/minecraft/client/resources/model/cuboid/ItemTransform'

@@ -26,6 +26,7 @@ public final class Mraz1VisualPauseScreen extends MenuBase {
         });
         item("СТАТИСТИКА", () -> minecraft.setScreen(new Mraz1VisualStatsScreen(this)));
         item("НАСТРОЙКИ", () -> minecraft.setScreen(new Mraz1VisualOptionsScreen(this)));
+        item("МОДЫ", () -> dev.mraz1visual.integration.IntegrationScreens.mods(this));
         IntegratedServer sp = net.minecraft.client.Minecraft.getInstance().getSingleplayerServer();
         if (sp != null && !sp.isPublished()) lanItem = item("ОТКРЫТЬ ДЛЯ СЕТИ", () -> minecraft.setScreen(new Mraz1VisualLanScreen(this)));
         boolean local = net.minecraft.client.Minecraft.getInstance().isLocalServer();

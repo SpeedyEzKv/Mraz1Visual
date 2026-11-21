@@ -1,0 +1,3 @@
+Pulse SRC (pulse 1.0-SNAPSHOT): original textures/jump.png. All-Rights-Reserved.
+Pulse cosmetic models, textures and animation from debuda-beta 1.1 (debuda-readable-settings-src.zip): LuckyVIP where identified in the individual model files. Other entries have no individual author field in the archive. All-Rights-Reserved. Converted for this local build.
+China Hat rotating rim treatment inspired by aethereal ChinaHat in mbreadysrc.rar; implemented with Mraz1Visual geometry and palette.

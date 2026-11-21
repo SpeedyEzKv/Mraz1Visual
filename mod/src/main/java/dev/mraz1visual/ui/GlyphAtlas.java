@@ -205,6 +205,8 @@ final class GlyphAtlas {
     /** Нарисовать букву: (px, py) — левый верхний угол в физических пикселях относительно базовой матрицы. */
     void draw(GuiGraphics g, Matrix3x2f physical, Glyph gl, int px, int py, int color) {
         if (gl.page() < 0) return;
+        var clip = g.scissorStack.peek();
+        if (clip != null && (clip.width() <= 0 || clip.height() <= 0)) return;
         if (dirty[gl.page()]) {
             textures.get(gl.page()).upload();
             dirty[gl.page()] = false;
@@ -242,6 +244,7 @@ final class GlyphAtlas {
         runCount = 0;
         if (n == 0) return;
         var scissor = g.scissorStack.peek();
+        if (scissor != null && (scissor.width() <= 0 || scissor.height() <= 0)) return;
         for (int page = 0; page < pages.size(); page++) {
             int count = 0;
             float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
@@ -268,7 +271,7 @@ final class GlyphAtlas {
             var b = new net.minecraft.client.gui.navigation.ScreenRectangle((int) Math.floor(minX), (int) Math.floor(minY),
                     (int) Math.ceil(maxX - minX) + 1, (int) Math.ceil(maxY - minY) + 1).transformMaxBounds(physical);
             if (scissor != null) b = scissor.intersection(b);
-            if (b == null) continue;
+            if (b == null || b.width() <= 0 || b.height() <= 0) continue;
             g.guiRenderState.submitGuiElement(new Run(TextureSetup.singleTexture(view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)),
                     physical, q, color, scissor, b));
         }
@@ -330,6 +333,7 @@ final class GlyphAtlas {
     /** Отправить готовую раскладку: phys уже сдвинута в начало строки. */
     void submit(GuiGraphics g, Matrix3x2f phys, Layout l, int color) {
         var scissor = g.scissorStack.peek();
+        if (scissor != null && (scissor.width() <= 0 || scissor.height() <= 0)) return;
         for (int pi = 0; pi < l.pages().length; pi++) {
             int page = l.pages()[pi];
             if (page >= textures.size()) continue;
@@ -343,7 +347,7 @@ final class GlyphAtlas {
             var r = new net.minecraft.client.gui.navigation.ScreenRectangle((int) Math.floor(b[0]), (int) Math.floor(b[1]),
                     (int) Math.ceil(b[2] - b[0]) + 1, (int) Math.ceil(b[3] - b[1]) + 1).transformMaxBounds(phys);
             if (scissor != null) r = scissor.intersection(r);
-            if (r == null) continue;
+            if (r == null || r.width() <= 0 || r.height() <= 0) continue;
             g.guiRenderState.submitGuiElement(new Run(TextureSetup.singleTexture(view, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)),
                     phys, l.quads()[pi], color, scissor, r));
         }

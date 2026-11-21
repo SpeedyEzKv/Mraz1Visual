@@ -17,6 +17,8 @@ import java.util.Random;
 
 /** Пузыри-кольца, расходящиеся от точки удара. */
 public final class HitBubbles extends Module implements AttackListener, WorldLayer {
+    final dev.mraz1visual.setting.EnumSetting style = add(new dev.mraz1visual.setting.EnumSetting("style", "Вид", 0, LocalArtwork.options("rings", "Кольца", "aura", "AuraVisual")));
+    private static final net.minecraft.resources.Identifier AURA = net.minecraft.resources.Identifier.fromNamespaceAndPath("auravisuals","textures/hitbubble.png");
     final ColorSetting color = add(new ColorSetting("color", "Цвет", 0xFFB8B4F2));
     final SliderSetting count = add(new SliderSetting("count", "Количество", 3, 1, 6, 1, ""));
 
@@ -53,6 +55,10 @@ public final class HitBubbles extends Module implements AttackListener, WorldLay
             float t = (float) ((now - b[3]) / 700.0);
             float ease = 1f - (1f - t) * (1f - t);
             float a = 1f - t;
+            if (style.getId().equals("aura")) {
+                d.sprite(AURA,b[0],b[1]+t*.2,b[2],b[4]*(.3+ease),Colors.mulAlpha(c,a),false);
+                continue;
+            }
             d.billboardRing(b[0], b[1] + t * 0.2, b[2], b[4] * (0.3 + ease), 0.05 * (1 - t) + 0.015, 32, Colors.mulAlpha(c, a));
             d.billboardDot(b[0], b[1] + t * 0.2, b[2], b[4] * 0.5 * (1 - t), Colors.mulAlpha(c, a * 0.35f));
         }

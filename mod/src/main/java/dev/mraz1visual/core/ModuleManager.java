@@ -14,6 +14,9 @@ import java.util.Map;
 public final class ModuleManager {
     public static final Logger LOG = LoggerFactory.getLogger("Mraz1Visual");
     private static final Module[] EMPTY = new Module[0];
+    private static final java.util.concurrent.atomic.AtomicInteger FAILURES=new java.util.concurrent.atomic.AtomicInteger();
+    public static int failureCount(){return FAILURES.get();}
+    static void failed(){FAILURES.incrementAndGet();}
 
     private final List<Module> all = new ArrayList<>();
     private final List<Module> allView = Collections.unmodifiableList(all);
@@ -61,7 +64,7 @@ public final class ModuleManager {
     public void afterConfigLoad() {
         for (Module m : all) {
             if (m.isEnabled()) {
-                try { m.onEnable(); } catch (Throwable t) { LOG.error("Module {} failed on enable", m.id, t); }
+                try { m.onEnable(); } catch (Throwable t) { failed();LOG.error("Module {} failed on enable", m.id, t); }
             }
         }
         onModuleStateChanged();
@@ -125,6 +128,7 @@ public final class ModuleManager {
             try {
                 t[i].onTick(mc);
             } catch (Throwable e) {
+                failed();
                 LOG.error("Module {} crashed in tick, disabling", t[i].id, e);
                 t[i].setEnabled(false);
             }

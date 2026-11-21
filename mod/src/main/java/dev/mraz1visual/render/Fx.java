@@ -9,6 +9,8 @@ import dev.mraz1visual.ui.Colors;
  */
 public final class Fx {
     private Fx() {}
+    public static float decorativeAlpha(double x,double y,double z){var settings=VisualFx.get();return settings==null?1:settings.decorativeAlpha(x,y,z);}
+    public static float decorativeAlpha(double x,double y,double z,String kind){var settings=VisualFx.get();return settings==null?1:settings.decorativeAlpha(x,y,z,kind);}
 
     /** Множитель качества: 0.35 / 0.6 / 1 / 1.5. */
     public static float quality() {
@@ -70,8 +72,9 @@ public final class Fx {
 
     /** Секунды с запуска — общее время анимаций (по реальному времени кадра). */
     public static float time() {
-        return (System.nanoTime() - START) / 1e9f;
+        return dev.mraz1visual.module.PhotoMode.animationTime(rawTime());
     }
+    public static float rawTime(){return (System.nanoTime()-START)/1e9f;}
 
     private static final long START = System.nanoTime();
 }

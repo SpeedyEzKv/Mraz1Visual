@@ -13,8 +13,10 @@ import net.minecraft.world.entity.Entity;
 
 /** Звук при твоём ударе. Играет только у тебя. */
 public final class HitSounds extends Module implements AttackListener {
-    final EnumSetting sound = add(new EnumSetting("sound", "Звук", 0,
-            "orb", "Опыт", "bell", "Колокол", "chime", "Аметист", "click", "Щелчок", "pling", "Плинг"));
+    final EnumSetting sound = add(new EnumSetting("sound", "Звук", 0, LocalArtwork.options("orb", "Опыт", "bell", "Колокол", "chime", "Аметист", "click", "Щелчок", "pling", "Плинг",
+            "aura_bell", "Aura: Bell", "aura_chime", "Aura: Chime", "aura_kill2", "Aura: Kill",
+            "aura_nya", "Aura: Nya", "aura_sixseven", "Aura: Six Seven", "aura_skeet", "Aura: Skeet",
+            "aura_uwu", "Aura: Uwu", "aura_naruto_shadow_clones", "Aura: Naruto")));
     final SliderSetting volume = add(new SliderSetting("volume", "Громкость", 60, 0, 100, 1, "%"));
     final SliderSetting pitch = add(new SliderSetting("pitch", "Тон", 1.0, 0.5, 2.0, 0.05, "×"));
 
@@ -23,6 +25,7 @@ public final class HitSounds extends Module implements AttackListener {
     }
 
     private SoundEvent event() {
+        if (sound.getId().startsWith("aura_")) return SoundEvent.createVariableRangeEvent(net.minecraft.resources.Identifier.fromNamespaceAndPath("auravisuals",sound.getId().substring(5)));
         return switch (sound.getId()) {
             case "bell" -> SoundEvents.NOTE_BLOCK_BELL.value();
             case "chime" -> SoundEvents.AMETHYST_BLOCK_CHIME;

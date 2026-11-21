@@ -11,7 +11,7 @@ import java.util.Random;
  * рябь на воде и лёгкий параллакс от мыши. Рисуется только в меню — в игре стоит ноль.
  * Все слои лежат в координатах исходной картинки 1920×1080, поэтому одна матрица на всё.
  */
-final class EclipseBackground {
+public final class EclipseBackground {
     private static Identifier tex(String n) {
         return Identifier.fromNamespaceAndPath("mraz1visual", "textures/gui/menu/" + n + ".png");
     }
@@ -48,7 +48,7 @@ final class EclipseBackground {
     /**
      * @param sunX, sunY где на экране (доли) держать центр затмения
      */
-    void render(GuiGraphics g, int sw, int sh, float sunX, float sunY, float zoom, int mouseX, int mouseY, boolean animate) {
+    public void render(GuiGraphics g, int sw, int sh, float sunX, float sunY, float zoom, int mouseX, int mouseY, boolean animate) {
         float t = animate ? (System.nanoTime() - START) / 1e9f : 0f;
         g.fill(0, 0, sw, sh, 0xFF030308);
 

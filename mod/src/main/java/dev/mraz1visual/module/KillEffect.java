@@ -22,8 +22,10 @@ import dev.mraz1visual.setting.SliderSetting;
 import net.minecraft.core.BlockPos;
 
 /** Эффект на месте цели, которую ты добил: молния, души или ударная волна. Только у тебя. */
-public final class KillEffect extends Module implements AttackListener, WorldLayer {
-    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "ascend", "Растворение и душа", "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Взрыв частиц", "all", "Всё сразу", "beam", "Световой луч"));
+public final class KillEffect extends Module implements AttackListener, dev.mraz1visual.core.DecorativeLayer {
+    final EnumSetting style = add(new EnumSetting("style", "Эффект", 0, "ascend", "Растворение и душа", "blood", "Кровь", "lightning", "Молния", "souls", "Души", "wave", "Волна", "shards", "Взрыв частиц", "all", "Всё сразу", "beam", "Световой луч", "eclipse", "Затмение"));
+    final SliderSetting eclipseSize=add(new SliderSetting("eclipse_size","Затмение: размер",.32,.15,.7,.02," бл."));
+    private Object world;
     final dev.mraz1visual.setting.BoolSetting beamBolt = add(new dev.mraz1visual.setting.BoolSetting("beam_bolt", "Луч + молния", false));
     final EnumSetting preset = add(new EnumSetting("preset", "Цвет", 0, dev.mraz1visual.render.Palette.OPTIONS));
     final ColorSetting color = add(new ColorSetting("color", "Свой цвет", 0xFFB8B4F2));
@@ -61,6 +63,7 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
         double[] souls;  // смещения душ
         dev.mraz1visual.render.Ribbon soul; // «душа» для «Растворения»
         double seed;
+        boolean eclipseBurst;
     }
 
     private final List<Fx> fx = new ArrayList<>();
@@ -73,6 +76,10 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
         markNew();
         instance = this;
     }
+
+    private void resetState(){fx.clear();pending.clear();done.clear();drops.clear();splats.clear();last=null;lastAt=lastFrame=0;}
+    @Override protected void onEnable(){resetState();world=Minecraft.getInstance().level;}
+    @Override protected void onDisable(){resetState();world=null;}
 
     @Override
     public void onAttack(Entity e) {
@@ -90,13 +97,14 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
     /** Из миксина LivingEntity.handleEntityEvent(3): кто-то рядом умер. */
     public static void onDeath(LivingEntity e) {
         KillEffect k = instance;
-        if (k == null || !k.isEnabled() || !k.allDeaths.get() || e == Minecraft.getInstance().player) return;
+        if (k == null || !k.isEnabled() || !k.allDeaths.get() || k.style.getId().equals("eclipse") || e == Minecraft.getInstance().player) return;
         if (k.playersOnly.get() && !(e instanceof net.minecraft.world.entity.player.Player)) return;
         if (k.pending.size() < 16) k.pending.add(e);
     }
 
     @Override
     public void onTick(Minecraft mc) {
+        if(world!=mc.level){resetState();world=mc.level;}
         if (done.size() > 256) done.clear();
         while (!pending.isEmpty()) {
             LivingEntity e = pending.remove(0);
@@ -108,7 +116,9 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
             return;
         }
         if (!last.isDeadOrDying()) return;
-        if (done.add(last.getId())) play(mc, last);
+        var damage = last.getLastDamageSource();
+        boolean credited = damage != null && damage.getEntity() == mc.player;
+        if ((!style.getId().equals("eclipse") || credited) && done.add(last.getId())) play(mc, last);
         last = null;
     }
 
@@ -186,6 +196,26 @@ public final class KillEffect extends Module implements AttackListener, WorldLay
         int c = color.get();
         for (Fx f : fx) {
             float t = (now - f.start) / 1600f;
+            if(s.equals("eclipse")){
+                double collapse = Math.min(1,Math.max(0,(t-.10)/.36));
+                double cy=f.y+f.h*.6, r=eclipseSize.get()*(1-collapse*collapse);
+                if(collapse>=1){
+                    if(!f.eclipseBurst){
+                        f.eclipseBurst=true;
+                        for(int i=0;i<dev.mraz1visual.render.Fx.count(7);i++){
+                            double angle=i*2.39996;
+                            dev.mraz1visual.render.FxParticles.spawn(f.x,cy,f.z,Math.cos(angle)*.72,.22+rnd.nextDouble()*.4,Math.sin(angle)*.72,.44f,.025f,col(.24f,1),.55f,false,dev.mraz1visual.render.FxParticles.SPARK,true,.25f,0);
+                        }
+                    }
+                    continue;
+                }
+                int dark=Colors.mulAlpha(0xFF090A10,Math.max(0,1-t));
+                for(int v=0;v<8;v++)for(int u=0;u<16;u++){
+                    double a=u*Math.PI/8,b=(u+1)*Math.PI/8,c0=-Math.PI/2+v*Math.PI/8,c1=c0+Math.PI/8;
+                    d.quad(f.x+Math.cos(a)*Math.cos(c0)*r,cy+Math.sin(c0)*r,f.z+Math.sin(a)*Math.cos(c0)*r,f.x+Math.cos(b)*Math.cos(c0)*r,cy+Math.sin(c0)*r,f.z+Math.sin(b)*Math.cos(c0)*r,f.x+Math.cos(b)*Math.cos(c1)*r,cy+Math.sin(c1)*r,f.z+Math.sin(b)*Math.cos(c1)*r,f.x+Math.cos(a)*Math.cos(c1)*r,cy+Math.sin(c1)*r,f.z+Math.sin(a)*Math.cos(c1)*r,dark);
+                }
+                d.glowBegin();d.billboardRing(f.x,cy,f.z,r*1.04,.025,48,col(.1f,Math.max(0,1-t)*.8f));d.billboardRing(f.x,cy,f.z,r*1.12,.009,32,col(.2f,(float)(.2+.35*collapse)));d.glowEnd();continue;
+            }
             if (s.equals("ascend") && f.soul != null) {
                 float u = Math.min(1f, (now - f.start) / 1800f);
                 // душа: поднимается с плавным покачиванием, замедляясь к концу

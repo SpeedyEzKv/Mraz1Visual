@@ -9,56 +9,48 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 
 import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
 
-/**
- * Экран загрузки в стиле клиента: видео-фон, логотип и полоса прогресса.
- * Логотип — картинка из jar (шрифты игры при первой загрузке ещё не готовы).
- * Используется вместо ванильной заставки Mojang и поверх экранов «Загрузка мира», «Сохранение», «Подключение».
- */
+/** Splash artwork is read directly from the JAR before the resource and font reload completes. */
 public final class LoadingView {
     private static final Identifier LOGO = Identifier.fromNamespaceAndPath("mraz1visual", "gui/brand_logo");
     private static final int LOGO_W = 1440, LOGO_H = 84;
     private static boolean logoReady, logoFailed;
-    private static float shownProgress;
 
     private LoadingView() {}
 
+    private static final Identifier DIGITS = Identifier.fromNamespaceAndPath("mraz1visual", "gui/loading_digits");
+
+    private static void register(Identifier id, String filename) throws java.io.IOException {
+        try (InputStream in = LoadingView.class.getResourceAsStream("/assets/mraz1visual/textures/gui/" + filename)) {
+            if (in == null) throw new java.io.FileNotFoundException(filename);
+            Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(id::toString, NativeImage.read(in)));
+        }
+    }
+
     private static boolean logo() {
-        if (logoReady || logoFailed) return logoReady;
-        try (InputStream in = LoadingView.class.getResourceAsStream("/assets/mraz1visual/textures/gui/brand.png")) {
-            if (in == null) {
+        if (!logoReady && !logoFailed) {
+            try {
+                register(LOGO, "brand.png");
+                register(DIGITS, "loading_digits.png");
+                logoReady = true;
+            } catch (java.io.IOException e) {
                 logoFailed = true;
-                return false;
+                ModuleManager.LOG.warn("Loading artwork unavailable", e);
             }
-            NativeImage img = NativeImage.read(in);
-            Minecraft.getInstance().getTextureManager().register(LOGO, new DynamicTexture(() -> "mraz1visual logo", img));
-            logoReady = true;
-        } catch (Throwable t) {
-            logoFailed = true;
-            ModuleManager.LOG.warn("Logo load failed", t);
         }
         return logoReady;
     }
 
-    private static final EclipseBackground LOADING_BG = new EclipseBackground();
-    /** Во время перезагрузки ресурсов текстуры фона ещё не готовы — рисуем только логотип. */
-    private static boolean inReload;
-
     /**
      * Нарисовать экран загрузки на весь экран.
-     * @param progress 0..1 или &lt; 0 — бегущая полоса без процентов
+     * @param progress Действительный прогресс перезагрузки, 0..1
      * @param alpha    прозрачность всего экрана (для плавного появления/исчезновения)
      */
-    public static void render(GuiGraphics g, float progress, float alpha) {
+    private static void render(GuiGraphics g, float progress, float alpha) {
         if (alpha <= 0.003f) return;
         int w = g.guiWidth(), h = g.guiHeight();
         int a = Math.round(255 * Math.min(1f, alpha));
         g.fill(0, 0, w, h, a << 24 | 0x030308);
-        if (alpha > 0.5f && !inReload) LOADING_BG.render(g, w, h, 0.5f, 0.38f, 1f, w / 2, h / 2, true);
         // затемнение, чтобы логотип читался
         g.fill(0, 0, w, h, Math.round(a * 0.55f) << 24 | 0x030308);
         g.fillGradient(0, h / 2, w, h, 0, Math.round(a * 0.6f) << 24);
@@ -77,117 +69,36 @@ public final class LoadingView {
         // полоса прогресса под логотипом: градиент #8B6CFF → #4FD1FF
         int bw = lw, bx = lx, by = h / 2 + 14;
         g.fill(bx, by, bx + bw, by + 2, Math.round(a * 0.18f) << 24 | 0xFFFFFF);
-        int accent = 0x8B6CFF;
-        if (progress >= 0) {
-            shownProgress += (Math.min(1f, progress) - shownProgress) * 0.15f;
-            int fw = Math.round(bw * shownProgress);
-            int segs = 24;
-            for (int i = 0; i < segs; i++) {
-                int x0 = bx + fw * i / segs, x1 = bx + fw * (i + 1) / segs;
-                if (x1 > x0) g.fill(x0, by, x1, by + 2, a << 24 | (dev.mraz1visual.ui.Colors.lerp(0xFF8B6CFF, 0xFF4FD1FF, (x0 - bx) / (float) Math.max(1, bw)) & 0xFFFFFF));
-            }
-            g.fill(bx + fw - 6, by - 1, bx + fw, by + 3, Math.round(a * 0.9f) << 24 | 0xFFFFFF);
-            percent(g, Math.round(shownProgress * 100), bx + bw, by + 6, alpha);
-        } else {
-            // бегущий отрезок
-            float t = (System.nanoTime() % 1_600_000_000L) / 1.6e9f;
-            int seg = bw / 4;
-            int sx = bx + Math.round((bw + seg) * t) - seg;
-            int x0 = Math.max(bx, sx), x1 = Math.min(bx + bw, sx + seg);
-            if (x1 > x0) g.fill(x0, by, x1, by + 2, a << 24 | accent);
+        float shownProgress = Math.clamp(progress, 0f, 1f);
+        int fw = Math.round(bw * shownProgress);
+        int segs = 24;
+        for (int i = 0; i < segs; i++) {
+            int x0 = bx + fw * i / segs, x1 = bx + fw * (i + 1) / segs;
+            if (x1 > x0) g.fill(x0, by, x1, by + 2, a << 24 | (dev.mraz1visual.ui.Colors.lerp(0xFF8B6CFF, 0xFF4FD1FF, (x0 - bx) / (float) Math.max(1, bw)) & 0xFFFFFF));
         }
+        if (fw > 0) g.fill(bx + Math.max(0, fw - 6), by - 1, bx + fw, by + 3, Math.round(a * 0.9f) << 24 | 0xFFFFFF);
+        percent(g, Math.round(shownProgress * 100), bx + bw, by + 6, alpha);
     }
 
-    /** Цифры 3×5 точек: во время первой загрузки шрифтов и текстовых шейдеров ещё нет — рисуем прямоугольниками. */
-    private static final int[] DIGITS = {0x7B6F, 0x2C97, 0x73E7, 0x73CF, 0x5BC9, 0x79CF, 0x79EF, 0x7249, 0x7BEF, 0x7BCF};
-
-    /** Процент справа под полосой. */
+    // Pre-rasterized from the same Inter face as the UI, available before Minecraft loads fonts.
     private static void percent(GuiGraphics g, int p, int right, int y, float alpha) {
-        p = Math.max(0, Math.min(100, p));
-        int a = Math.round(220 * alpha);
-        if (a < 8) return;
-        int c = a << 24 | 0xC9C6F5, px = 1;
-        int digits = p >= 100 ? 3 : p >= 10 ? 2 : 1;
-        int x = right - (digits * 4 + 6) * px;
-        for (int i = digits - 1; i >= 0; i--) {
-            int d = (int) (p / Math.pow(10, i)) % 10, bits = DIGITS[d];
-            for (int r = 0; r < 5; r++) {
-                for (int col = 0; col < 3; col++) {
-                    if ((bits >> (14 - r * 3 - col) & 1) != 0) g.fill(x + col * px, y + r * px, x + (col + 1) * px, y + (r + 1) * px, c);
-                }
-            }
-            x += 4 * px;
-        }
-        // знак процента: две точки и диагональ
-        g.fill(x, y, x + 1, y + 1, c);
-        g.fill(x + 4, y + 4, x + 5, y + 5, c);
-        for (int k = 0; k < 5; k++) g.fill(x + 4 - k, y + k, x + 5 - k, y + k + 1, c);
-    }
-
-    /** Подпись под полосой (название этапа). Шрифт может быть ещё не готов — тогда ничего не рисуем. */
-    public static void caption(GuiGraphics g, String text, float alpha) {
-        try {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.font == null || text == null || text.isEmpty()) return;
-            int a = Math.round(220 * alpha);
-            if (a < 8) return;
-            int w = mc.font.width(text);
-            g.drawString(mc.font, text, (g.guiWidth() - w) / 2, g.guiHeight() / 2 + 26, a << 24 | 0xC9C6F5, false);
-        } catch (Throwable ignored) {
+        if (!logoReady) return;
+        String label = Math.clamp(p, 0, 100) + "%";
+        int x = right - label.length() * 7;
+        int color = Math.round(220 * alpha) << 24 | 0xC9C6F5;
+        for (int i = 0; i < label.length(); i++) {
+            char c = label.charAt(i);
+            int index = c == '%' ? 10 : c - '0';
+            g.blit(RenderPipelines.GUI_TEXTURED, DIGITS, x, y, index * 32f, 0, 9, 10, 32, 36, 352, 36, color);
+            x += 7;
         }
     }
 
-    // ── ванильная заставка: читаем её состояние по типам полей (без имён — надёжно в любой версии) ──
-
-    private static Field progressF, fadeOutF, fadeInStartF, fadeInF;
-    private static boolean reflected;
-
-    private static void reflect(Class<?> c) {
-        reflected = true;
-        try {
-            List<Field> floats = new ArrayList<>(), longs = new ArrayList<>(), bools = new ArrayList<>();
-            for (Field f : c.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers())) continue;
-                f.setAccessible(true);
-                if (f.getType() == float.class) floats.add(f);
-                else if (f.getType() == long.class) longs.add(f);
-                else if (f.getType() == boolean.class) bools.add(f);
-            }
-            if (!floats.isEmpty()) progressF = floats.get(0);
-            if (longs.size() >= 2) {
-                fadeOutF = longs.get(0);
-                fadeInStartF = longs.get(1);
-            }
-            if (!bools.isEmpty()) fadeInF = bools.get(0);
-        } catch (Throwable t) {
-            ModuleManager.LOG.warn("Loading overlay reflection failed", t);
-        }
-    }
-
-    /** Из миксина LoadingOverlay.render (в конце): рисуем свой экран поверх ванильного. */
-    public static void overlay(Object overlay, GuiGraphics g) {
-        try {
-            if (!reflected) reflect(overlay.getClass());
-            float progress = progressF != null ? progressF.getFloat(overlay) : -1f;
-            long fadeOut = fadeOutF != null ? fadeOutF.getLong(overlay) : -1L;
-            long fadeInStart = fadeInStartF != null ? fadeInStartF.getLong(overlay) : -1L;
-            boolean fadeIn = fadeInF != null && fadeInF.getBoolean(overlay);
-            long now = System.nanoTime() / 1_000_000L;
-            float fo = fadeOut > -1 ? (now - fadeOut) / 1000f : -1f;
-            float fi = fadeInStart > -1 ? (now - fadeInStart) / 500f : -1f;
-            float alpha;
-            if (fo >= 1f) alpha = 1f - Math.max(0f, Math.min(1f, fo - 1f));
-            else if (fadeIn) alpha = Math.max(0f, Math.min(1f, fi));
-            else alpha = 1f;
-            g.nextStratum();
-            inReload = true;
-            try {
-                render(g, progress, alpha);
-            } finally {
-                inReload = false;
-            }
-        } catch (Throwable t) {
-            // не сломать загрузку игры из-за картинки
-        }
+    public static void overlay(GuiGraphics g, float progress, long fadeOut, long fadeInStart, boolean fadeIn) {
+        long now = net.minecraft.util.Util.getMillis();
+        float alpha = fadeOut >= 0 ? 1f - Math.clamp((now - fadeOut - 1000) / 1000f, 0f, 1f)
+                : fadeIn ? Math.clamp((now - fadeInStart) / 500f, 0f, 1f) : 1f;
+        g.nextStratum();
+        render(g, progress, alpha);
     }
 }

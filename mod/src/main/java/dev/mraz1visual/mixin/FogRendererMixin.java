@@ -14,6 +14,10 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(FogRenderer.class)
 public abstract class FogRendererMixin {
+    @ModifyReturnValue(method = "getFogType", at = @At("RETURN"))
+    private net.minecraft.world.level.material.FogType mraz$fluidFog(net.minecraft.world.level.material.FogType original) {
+        return dev.mraz1visual.module.NoFluids.hide(original) ? net.minecraft.world.level.material.FogType.NONE : original;
+    }
     //? if >=26.1 {
     /*// 26.x: цвет пишется в переданный вектор, метод ничего не возвращает
     @org.spongepowered.asm.mixin.injection.Inject(method = "computeFogColor", at = @At("TAIL"), require = 0)

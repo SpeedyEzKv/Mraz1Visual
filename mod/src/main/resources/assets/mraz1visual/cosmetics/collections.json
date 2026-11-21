@@ -1,6 +1,21 @@
 {
   "collections": [
     {
+      "id": "aura", "title": "AuraVisual Cosmetics",
+      "author": "AuraVisual / @fixedproject; contributors in catalog.json",
+      "url": "https://t.me/fixedproject", "kind": "aura",
+      "note": "All Rights Reserved — original notices retained", "stem": "aura"
+    },
+    {
+      "id": "pulse", "title": "Pulse Cosmetics", "author": "LuckyVIP",
+      "kind": "bedrock", "note": "Pulse assets from debuda-beta 1.1 · All-Rights-Reserved"
+    },
+    {
+      "id": "aura-items", "title": "AuraVisual Items",
+      "author": "AuraVisual / @fixedproject", "url": "https://t.me/fixedproject",
+      "kind": "weapons", "note": "All Rights Reserved — original notices retained", "stem": "aura-items"
+    },
+    {
       "id": "majestica",
       "title": "Blades of Majestica",
       "author": "Eftann",

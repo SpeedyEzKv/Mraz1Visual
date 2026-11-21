@@ -72,6 +72,7 @@ public abstract class Module {
         try {
             if (value) onEnable(); else onDisable();
         } catch (Throwable t) {
+            ModuleManager.failed();
             ModuleManager.LOG.error("Module {} failed on {}", id, value ? "enable" : "disable", t);
         }
         if (manager != null) manager.onModuleStateChanged();

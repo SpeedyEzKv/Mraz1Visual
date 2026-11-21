@@ -42,7 +42,7 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
     private static final EquipmentSlot[] ARMOR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     private static final int SPARKS = 16;
 
-    final EnumSetting style = add(new EnumSetting("style", "Стиль", 0, "classic", "Классика", "pill", "Плашка"));
+    final EnumSetting style = add(new EnumSetting("style", "Стиль", 2, "classic", "Классика", "pill", "Плашка", "compact", "Компактный"));
     final SliderSetting keep = add(new SliderSetting("keep", "Время показа после удара", 2, 1, 5, 0.5, " с"));
     final BoolSetting onLook = add(new BoolSetting("on_look", "Когда смотришь на игрока", true));
     final EnumSetting place = add(new EnumSetting("place", "Где", 0, "cross", "У прицела", "top", "Сверху", "bottom", "Над хотбаром",
@@ -104,8 +104,10 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         lastHp = -1;
         lastDist = -1;
         pearlUntil = shieldUntil = 0;
-        // HP-полоса не прыгает: плавно доезжает от прошлой цели к новой
-        if (shownHp < 0) shownHp = lagHp = le.getHealth() / Math.max(1f, le.getMaxHealth());
+        shownHp = -1;
+        lagHold = hitAt = lookAt = 0;
+        lastPearlId = -1;
+        java.util.Arrays.fill(spAge, 99);
     }
 
     private void spawnSparks() {
@@ -124,7 +126,11 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) return;
+        if (mc.player == null || mc.level == null || target != null && target.level() != mc.level) {
+            target = null;
+            alpha = 0;
+            return;
+        }
         // смотришь на игрока — он цель
         if (onLook.get() && mc.hitResult instanceof EntityHitResult hit && hit.getEntity() instanceof Player pl && pl != mc.player) {
             setTarget(pl);
@@ -178,7 +184,8 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         update(mc, now, dt);
 
         boolean pill = style.getId().equals("pill");
-        int w = pill ? 150 : 162, h = pill ? 22 : 54;
+        boolean compact = style.getId().equals("compact");
+        int w = pill ? 150 : 162, h = pill ? 22 : compact ? 43 : 54;
         int chips = chipsHeight(ms);
         float k = scale.getF();
         int sw = g.guiWidth(), sh = g.guiHeight();
@@ -205,7 +212,8 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         g.pose().translate(cx + w * k / 2, cy + h * k / 2);
         g.pose().scale(s, s);
         g.pose().translate(-w / 2f, -h / 2f);
-        if (pill) drawPill(g, w, h);
+        if (compact) drawCompact(g);
+        else if (pill) drawPill(g, w, h);
         else drawClassic(g, w, h);
         drawChips(g, h + 3, ms);
         drawSparks(g, dt);
@@ -262,6 +270,30 @@ public final class TargetHud extends Module implements HudLayer, AttackListener,
         Sdf.fill(g, bx, by, bw, bh, bh / 2, Colors.mulAlpha(0x24FFFFFF, alpha));
         if (lagHp > shownHp) Sdf.fill(g, bx, by, bw * lagHp, bh, bh / 2, Colors.mulAlpha(0x88FFFFFF, alpha));
         if (shownHp > 0.005f) Sdf.fill(g, bx, by, Math.max(bh, bw * shownHp), bh, bh / 2, Colors.mulAlpha(hpColor(), alpha));
+    }
+
+    private void drawCompact(GuiGraphics g) {
+        HudStyle.panel(g, 0, 0, 130, 26, 7, alpha);
+        head(g, 5, 5, 16, 4);
+        String health = Math.round(target.getHealth() + target.getAbsorptionAmount()) + " HP";
+        int healthX = 125 - Fonts.width(health, Fonts.Kind.TEXT);
+        Fonts.draw(g, ellipsize(name, healthX - 30), Fonts.Kind.BOLD, 26, 4, Colors.mulAlpha(HudStyle.TEXT, alpha));
+        Fonts.draw(g, health, Fonts.Kind.TEXT, healthX, 4, Colors.mulAlpha(0xFFC5B6FF, alpha));
+        Sdf.fill(g, 26, 18, 98, 3, 1.5f, Colors.mulAlpha(0x36FFFFFF, alpha));
+        if (shownHp > 0) Sdf.fill(g, 26, 18, 98 * shownHp, 3, 1.5f, Colors.mulAlpha(0xFF9877FF, alpha));
+        HudStyle.panel(g, 15, 28, 100, 15, 6, alpha);
+        g.pose().pushMatrix();
+        g.pose().translate(19f, 29f);
+        g.pose().scale(.8f, .8f);
+        if (!target.getMainHandItem().isEmpty()) g.renderItem(target.getMainHandItem(), 0, 0);
+        for (int i = 0; i < armorStack.length; i++) {
+            if (!armorStack[i].isEmpty()) g.renderItem(armorStack[i], 24 * (i + 1), 0);
+        }
+        g.pose().popMatrix();
+        if (target.isUsingItem() && !target.getUseItem().isEmpty()) {
+            HudStyle.panel(g, 134, 1, 24, 24, 12, alpha);
+            g.renderItem(target.getUseItem(), 138, 5);
+        }
     }
 
     private void drawClassic(GuiGraphics g, int w, int h) {

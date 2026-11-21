@@ -1,0 +1,7 @@
+{
+  "providers": [
+    {"type":"ttf","file":"mraz1visual:text.ttf","size":9.0,"oversample":3.0,"shift":[0,0.5]},
+    {"type":"ttf","file":"mraz1visual:symbols.ttf","size":9.0,"oversample":3.0,"shift":[0,0.5]},
+    {"type":"reference","id":"minecraft:default"}
+  ]
+}

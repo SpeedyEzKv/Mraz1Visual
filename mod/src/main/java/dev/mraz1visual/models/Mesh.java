@@ -19,6 +19,8 @@ public final class Mesh {
     public final short[] quadBone;
     public final byte[] quadFlags;
     public final Bone[] bones;
+    /** Optional imported model orientation, applied before all root bones. */
+    public Matrix4f rootTransform;
     public final Atlas atlas;
     /** Границы в блоках: minX, minY, minZ, maxX, maxY, maxZ (в позе покоя). */
     public final float[] bounds = new float[6];

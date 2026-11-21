@@ -22,6 +22,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
     private static final int PANEL_W = 240;
 
     private int left;
+    private int titleLine = ITEM_LINE;
     private final dev.mraz1visual.music.MusicWidget music = new dev.mraz1visual.music.MusicWidget();
 
     private int musicX() { return vw - 36 - dev.mraz1visual.music.MusicWidget.W; }
@@ -35,7 +36,8 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         super("Mraz1Visual");
         item("ОДИНОЧНАЯ ИГРА", () -> minecraft.setScreen(new SelectWorldScreen(this)));
         item("СЕТЕВАЯ ИГРА", () -> minecraft.setScreen(new Mraz1VisualServersScreen(this)));
-        itemAfterGap("АККАУНТЫ", () -> accountsOpen = !accountsOpen);
+        itemAfterGap("АККАУНТЫ", () -> dev.mraz1visual.integration.IntegrationScreens.accounts(this));
+        item("МОДЫ", () -> dev.mraz1visual.integration.IntegrationScreens.mods(this));
         item("НАСТРОЙКИ", () -> minecraft.setScreen(new Mraz1VisualOptionsScreen(this)));
         item("MRAZ1VISUAL", () -> Mraz1Visual.openMenu(minecraft));
         itemAfterGap("ВЫХОД", () -> minecraft.stop());
@@ -52,8 +54,13 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
     @Override
     protected void onLayout() {
         left = Math.max(24, Math.round(vw * 0.056f));
-        layoutItems(left, Math.round(vh * 0.19f));
+        int top = Math.round(vh * 0.19f);
+        int gaps = items.stream().mapToInt(item -> item.gapBefore).sum();
+        titleLine = Math.max(24, Math.min(ITEM_LINE, (vh - 88 - 8 - top - gaps) / items.size()));
+        layoutItems(left, top);
     }
+
+    @Override protected int itemLine() { return titleLine; }
 
     private boolean currentIsMicrosoft() {
         for (AccountStore.Account a : AccountStore.accounts()) if (AccountStore.isCurrent(a)) return true;
@@ -73,7 +80,7 @@ public final class Mraz1VisualTitleScreen extends MenuBase {
         d.textCenter(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(), tx + tile / 2, ty + 8, Colors.mulAlpha(ITEM_HOVER, fade));
         int right = tx - 9;
         d.text(name, Fonts.Kind.BOLD, right - Fonts.width(name, Fonts.Kind.BOLD), ty + 2, Colors.mulAlpha(0xFFE6E6F4, fade));
-        d.textRight(currentIsMicrosoft() ? "Microsoft" : "локальная сессия", right, ty + 14, Colors.mulAlpha(0xFF8686A2, fade));
+        d.textRight("аккаунт Minecraft", right, ty + 14, Colors.mulAlpha(0xFF8686A2, fade));
 
         if (dev.mraz1visual.music.NowPlaying.available()) music.render(d, musicX(), musicY(), fade, true, mx, my);
 

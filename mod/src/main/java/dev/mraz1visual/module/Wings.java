@@ -40,6 +40,7 @@ public final class Wings extends Module implements WorldLayer {
 
     @Override
     public void renderWorld(WorldDraw d, float pt) {
+        if(ShardWings.active())return;
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer p = mc.player;
         if (p == null || mc.options.getCameraType().isFirstPerson() || p.isInvisible()) return;

@@ -56,6 +56,7 @@ public final class FxParticles {
     }
 
     static void render(WorldDraw d) {
+        if(!dev.mraz1visual.module.PhotoMode.effectsVisible())return;
         long now = System.nanoTime();
         float dt = last == 0 ? 0 : Math.min(0.05f, (now - last) / 1e9f);
         last = now;
@@ -95,6 +96,7 @@ public final class FxParticles {
             float t = age[i] / life[i];
             // быстрое мягкое появление и долгий ease-out хвост
             float a = t < 0.08f ? t / 0.08f : (float) Math.pow(1f - (t - 0.08f) / 0.92f, 1.7);
+            a *= Fx.decorativeAlpha(x[i],y[i],z[i]);
             int c = Colors.mulAlpha(color[i], a);
             float s = size[i];
             switch (shape[i]) {

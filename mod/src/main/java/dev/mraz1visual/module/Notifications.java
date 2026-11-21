@@ -119,6 +119,11 @@ public final class Notifications extends Module implements HudLayer {
         n.push(KIND_CHAT, null, 0, "Упоминание", StreamerMode.filter(body));
     }
 
+    /** Native client toast for a module's local resource status. */
+    public static void message(String title,String detail) {
+        Notifications n=instance;if(n!=null&&n.isEnabled())n.push(KIND_CHAT,null,0,title,detail);
+    }
+
     @Override
     public void onTick(Minecraft mc) {
         LocalPlayer p = mc.player;

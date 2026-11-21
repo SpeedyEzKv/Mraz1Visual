@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Одна импортированная модель: скин оружия, питомец, косметика или эффект. */
 public final class ModelEntry {
-    public enum Kind { WEAPON, PET, HAT, WING, EFFECT }
+    public enum Kind { WEAPON, PET, HAT, WING, BACK, EFFECT }
 
     /** Состояния предмета: обычное, натяжение лука 0–2, заброшенная удочка, поднятый щит. */
     public static final String DEFAULT = "default", PULL0 = "pull0", PULL1 = "pull1", PULL2 = "pull2", CAST = "cast", BLOCKING = "blocking";
@@ -30,6 +30,7 @@ public final class ModelEntry {
     /** Эффекты «особой» анимации (vfx_* из того же пака). */
     public final List<ModelEntry> effects = new ArrayList<>();
     public boolean flying;
+    public AuraPlacement auraPlacement;
     public final List<String> warnings = new ArrayList<>();
     public String error;
     /** Вид оружия «по умолчанию» для подписи источника: CIT, CraftEngine, bbmodel, PNG. */

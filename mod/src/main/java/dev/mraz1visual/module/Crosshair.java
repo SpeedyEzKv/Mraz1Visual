@@ -41,12 +41,16 @@ public final class Crosshair extends Module {
     private void render(GuiGraphics g) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !mc.options.getCameraType().isFirstPerson() || mc.options.hideGui) return;
-        int cx = g.guiWidth() / 2, cy = g.guiHeight() / 2;
+        drawAt(g, g.guiWidth() / 2, g.guiHeight() / 2);
+    }
+
+    public void drawAt(GuiGraphics g, int cx, int cy) {
+        Minecraft mc = Minecraft.getInstance();
         int len = size.getI(), gp = gap.getI(), t = thickness.getI();
         int col = color.get();
         int o = outline.get() ? 0xA0000000 : 0;
         if (style.getId().equals("ios")) {
-            ios(g, mc);
+            ios(g, mc, cx, cy);
             return;
         }
         switch (style.getId()) {
@@ -66,7 +70,7 @@ public final class Crosshair extends Module {
                 rect(g, cx - h, cy + gp + 1, t, len, col, o);
             }
         }
-        if (cooldown.get()) {
+        if (cooldown.get() && mc.player != null) {
             float s = mc.player.getAttackStrengthScale(0f);
             if (s < 1f) {
                 int w = 16;
@@ -87,18 +91,17 @@ public final class Crosshair extends Module {
         critAt = System.currentTimeMillis();
     }
 
-    private void ios(GuiGraphics g, Minecraft mc) {
+    private void ios(GuiGraphics g, Minecraft mc, float cx, float cy) {
         long now = System.nanoTime();
         float dt = lastNs == 0 ? 0 : Math.min(0.1f, (now - lastNs) / 1e9f);
         lastNs = now;
-        boolean ready = critGlow.get() && CritIndicator.critReady(mc.player);
+        boolean ready = critGlow.get() && mc.player != null && CritIndicator.critReady(mc.player);
         critK += ((ready ? 1f : 0f) - critK) * Math.min(1f, dt * 10f);
         float flash = Math.max(0f, 1f - (System.currentTimeMillis() - critAt) / 420f);
         flash = flash * flash;
-        float cx = g.guiWidth() / 2f, cy = g.guiHeight() / 2f;
         int col = color.get();
         int cc = critColor.get();
-        float r = 4.5f + gap.getF() * 0.5f - critK * 0.8f + flash * 2.5f;
+        float r = size.getF() + .5f + gap.getF() * 0.5f - critK * 0.8f + flash * 2.5f;
         float t = Math.max(0.8f, thickness.getF() * 0.9f);
         // мягкая тень — прицел читается на любом фоне
         if (outline.get()) {
@@ -113,7 +116,7 @@ public final class Crosshair extends Module {
             dev.mraz1visual.ui.Sdf.shape(g, cx - r, cy - r, r * 2, r * 2, r, dev.mraz1visual.ui.Sdf.SHADOW, 4f, dev.mraz1visual.ui.Colors.mulAlpha(cc, 0.45f * k), dev.mraz1visual.ui.Colors.mulAlpha(cc, 0.45f * k));
         }
         dev.mraz1visual.ui.Sdf.fill(g, cx - 1.25f, cy - 1.25f, 2.5f, 2.5f, 1.25f, col);
-        if (cooldown.get()) {
+        if (cooldown.get() && mc.player != null) {
             float s = mc.player.getAttackStrengthScale(0f);
             if (s < 1f) {
                 float w = 14f, y = cy + r + 4f;

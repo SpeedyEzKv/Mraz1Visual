@@ -368,7 +368,7 @@ public final class PostFx {
         return GlStateManager._glGetUniformLocation(program, name);
     }
 
-    private static String read(String name) {
+    static String read(String name) {
         try (InputStream in = PostFx.class.getResourceAsStream("/assets/mraz1visual/postfx/" + name)) {
             if (in == null) throw new IllegalStateException("no shader " + name);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -377,7 +377,7 @@ public final class PostFx {
         }
     }
 
-    private static int program(String vsh, String fsh) {
+    static int program(String vsh, String fsh) {
         int v = shader(GL20.GL_VERTEX_SHADER, vsh), f = shader(GL20.GL_FRAGMENT_SHADER, fsh);
         int p = GlStateManager.glCreateProgram();
         GlStateManager.glAttachShader(p, v);
@@ -427,7 +427,7 @@ public final class PostFx {
     }
 
     /** Текстура с линейной фильтрацией и её FBO. @return {текстура, fbo} */
-    private static int[] texture(int w, int h, int internal, int type) {
+    static int[] texture(int w, int h, int internal, int type) {
         int prevActive = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
         GL13.glActiveTexture(GL13.GL_TEXTURE0);
         int prev = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);

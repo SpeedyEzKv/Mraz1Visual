@@ -16,7 +16,9 @@ public final class MusicWidget {
     public static final int W = 220, H = 64, IW = 170, IH = 24;
 
     private String key = "", title = "", artist = "", oldTitle = "", oldArtist = "";
-    private float swap = 1, eqPhase;
+    private float swap = 1;
+    private boolean showCover=true,showArtist=true,showSource=true,showProgress=true;
+    public void configure(boolean cover,boolean artist,boolean source,boolean progress){if(showArtist!=artist||showSource!=source)key="";showCover=cover;showArtist=artist;showSource=source;showProgress=progress;}
     private long last;
     private int tint = 0xFF2A2A3C;
 
@@ -27,13 +29,12 @@ public final class MusicWidget {
             oldTitle = title;
             oldArtist = artist;
             title = NowPlaying.title().isBlank() ? "Ничего не играет" : NowPlaying.title();
-            String a = NowPlaying.artist(), src = NowPlaying.source();
+            String a = showArtist?NowPlaying.artist():"", src = showSource?NowPlaying.source():"";
             artist = a.isBlank() ? src : (src.isBlank() ? a : a + " · " + src);
             swap = 0;
         }
         swap = Math.min(1, swap + dt / 0.35f);
         tint = Colors.lerp(tint, NowPlaying.coverTint, Math.min(1, dt * 4));
-        if (NowPlaying.playing()) eqPhase += dt;
     }
 
     private float dt() {
@@ -52,21 +53,21 @@ public final class MusicWidget {
         int bottom = Colors.withAlpha(Colors.lerp(tint, 0xFF08080C, 0.6f), Math.round(0xE8 * alpha));
         Sdf.shape(g, x, y, W, H, 16, Sdf.FILL, 0, top, bottom);
         Sdf.shape(g, x, y, W, H, 16, Sdf.RING, 1f, Colors.withAlpha(0xFFFFFF, Math.round(60 * alpha)), Colors.withAlpha(0xFFFFFF, Math.round(14 * alpha)));
-        cover(g, x + 8, y + 8, 48, alpha);
-        float tx = x + 64, tw = W - 72;
+        if(showCover)cover(g, x + 8, y + 8, 48, alpha*Ease.smooth(swap));
+        float tx = x + (showCover?64:12), tw = W - (showCover?72:24);
         float e = Ease.smooth(swap);
         if (e < 1) {
             marquee(g, oldTitle, Fonts.Kind.BOLD, tx, y + 11, tw, Colors.withAlpha(0xFFFFFF, Math.round(255 * alpha * (1 - e))));
             marquee(g, oldArtist, Fonts.Kind.TEXT, tx, y + 23, tw, Colors.withAlpha(0xC8C8D2, Math.round(255 * alpha * (1 - e))));
         }
         marquee(g, title, Fonts.Kind.BOLD, tx, y + 11 + (1 - e) * 4, tw, Colors.withAlpha(0xFFFFFF, Math.round(255 * alpha * e)));
-        marquee(g, artist, Fonts.Kind.TEXT, tx, y + 23 + (1 - e) * 4, tw, Colors.withAlpha(0xC8C8D2, Math.round(255 * alpha * e)));
+        marquee(g, NowPlaying.available()&&!NowPlaying.playing()?"На паузе"+(artist.isBlank()?"":" · "+artist):artist, Fonts.Kind.TEXT, tx, y + 23 + (1 - e) * 4, tw, Colors.withAlpha(0xC8C8D2, Math.round(255 * alpha * e)));
         // прогресс и время
         long dur = NowPlaying.duration(), pos = NowPlaying.position();
         float f = dur > 0 ? Math.min(1, pos / (float) dur) : 0;
-        Sdf.fill(g, tx, y + 42, tw, 3, 1.5f, Colors.withAlpha(0xFFFFFF, Math.round(50 * alpha)));
-        if (f > 0) Sdf.fill(g, tx, y + 42, Math.max(3, tw * f), 3, 1.5f, Colors.withAlpha(0xFFFFFF, Math.round(220 * alpha)));
-        if (dur > 0) {
+        if(showProgress&&dur>0)Sdf.fill(g, tx, y + 42, tw, 3, 1.5f, Colors.withAlpha(0xFFFFFF, Math.round(50 * alpha)));
+        if (showProgress&&f > 0) Sdf.fill(g, tx, y + 42, Math.max(3, tw * f), 3, 1.5f, Colors.withAlpha(0xFFFFFF, Math.round(220 * alpha)));
+        if (showProgress&&dur > 0) {
             int c = Colors.withAlpha(0xA8A8B4, Math.round(255 * alpha));
             Fonts.draw(g, time(pos), Fonts.Kind.TEXT, tx, y + 49, c);
             String d = "-" + time(Math.max(0, dur - pos));
@@ -88,7 +89,8 @@ public final class MusicWidget {
     private void button(dev.mraz1visual.ui.Draw d, int kind, int x, int y, float a, double mx, double my) {
         boolean hov = dev.mraz1visual.ui.widget.Widget.hit(mx, my, x - 3, y - 3, 18, 18);
         if (hov) d.round(x - 3, y - 3, 18, 18, 9, Colors.withAlpha(0xFFFFFF, Math.round(40 * a)));
-        dev.mraz1visual.ui.MediaIcons.draw(d, kind, x + 6, y + 6, 8, Colors.withAlpha(0xFFFFFF, Math.round((hov ? 255 : 190) * a)));
+        String command=kind==dev.mraz1visual.ui.MediaIcons.PREV?"prev":kind==dev.mraz1visual.ui.MediaIcons.NEXT?"next":"toggle";
+        dev.mraz1visual.ui.MediaIcons.draw(d, kind, x + 6, y + 6, 8, Colors.withAlpha(0xFFFFFF, Math.round((NowPlaying.supports(command)?hov?255:190:55) * a)));
     }
 
     /** @return true, если клик попал в кнопку. */
@@ -106,7 +108,7 @@ public final class MusicWidget {
         int a = Math.round(255 * alpha);
         Sdf.shape(g, x, y + 2, IW, IH, IH / 2f, Sdf.SHADOW, 10, Colors.withAlpha(0x000000, a / 3), Colors.withAlpha(0x000000, a / 3));
         Sdf.shape(g, x, y, IW, IH, IH / 2f, Sdf.GLASS, 8f, Colors.withAlpha(0x0B0B10, Math.round(0xE0 * alpha)), Colors.withAlpha(0x0B0B10, Math.round(0xE0 * alpha)));
-        cover(g, x + 4, y + 4, 16, alpha);
+        if(showCover)cover(g, x + 4, y + 4, 16, alpha*Ease.smooth(swap));
         float e = Ease.smooth(swap);
         marquee(g, title, Fonts.Kind.BOLD, x + 25, y + 8, IW - 50, Colors.withAlpha(0xFFFFFF, Math.round(255 * alpha * e)));
         if (NowPlaying.playing()) bars(g, x + IW - 18, y + 7, alpha);
@@ -124,10 +126,11 @@ public final class MusicWidget {
         }
     }
 
-    /** Мини-эквалайзер: три столбика плавно «дышат». */
+    /** Local PCM level, or a steady playback marker when the source supplies no audio samples. */
     private void bars(GuiGraphics g, float x, float y, float alpha) {
+        if(!NowPlaying.local()){Sdf.fill(g,x+4,y+3,5,5,2.5f,Colors.withAlpha(0xFFFFFF,Math.round(170*alpha)));return;}
         for (int i = 0; i < 3; i++) {
-            float h = 3 + 6 * (0.5f + 0.5f * (float) Math.sin(eqPhase * (5 + i * 1.7) + i * 1.3));
+            float h = 2 + 7 * Math.min(1,dev.mraz1visual.music.player.MusicPlayer.signalLevel*4)*(i==1?1:.7f);
             Sdf.fill(g, x + i * 4, y + 9 - h, 2.4f, h, 1.2f, Colors.withAlpha(0xFFFFFF, Math.round(200 * alpha)));
         }
     }

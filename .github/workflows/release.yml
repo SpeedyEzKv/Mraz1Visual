@@ -123,6 +123,8 @@ jobs:
           jq -r '(.releases[0].items // .changelog // []) | map("- " + .) | join("\n")' dist/manifest.json > notes.md
       - uses: softprops/action-gh-release@v2
         with:
+          target_commitish: ${{ github.sha }}
+          draft: ${{ github.event_name == 'workflow_dispatch' && github.ref_name != 'main' }}
           tag_name: v${{ env.VERSION }}
           name: Mraz1Visual ${{ env.VERSION }}
           body_path: notes.md

@@ -13,10 +13,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Aspect Ratio и тряска при уроне (Zoom — FovMixin). Если метода нет — просто не применится. */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
+    //? if <26.1 {
     @ModifyReturnValue(method = "getProjectionMatrix", at = @At("RETURN"), require = 0)
     private Matrix4f mraz1visual$aspect(Matrix4f m) {
         return AspectRatio.apply(m);
     }
+    //?}
 
     @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true, require = 0)
     private void mraz1visual$noHurtCam(CallbackInfo ci) {
